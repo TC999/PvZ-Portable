@@ -42,7 +42,11 @@ void SexyAppBase::MakeWindow()
 		return;
 
 	// Initialize the EGL display connection
-	eglInitialize(mWindow, nullptr, nullptr);
+	if (eglInitialize(mWindow, nullptr, nullptr) == EGL_FALSE)
+	{
+		eglTerminate(mWindow);
+		return;
+	}
 
 	// Select OpenGL ES as the desired graphics API
 	if (eglBindAPI(EGL_OPENGL_ES_API) == EGL_FALSE)
@@ -64,7 +68,11 @@ void SexyAppBase::MakeWindow()
 		EGL_STENCIL_SIZE, 8,
 		EGL_NONE
 	};
-	eglChooseConfig(mWindow, framebufferAttributeList, &config, 1, &numConfigs);
+	if (eglChooseConfig(mWindow, framebufferAttributeList, &config, 1, &numConfigs) == EGL_FALSE)
+	{
+		eglTerminate(mWindow);
+		return;
+	}
 	if (numConfigs == 0)
 	{
 		eglTerminate(mWindow);
@@ -94,7 +102,16 @@ void SexyAppBase::MakeWindow()
 	}
 
 	// Connect the context to the surface
-	eglMakeCurrent(mWindow, mSurface, mSurface, mContext);
+	if (eglMakeCurrent(mWindow, mSurface, mSurface, mContext) == EGL_FALSE)
+	{
+		eglDestroyContext(mWindow, mContext);
+		mContext = nullptr;
+		eglDestroySurface(mWindow, mSurface);
+		mSurface = nullptr;
+		eglTerminate(mWindow);
+		mWindow = nullptr;
+		return;
+	}
 
 	eglSwapInterval(mWindow, 1);
 
