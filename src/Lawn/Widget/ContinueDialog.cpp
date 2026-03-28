@@ -112,6 +112,17 @@ void ContinueDialog::RemovedFromManager(WidgetManager* theWidgetManager)
     RemoveWidget(mNewGameButton);
 }
 
+void ContinueDialog::KeyDown(KeyCode theKey)
+{
+    if (theKey == KeyCode::KEYCODE_ESCAPE)
+    {
+        ButtonDepress(Dialog::ID_FOOTER);
+        return;
+    }
+
+    LawnDialog::KeyDown(theKey);
+}
+
 //0x4335D0
 void ContinueDialog::RestartLoopingSounds()
 {

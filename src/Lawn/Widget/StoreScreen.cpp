@@ -879,10 +879,21 @@ void StoreScreen::ButtonDepress(int theId)
     }
 }
 
-//0x48C5F0
-void StoreScreen::KeyChar(char theChar)
+void StoreScreen::KeyDown(KeyCode theKey)
 {
-    if (mBubbleClickToContinue && (theChar == ' ' || theChar == '\r')) AdvanceCrazyDaveDialog();
+    if (theKey == KeyCode::KEYCODE_ESCAPE)
+    {
+        ButtonDepress(StoreScreen::StoreScreen_Back);
+        return;
+    }
+
+    if (mBubbleClickToContinue && (theKey == KeyCode::KEYCODE_SPACE || theKey == KeyCode::KEYCODE_RETURN))
+    {
+        AdvanceCrazyDaveDialog();
+        return;
+    }
+
+    Dialog::KeyDown(theKey);
 }
 
 //0x48C620
