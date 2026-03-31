@@ -76,16 +76,15 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
+        sudo apt install -y \
           cmake \
-          libjpeg-turbo-dev \
+          ninja-build \
           libogg-dev \
+          libjpeg-dev \
           libopenmpt-dev \
           libpng-dev \
           libvorbis-dev \
           libmpg123-dev \
-          ninja-build \
           libsdl2-dev
 
     - name: Build PvZ-Portable for Ubuntu
