@@ -65,6 +65,45 @@ jobs:
         name: pvz-portable-archlinux
         path: dist/
 
+  build-ubuntu:
+    name: Build for Ubuntu (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libjpeg-turbo-dev \
+          libogg-dev \
+          libopenmpt-dev \
+          libpng-dev \
+          libvorbis-dev \
+          libmpg123-dev \
+          ninja-build \
+          libsdl2-dev
+
+    - name: Build PvZ-Portable for Ubuntu
+      run: |
+        mkdir build
+        cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+
+        mkdir -p dist
+        cp build/pvz-portable dist/
+        strip dist/pvz-portable
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: pvz-portable-ubuntu
+        path: dist/
+
   build-windows-msys2-ucrt64:
     name: Build for Windows (MSYS2 UCRT64)
     runs-on: windows-latest
