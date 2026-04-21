@@ -143,6 +143,24 @@ else()
 	find_package(JPEG REQUIRED)
 	find_package(PNG REQUIRED)
 	find_package(SDL2 REQUIRED)
+	# SDL2 < 2.0.12 (Ubuntu 20.04 ships 2.0.10) uses an old FindSDL2.cmake that
+	# only sets SDL2_LIBRARIES / SDL2_INCLUDE_DIRS variables and does NOT define
+	# imported targets.  Create compatibility shims when they are absent.
+	if(NOT TARGET SDL2::SDL2)
+		add_library(SDL2::SDL2 INTERFACE IMPORTED)
+		set_target_properties(SDL2::SDL2 PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES "${SDL2_INCLUDE_DIRS}"
+			INTERFACE_LINK_LIBRARIES      "${SDL2_LIBRARIES}"
+		)
+	endif()
+	if(NOT TARGET SDL2::SDL2main)
+		add_library(SDL2::SDL2main INTERFACE IMPORTED)
+		if(SDL2_MAIN_LIBRARIES)
+			set_target_properties(SDL2::SDL2main PROPERTIES
+				INTERFACE_LINK_LIBRARIES "${SDL2_MAIN_LIBRARIES}"
+			)
+		endif()
+	endif()
 endif()
 
 function(_pvz_patch_sdl2_iface_libs target)
