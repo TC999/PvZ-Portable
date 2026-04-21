@@ -52,6 +52,7 @@ typedef struct
 	double (*openmpt_module_get_position_seconds)(openmpt_module *mod);
 	double (*openmpt_module_get_duration_seconds)(openmpt_module *mod);
 	const char* (*openmpt_module_get_metadata)(openmpt_module *mod, const char *key);
+	int (*openmpt_module_ctl_set)(openmpt_module *mod, const char *ctl, const char *value);
 	int (*openmpt_module_ctl_set_boolean)(openmpt_module *mod, const char *ctl, int value);
 } openmpt_loader;
 
@@ -63,6 +64,14 @@ static struct OpenMpt_Settings
 	int mBits;
 	int mFrequency;
 } settings;
+
+#if defined(OPENMPT_API_VERSION_AT_LEAST)
+#define OPENMPT_HAS_CTL_SET_BOOLEAN OPENMPT_API_VERSION_AT_LEAST(0, 5, 0)
+#elif defined(OPENMPT_API_VERSION_MAJOR) && defined(OPENMPT_API_VERSION_MINOR)
+#define OPENMPT_HAS_CTL_SET_BOOLEAN ((OPENMPT_API_VERSION_MAJOR > 0) || ((OPENMPT_API_VERSION_MAJOR == 0) && (OPENMPT_API_VERSION_MINOR >= 5)))
+#else
+#define OPENMPT_HAS_CTL_SET_BOOLEAN 0
+#endif
 
 #ifdef OPENMPT_DYNAMIC
 #define FUNCTION_LOADER(FUNC, SIG) \
@@ -103,10 +112,28 @@ static int OPENMPT_Load(void)
 		FUNCTION_LOADER(openmpt_module_get_position_seconds, double (*)(openmpt_module *mod))
 		FUNCTION_LOADER(openmpt_module_get_duration_seconds, double (*)(openmpt_module *mod))
 		FUNCTION_LOADER(openmpt_module_get_metadata, const char* (*)(openmpt_module *mod, const char *key))
-		FUNCTION_LOADER(openmpt_module_ctl_set_boolean, int (*)(openmpt_module *mod, const char *ctl, int value))
+		FUNCTION_LOADER(openmpt_module_ctl_set, int (*)(openmpt_module *mod, const char *ctl, const char *value))
+#ifdef OPENMPT_DYNAMIC
+		openmpt.openmpt_module_ctl_set_boolean = (int (*)(openmpt_module *mod, const char *ctl, int value)) SDL_LoadFunction(openmpt.handle, "openmpt_module_ctl_set_boolean");
+#else
+#if OPENMPT_HAS_CTL_SET_BOOLEAN
+		openmpt.openmpt_module_ctl_set_boolean = openmpt_module_ctl_set_boolean;
+#else
+		openmpt.openmpt_module_ctl_set_boolean = NULL;
+#endif
+#endif
 	}
 	++openmpt.loaded;
 	return 0;
+}
+
+static int OPENMPT_CtlSetBoolean(openmpt_module *mod, const char *ctl, int value)
+{
+	if (openmpt.openmpt_module_ctl_set_boolean) {
+		return openmpt.openmpt_module_ctl_set_boolean(mod, ctl, value);
+	}
+	/* Compatibility with older libopenmpt that only provides string-based ctl set. */
+	return openmpt.openmpt_module_ctl_set(mod, ctl, value ? "1" : "0");
 }
 
 static void OPENMPT_Unload(void)
@@ -224,7 +251,7 @@ void *OPENMPT_CreateFromRW(SDL_RWops *src, int freesrc)
     meta_tags_set(&music->tags, MIX_META_TITLE, openmpt.openmpt_module_get_metadata(music->file, "title"));
 	openmpt.openmpt_module_set_repeat_count(music->file, -1);
 	/* Equivalent to BASS_MUSIC_POSRESET: stop all notes when seeking */
-	openmpt.openmpt_module_ctl_set_boolean(music->file, "seek.sync_samples", 0);
+	OPENMPT_CtlSetBoolean(music->file, "seek.sync_samples", 0);
 
     if (freesrc) {
         SDL_RWclose(src);
