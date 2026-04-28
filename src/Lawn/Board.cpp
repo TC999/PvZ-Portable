@@ -2577,7 +2577,7 @@ bool Board::RowCanHaveZombieType(int theRow, ZombieType theZombieType)
 	{
 		return false;  // 无草皮之地关卡，无草皮的行在前 5 波不刷出僵尸
 	}
-	if (mPlantRow[theRow] == PlantRowType::PLANTROW_POOL && !Zombie::ZombieTypeCanGoInPool(theZombieType))
+	if (mPlantRow[theRow] == PlantRowType::PLANTROW_POOL && !Zombie::ZombieTypeCanGoInPool(theZombieType) && theZombieType != ZombieType::ZOMBIE_BALLOON)
 	{
 		return false;  // 水路不会刷出不能进入泳池的僵尸
 	}
@@ -4680,6 +4680,10 @@ void Board::ClearCursor()
 
 bool Board::CanInteractWithBoardButtons()
 {
+	// during the process of obtaining a reward, should not interaction with the menu.
+	if (mBoardFadeOutCounter >= 0)
+		return false;
+
 	if (mPaused || mApp->GetDialogCount() > 0)
 		return false;
 
@@ -5474,7 +5478,7 @@ void Board::UpdateZombieSpawning()
 			mZombieHealthToNextWave = 0;
 			mZombieCountDown = ZOMBIE_COUNTDOWN_BEFORE_REPICK + 1;
 		}
-		else if (IsFlagWave(mCurrentWave) && (mApp->IsWallnutBowlingLevel() || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_LAST_STAND))
+		else if (IsFlagWave(mCurrentWave) && !(mApp->IsWallnutBowlingLevel() || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_LAST_STAND))
 		{
 			mZombieHealthToNextWave = 0;
 			mZombieCountDown = ZOMBIE_COUNTDOWN_BEFORE_FLAG;
