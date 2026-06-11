@@ -410,7 +410,6 @@ jobs:
         cmake -B $BUILD_DIR \
           -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
           -DVCPKG_TARGET_TRIPLET=arm64-ios \
-          -DVCPKG_OVERLAY_PORTS=$GITHUB_WORKSPACE/ios/ports \
           -DCMAKE_SYSTEM_NAME=iOS \
           -DCMAKE_OSX_DEPLOYMENT_TARGET=$IOS_DEPLOY_TARGET \
           -DCMAKE_OSX_ARCHITECTURES=arm64 \
@@ -480,7 +479,7 @@ jobs:
     - name: Build PvZ-Portable for WebAssembly
       run: |
         mkdir build-wasm
-        emcmake cmake -G Ninja -B build-wasm -DCMAKE_BUILD_TYPE=Release -DLIMBO_PAGE=OFF
+        emcmake cmake -G Ninja -B build-wasm -DCMAKE_BUILD_TYPE=Release
         cmake --build build-wasm -j$(nproc)
 
     - name: Upload Artifact
