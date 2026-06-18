@@ -141,6 +141,7 @@ public:
 public:
 	ActiveFontLayer();
 	ActiveFontLayer(const ActiveFontLayer& theActiveFontLayer);
+	ActiveFontLayer& operator=(const ActiveFontLayer& theActiveFontLayer) = delete;
 	virtual ~ActiveFontLayer();
 };
 
@@ -180,6 +181,7 @@ public:
 	ImageFont(SexyAppBase* theSexyApp, const std::string& theFontDescFileName);
 	ImageFont(Image *theFontImage); // for constructing your own image font without a file descriptor
 	ImageFont(const ImageFont& theImageFont);
+	ImageFont& operator=(const ImageFont& theImageFont) = delete;
 	~ImageFont() override;
 
 	// Deprecated

@@ -1211,13 +1211,11 @@ ImageFont::ImageFont(const ImageFont& theImageFont) :
 	mPointSize(theImageFont.mPointSize),
 	mTagVector(theImageFont.mTagVector),
 	mActiveListValid(theImageFont.mActiveListValid),
+	mActiveLayerList(theImageFont.mActiveLayerList),
 	mScale(theImageFont.mScale),
 	mForceScaledImagesWhite(theImageFont.mForceScaledImagesWhite)
 {
 	mFontData->Ref();
-
-	if (mActiveListValid)
-		mActiveLayerList = theImageFont.mActiveLayerList;
 }
 
 ImageFont::ImageFont(Image* theFontImage, const std::string& theFontDescFileName)
