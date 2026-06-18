@@ -38,137 +38,137 @@
 #include "../Resources.h"
 #include "Common.h"
 
-DefSymbol gTrailFlagDefSymbols[] = {
-    { 0, "Loops" },                 { -1, nullptr }
+constinit DefSymbol gTrailFlagDefSymbols[] = {
+    { .mSymbolValue = 0, .mSymbolName = "Loops" },                 { .mSymbolValue = -1, .mSymbolName = nullptr }
 };
-DefField gTrailDefFields[] = {
-    { "Image",            offsetof(TrailDefinition, mImage),           DefFieldType::DT_IMAGE,         nullptr },
-    { "MaxPoints",        offsetof(TrailDefinition, mMaxPoints),       DefFieldType::DT_INT,           nullptr },
-    { "MinPointDistance", offsetof(TrailDefinition, mMinPointDistance),DefFieldType::DT_FLOAT,         nullptr },
-    { "TrailFlags",       offsetof(TrailDefinition, mTrailFlags),      DefFieldType::DT_FLAGS,         gTrailFlagDefSymbols },
-    { "WidthOverLength",  offsetof(TrailDefinition, mWidthOverLength), DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "WidthOverTime",    offsetof(TrailDefinition, mWidthOverTime),   DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "AlphaOverLength",  offsetof(TrailDefinition, mAlphaOverLength), DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "AlphaOverTime",    offsetof(TrailDefinition, mAlphaOverTime),   DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "TrailDuration",    offsetof(TrailDefinition, mTrailDuration),   DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "",                 0x0,                                         DefFieldType::DT_INVALID,       nullptr }
+constinit DefField gTrailDefFields[] = {
+    { .mFieldName = "Image", .mFieldOffset = offsetof(TrailDefinition, mImage), .mFieldType = DefFieldType::DT_IMAGE, .mExtraData = nullptr },
+    { .mFieldName = "MaxPoints", .mFieldOffset = offsetof(TrailDefinition, mMaxPoints), .mFieldType = DefFieldType::DT_INT, .mExtraData = nullptr },
+    { .mFieldName = "MinPointDistance", .mFieldOffset = offsetof(TrailDefinition, mMinPointDistance), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "TrailFlags", .mFieldOffset = offsetof(TrailDefinition, mTrailFlags), .mFieldType = DefFieldType::DT_FLAGS, .mExtraData = gTrailFlagDefSymbols },
+    { .mFieldName = "WidthOverLength", .mFieldOffset = offsetof(TrailDefinition, mWidthOverLength), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "WidthOverTime", .mFieldOffset = offsetof(TrailDefinition, mWidthOverTime), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "AlphaOverLength", .mFieldOffset = offsetof(TrailDefinition, mAlphaOverLength), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "AlphaOverTime", .mFieldOffset = offsetof(TrailDefinition, mAlphaOverTime), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "TrailDuration", .mFieldOffset = offsetof(TrailDefinition, mTrailDuration), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "", .mFieldOffset = 0x0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr }
 };
-DefMap gTrailDefMap = { gTrailDefFields, sizeof(TrailDefinition), TrailDefinitionConstructor };
+constinit DefMap gTrailDefMap = { .mMapFields = gTrailDefFields, .mDefSize = sizeof(TrailDefinition), .mConstructorFunc = TrailDefinitionConstructor };
 
-DefSymbol gParticleFlagSymbols[] = {
-    {  0, "RandomLaunchSpin" },     {  1, "AlignLaunchSpin" },  {  2, "AlignToPixel" },     {  4, "ParticleLoops" },    {  3, "SystemLoops" },
-    {  5, "ParticlesDontFollow" },  {  6, "RandomStartTime" },  {  7, "DieIfOverloaded" },  {  8, "Additive" },         {  9, "FullScreen" },
-    { 10, "SoftwareOnly" },         { 11, "HardwareOnly" },     { -1, nullptr }
+constinit DefSymbol gParticleFlagSymbols[] = {
+    { .mSymbolValue = 0, .mSymbolName = "RandomLaunchSpin" },     { .mSymbolValue = 1, .mSymbolName = "AlignLaunchSpin" },  { .mSymbolValue = 2, .mSymbolName = "AlignToPixel" },     { .mSymbolValue = 4, .mSymbolName = "ParticleLoops" },    { .mSymbolValue = 3, .mSymbolName = "SystemLoops" },
+    { .mSymbolValue = 5, .mSymbolName = "ParticlesDontFollow" },  { .mSymbolValue = 6, .mSymbolName = "RandomStartTime" },  { .mSymbolValue = 7, .mSymbolName = "DieIfOverloaded" },  { .mSymbolValue = 8, .mSymbolName = "Additive" },         { .mSymbolValue = 9, .mSymbolName = "FullScreen" },
+    { .mSymbolValue = 10, .mSymbolName = "SoftwareOnly" },         { .mSymbolValue = 11, .mSymbolName = "HardwareOnly" },     { .mSymbolValue = -1, .mSymbolName = nullptr }
 };
-DefSymbol gEmitterTypeSymbols[] = {
-    {  0, "Circle" },               {  1, "Box" },              {  2, "BoxPath" },          {  3, "CirclePath" },       {  4, "CircleEvenSpacing" },
-    { -1, nullptr }
+constinit DefSymbol gEmitterTypeSymbols[] = {
+    { .mSymbolValue = 0, .mSymbolName = "Circle" },               { .mSymbolValue = 1, .mSymbolName = "Box" },              { .mSymbolValue = 2, .mSymbolName = "BoxPath" },          { .mSymbolValue = 3, .mSymbolName = "CirclePath" },       { .mSymbolValue = 4, .mSymbolName = "CircleEvenSpacing" },
+    { .mSymbolValue = -1, .mSymbolName = nullptr }
 };
-DefSymbol gParticleTypeSymbols[] = {
-    {  1, "Friction" },             {  2, "Acceleration" },     {  3, "Attractor" },        {  4, "MaxVelocity" },      {  5, "Velocity" },
-    {  6, "Position" },             {  7, "SystemPosition" },   {  8, "GroundConstraint" }, {  9, "Shake" },            { 10, "Circle" },
-    { 11, "Away" },                 { -1, nullptr }
+constinit DefSymbol gParticleTypeSymbols[] = {
+    { .mSymbolValue = 1, .mSymbolName = "Friction" },             { .mSymbolValue = 2, .mSymbolName = "Acceleration" },     { .mSymbolValue = 3, .mSymbolName = "Attractor" },        { .mSymbolValue = 4, .mSymbolName = "MaxVelocity" },      { .mSymbolValue = 5, .mSymbolName = "Velocity" },
+    { .mSymbolValue = 6, .mSymbolName = "Position" },             { .mSymbolValue = 7, .mSymbolName = "SystemPosition" },   { .mSymbolValue = 8, .mSymbolName = "GroundConstraint" }, { .mSymbolValue = 9, .mSymbolName = "Shake" },            { .mSymbolValue = 10, .mSymbolName = "Circle" },
+    { .mSymbolValue = 11, .mSymbolName = "Away" },                 { .mSymbolValue = -1, .mSymbolName = nullptr }
 };
 
-DefField gParticleFieldDefFields[] = {
-    { "FieldType",          offsetof(ParticleField, mFieldType), DefFieldType::DT_ENUM,          gParticleTypeSymbols },
-    { "x",                  offsetof(ParticleField, mX),         DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "y",                  offsetof(ParticleField, mY),         DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "",                   0x0,                                 DefFieldType::DT_INVALID,       nullptr },
+constinit DefField gParticleFieldDefFields[] = {
+    { .mFieldName = "FieldType", .mFieldOffset = offsetof(ParticleField, mFieldType), .mFieldType = DefFieldType::DT_ENUM, .mExtraData = gParticleTypeSymbols },
+    { .mFieldName = "x", .mFieldOffset = offsetof(ParticleField, mX), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "y", .mFieldOffset = offsetof(ParticleField, mY), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "", .mFieldOffset = 0x0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr },
 };
-DefMap gParticleFieldDefMap = { gParticleFieldDefFields, sizeof(ParticleField), ParticleFieldConstructor };
+constinit DefMap gParticleFieldDefMap = { .mMapFields = gParticleFieldDefFields, .mDefSize = sizeof(ParticleField), .mConstructorFunc = ParticleFieldConstructor };
 
-DefField gEmitterDefFields[] = {
-    { "Image",              offsetof(TodEmitterDefinition,mImage)               ,  DefFieldType::DT_IMAGE,         nullptr },
-    { "ImageRow",           offsetof(TodEmitterDefinition,mImageRow)            ,  DefFieldType::DT_INT,           nullptr },
-    { "ImageCol",           offsetof(TodEmitterDefinition,mImageCol)            ,  DefFieldType::DT_INT,           nullptr },
-    { "ImageFrames",        offsetof(TodEmitterDefinition,mImageFrames)         ,  DefFieldType::DT_INT,           nullptr },
-    { "Animated",           offsetof(TodEmitterDefinition,mAnimated)            ,  DefFieldType::DT_INT,           nullptr },
-    { "ParticleFlags",      offsetof(TodEmitterDefinition,mParticleFlags)       ,  DefFieldType::DT_FLAGS,         gParticleFlagSymbols },
-    { "EmitterType",        offsetof(TodEmitterDefinition,mEmitterType)         ,  DefFieldType::DT_ENUM,          gEmitterTypeSymbols },
-    { "Name",               offsetof(TodEmitterDefinition,mName)                ,  DefFieldType::DT_STRING,        nullptr },
-    { "SystemDuration",     offsetof(TodEmitterDefinition,mSystemDuration)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "OnDuration",         offsetof(TodEmitterDefinition,mOnDuration)          ,  DefFieldType::DT_STRING,        nullptr },
-    { "CrossFadeDuration",  offsetof(TodEmitterDefinition,mCrossFadeDuration)  ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SpawnRate",          offsetof(TodEmitterDefinition,mSpawnRate)          ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SpawnMinActive",     offsetof(TodEmitterDefinition,mSpawnMinActive)     ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SpawnMaxActive",     offsetof(TodEmitterDefinition,mSpawnMaxActive)     ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SpawnMaxLaunched",   offsetof(TodEmitterDefinition,mSpawnMaxLaunched)   ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterRadius",      offsetof(TodEmitterDefinition,mEmitterRadius)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterOffsetX",     offsetof(TodEmitterDefinition,mEmitterOffsetX)     ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterOffsetY",     offsetof(TodEmitterDefinition,mEmitterOffsetY)     ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterBoxX",        offsetof(TodEmitterDefinition,mEmitterBoxX)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterBoxY",        offsetof(TodEmitterDefinition,mEmitterBoxY)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterPath",        offsetof(TodEmitterDefinition,mEmitterPath)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterSkewX",       offsetof(TodEmitterDefinition,mEmitterSkewX)       ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "EmitterSkewY",       offsetof(TodEmitterDefinition,mEmitterSkewY)       ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleDuration",   offsetof(TodEmitterDefinition,mParticleDuration)   ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SystemRed",          offsetof(TodEmitterDefinition,mSystemRed)          ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SystemGreen",        offsetof(TodEmitterDefinition,mSystemGreen)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SystemBlue",         offsetof(TodEmitterDefinition,mSystemBlue)         ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SystemAlpha",        offsetof(TodEmitterDefinition,mSystemAlpha)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "SystemBrightness",   offsetof(TodEmitterDefinition,mSystemBrightness)   ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "LaunchSpeed",        offsetof(TodEmitterDefinition,mLaunchSpeed)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "LaunchAngle",        offsetof(TodEmitterDefinition,mLaunchAngle)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "Field",              offsetof(TodEmitterDefinition,mParticleFields)     ,  DefFieldType::DT_ARRAY,         &gParticleFieldDefMap },
-    { "SystemField",        offsetof(TodEmitterDefinition,mSystemFields)       ,  DefFieldType::DT_ARRAY,         &gParticleFieldDefMap },
-    { "ParticleRed",        offsetof(TodEmitterDefinition,mParticleRed)        ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleGreen",      offsetof(TodEmitterDefinition,mParticleGreen)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleBlue",       offsetof(TodEmitterDefinition,mParticleBlue)       ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleAlpha",      offsetof(TodEmitterDefinition,mParticleAlpha)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleBrightness", offsetof(TodEmitterDefinition,mParticleBrightness) ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleSpinAngle",  offsetof(TodEmitterDefinition,mParticleSpinAngle)  ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleSpinSpeed",  offsetof(TodEmitterDefinition,mParticleSpinSpeed)  ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleScale",      offsetof(TodEmitterDefinition,mParticleScale)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ParticleStretch",    offsetof(TodEmitterDefinition,mParticleStretch)    ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "CollisionReflect",   offsetof(TodEmitterDefinition,mCollisionReflect)   ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "CollisionSpin",      offsetof(TodEmitterDefinition,mCollisionSpin)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ClipTop",            offsetof(TodEmitterDefinition,mClipTop)            ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ClipBottom",         offsetof(TodEmitterDefinition,mClipBottom)         ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ClipLeft",           offsetof(TodEmitterDefinition,mClipLeft)           ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "ClipRight",          offsetof(TodEmitterDefinition,mClipRight)          ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "AnimationRate",      offsetof(TodEmitterDefinition,mAnimationRate)      ,  DefFieldType::DT_TRACK_FLOAT,   nullptr },
-    { "",                   0x0,                                                  DefFieldType::DT_INVALID,       nullptr },
+constinit DefField gEmitterDefFields[] = {
+    { .mFieldName = "Image", .mFieldOffset = offsetof(TodEmitterDefinition,mImage), .mFieldType = DefFieldType::DT_IMAGE, .mExtraData = nullptr },
+    { .mFieldName = "ImageRow", .mFieldOffset = offsetof(TodEmitterDefinition,mImageRow), .mFieldType = DefFieldType::DT_INT, .mExtraData = nullptr },
+    { .mFieldName = "ImageCol", .mFieldOffset = offsetof(TodEmitterDefinition,mImageCol), .mFieldType = DefFieldType::DT_INT, .mExtraData = nullptr },
+    { .mFieldName = "ImageFrames", .mFieldOffset = offsetof(TodEmitterDefinition,mImageFrames), .mFieldType = DefFieldType::DT_INT, .mExtraData = nullptr },
+    { .mFieldName = "Animated", .mFieldOffset = offsetof(TodEmitterDefinition,mAnimated), .mFieldType = DefFieldType::DT_INT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleFlags", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleFlags), .mFieldType = DefFieldType::DT_FLAGS, .mExtraData = gParticleFlagSymbols },
+    { .mFieldName = "EmitterType", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterType), .mFieldType = DefFieldType::DT_ENUM, .mExtraData = gEmitterTypeSymbols },
+    { .mFieldName = "Name", .mFieldOffset = offsetof(TodEmitterDefinition,mName), .mFieldType = DefFieldType::DT_STRING, .mExtraData = nullptr },
+    { .mFieldName = "SystemDuration", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemDuration), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "OnDuration", .mFieldOffset = offsetof(TodEmitterDefinition,mOnDuration), .mFieldType = DefFieldType::DT_STRING, .mExtraData = nullptr },
+    { .mFieldName = "CrossFadeDuration", .mFieldOffset = offsetof(TodEmitterDefinition,mCrossFadeDuration), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SpawnRate", .mFieldOffset = offsetof(TodEmitterDefinition,mSpawnRate), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SpawnMinActive", .mFieldOffset = offsetof(TodEmitterDefinition,mSpawnMinActive), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SpawnMaxActive", .mFieldOffset = offsetof(TodEmitterDefinition,mSpawnMaxActive), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SpawnMaxLaunched", .mFieldOffset = offsetof(TodEmitterDefinition,mSpawnMaxLaunched), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterRadius", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterRadius), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterOffsetX", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterOffsetX), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterOffsetY", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterOffsetY), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterBoxX", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterBoxX), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterBoxY", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterBoxY), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterPath", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterPath), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterSkewX", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterSkewX), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "EmitterSkewY", .mFieldOffset = offsetof(TodEmitterDefinition,mEmitterSkewY), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleDuration", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleDuration), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SystemRed", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemRed), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SystemGreen", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemGreen), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SystemBlue", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemBlue), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SystemAlpha", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemAlpha), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "SystemBrightness", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemBrightness), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "LaunchSpeed", .mFieldOffset = offsetof(TodEmitterDefinition,mLaunchSpeed), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "LaunchAngle", .mFieldOffset = offsetof(TodEmitterDefinition,mLaunchAngle), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "Field", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleFields), .mFieldType = DefFieldType::DT_ARRAY, .mExtraData = &gParticleFieldDefMap },
+    { .mFieldName = "SystemField", .mFieldOffset = offsetof(TodEmitterDefinition,mSystemFields), .mFieldType = DefFieldType::DT_ARRAY, .mExtraData = &gParticleFieldDefMap },
+    { .mFieldName = "ParticleRed", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleRed), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleGreen", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleGreen), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleBlue", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleBlue), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleAlpha", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleAlpha), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleBrightness", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleBrightness), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleSpinAngle", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleSpinAngle), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleSpinSpeed", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleSpinSpeed), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleScale", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleScale), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ParticleStretch", .mFieldOffset = offsetof(TodEmitterDefinition,mParticleStretch), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "CollisionReflect", .mFieldOffset = offsetof(TodEmitterDefinition,mCollisionReflect), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "CollisionSpin", .mFieldOffset = offsetof(TodEmitterDefinition,mCollisionSpin), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ClipTop", .mFieldOffset = offsetof(TodEmitterDefinition,mClipTop), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ClipBottom", .mFieldOffset = offsetof(TodEmitterDefinition,mClipBottom), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ClipLeft", .mFieldOffset = offsetof(TodEmitterDefinition,mClipLeft), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ClipRight", .mFieldOffset = offsetof(TodEmitterDefinition,mClipRight), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "AnimationRate", .mFieldOffset = offsetof(TodEmitterDefinition,mAnimationRate), .mFieldType = DefFieldType::DT_TRACK_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "", .mFieldOffset = 0x0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr },
 };
-DefMap gEmitterDefMap = { gEmitterDefFields, sizeof(TodEmitterDefinition), TodEmitterDefinitionConstructor };
+constinit DefMap gEmitterDefMap = { .mMapFields = gEmitterDefFields, .mDefSize = sizeof(TodEmitterDefinition), .mConstructorFunc = TodEmitterDefinitionConstructor };
 
-DefField gParticleDefFields[] = {
-    { "Emitter",            offsetof(TodParticleDefinition,mEmitterDefs),        DefFieldType::DT_ARRAY,         &gEmitterDefMap },
-    { "",                   0x0,        DefFieldType::DT_INVALID,       nullptr }
+constinit DefField gParticleDefFields[] = {
+    { .mFieldName = "Emitter", .mFieldOffset = offsetof(TodParticleDefinition,mEmitterDefs), .mFieldType = DefFieldType::DT_ARRAY, .mExtraData = &gEmitterDefMap },
+    { .mFieldName = "", .mFieldOffset = 0x0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr }
 };
-DefMap gParticleDefMap = { gParticleDefFields, sizeof(TodParticleDefinition), TodParticleDefinitionConstructor };
+constinit DefMap gParticleDefMap = { .mMapFields = gParticleDefFields, .mDefSize = sizeof(TodParticleDefinition), .mConstructorFunc = TodParticleDefinitionConstructor };
 
-DefField gReanimatorTransformDefFields[] = {
-    { "x",    offsetof(ReanimatorTransform,mTransX), DefFieldType::DT_FLOAT,         nullptr },
-    { "y",    offsetof(ReanimatorTransform,mTransY), DefFieldType::DT_FLOAT,         nullptr },
-    { "kx",   offsetof(ReanimatorTransform,mSkewX), DefFieldType::DT_FLOAT,         nullptr },
-    { "ky",   offsetof(ReanimatorTransform,mSkewY), DefFieldType::DT_FLOAT,         nullptr },
-    { "sx",   offsetof(ReanimatorTransform,mScaleX), DefFieldType::DT_FLOAT,         nullptr },
-    { "sy",   offsetof(ReanimatorTransform,mScaleY), DefFieldType::DT_FLOAT,         nullptr },
-    { "f",    offsetof(ReanimatorTransform,mFrame), DefFieldType::DT_FLOAT,         nullptr },
-    { "a",    offsetof(ReanimatorTransform,mAlpha), DefFieldType::DT_FLOAT,         nullptr },
-    { "i",    offsetof(ReanimatorTransform,mImage), DefFieldType::DT_IMAGE,         nullptr },
-    { "font", offsetof(ReanimatorTransform,mFont), DefFieldType::DT_FONT,          nullptr },
-    { "text", offsetof(ReanimatorTransform,mText), DefFieldType::DT_STRING,        nullptr },
-    { "",     0, DefFieldType::DT_INVALID,       nullptr }
+constinit DefField gReanimatorTransformDefFields[] = {
+    { .mFieldName = "x", .mFieldOffset = offsetof(ReanimatorTransform,mTransX), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "y", .mFieldOffset = offsetof(ReanimatorTransform,mTransY), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "kx", .mFieldOffset = offsetof(ReanimatorTransform,mSkewX), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "ky", .mFieldOffset = offsetof(ReanimatorTransform,mSkewY), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "sx", .mFieldOffset = offsetof(ReanimatorTransform,mScaleX), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "sy", .mFieldOffset = offsetof(ReanimatorTransform,mScaleY), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "f", .mFieldOffset = offsetof(ReanimatorTransform,mFrame), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "a", .mFieldOffset = offsetof(ReanimatorTransform,mAlpha), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "i", .mFieldOffset = offsetof(ReanimatorTransform,mImage), .mFieldType = DefFieldType::DT_IMAGE, .mExtraData = nullptr },
+    { .mFieldName = "font", .mFieldOffset = offsetof(ReanimatorTransform,mFont), .mFieldType = DefFieldType::DT_FONT, .mExtraData = nullptr },
+    { .mFieldName = "text", .mFieldOffset = offsetof(ReanimatorTransform,mText), .mFieldType = DefFieldType::DT_STRING, .mExtraData = nullptr },
+    { .mFieldName = "", .mFieldOffset = 0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr }
 };
-DefMap gReanimatorTransformDefMap = { gReanimatorTransformDefFields, sizeof(ReanimatorTransform), ReanimatorTransformConstructor};
+constinit DefMap gReanimatorTransformDefMap = { .mMapFields = gReanimatorTransformDefFields, .mDefSize = sizeof(ReanimatorTransform), .mConstructorFunc = ReanimatorTransformConstructor };
 
-DefField gReanimatorTrackDefFields[] = {
-    { "name",               offsetof(ReanimatorTrack,mName),      DefFieldType::DT_STRING,        nullptr },
-    { "t",                  offsetof(ReanimatorTrack,mTransforms),DefFieldType::DT_ARRAY,         &gReanimatorTransformDefMap },
-    { "",                   0x0,                                  DefFieldType::DT_INVALID,       nullptr }
+constinit DefField gReanimatorTrackDefFields[] = {
+    { .mFieldName = "name", .mFieldOffset = offsetof(ReanimatorTrack,mName), .mFieldType = DefFieldType::DT_STRING, .mExtraData = nullptr },
+    { .mFieldName = "t", .mFieldOffset = offsetof(ReanimatorTrack,mTransforms), .mFieldType = DefFieldType::DT_ARRAY, .mExtraData = &gReanimatorTransformDefMap },
+    { .mFieldName = "", .mFieldOffset = 0x0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr }
 };
-DefMap gReanimatorTrackDefMap = { gReanimatorTrackDefFields, sizeof(ReanimatorTrack), ReanimatorTrackConstructor };
+constinit DefMap gReanimatorTrackDefMap = { .mMapFields = gReanimatorTrackDefFields, .mDefSize = sizeof(ReanimatorTrack), .mConstructorFunc = ReanimatorTrackConstructor };
 
-DefField gReanimatorDefFields[] = {
-    { "track",              offsetof(ReanimatorDefinition,mTracks),DefFieldType::DT_ARRAY,         &gReanimatorTrackDefMap },
-    { "fps",                offsetof(ReanimatorDefinition,mFPS),   DefFieldType::DT_FLOAT,         nullptr },
-    { "",                   0x0,                                   DefFieldType::DT_INVALID,       nullptr }
+constinit DefField gReanimatorDefFields[] = {
+    { .mFieldName = "track", .mFieldOffset = offsetof(ReanimatorDefinition,mTracks), .mFieldType = DefFieldType::DT_ARRAY, .mExtraData = &gReanimatorTrackDefMap },
+    { .mFieldName = "fps", .mFieldOffset = offsetof(ReanimatorDefinition,mFPS), .mFieldType = DefFieldType::DT_FLOAT, .mExtraData = nullptr },
+    { .mFieldName = "", .mFieldOffset = 0x0, .mFieldType = DefFieldType::DT_INVALID, .mExtraData = nullptr }
 };
-DefMap gReanimatorDefMap = { gReanimatorDefFields, sizeof(ReanimatorDefinition), ReanimatorDefinitionConstructor };
+constinit DefMap gReanimatorDefMap = { .mMapFields = gReanimatorDefFields, .mDefSize = sizeof(ReanimatorDefinition), .mConstructorFunc = ReanimatorDefinitionConstructor };
 
-static DefLoadResPath gDefLoadResPaths[4] = { {"IMAGE_", ""}, {"IMAGE_", "particles/"}, {"IMAGE_REANIM_", "reanim/"}, {"IMAGE_REANIM_", "images/"} };
+constinit static DefLoadResPath gDefLoadResPaths[4] = { { .mPrefix = "IMAGE_", .mDirectory = "" }, { .mPrefix = "IMAGE_", .mDirectory = "particles/" }, { .mPrefix = "IMAGE_REANIM_", .mDirectory = "reanim/" }, { .mPrefix = "IMAGE_REANIM_", .mDirectory = "images/" } };
 
 void* ParticleFieldConstructor(void* thePointer)
 {
@@ -881,7 +881,7 @@ const TodCurveStringMap TodCurveStrings[] = {
 };
 */
 
-DefSymbol gDefTrackEaseSymbols[] = {
+constinit DefSymbol gDefTrackEaseSymbols[] = {
     {TodCurves::CURVE_EASE_IN_OUT_WEAK,   "EaseInOutWeak"},
     {TodCurves::CURVE_FAST_IN_OUT_WEAK,   "FastInOutWeak"},
     {TodCurves::CURVE_EASE_IN_OUT,        "EaseInOut"},
