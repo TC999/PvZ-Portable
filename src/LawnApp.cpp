@@ -272,7 +272,6 @@ LawnApp::~LawnApp()
 
 	if (mPoolEffect)
 	{
-		mPoolEffect->PoolEffectDispose();
 		delete mPoolEffect;
 	}
 

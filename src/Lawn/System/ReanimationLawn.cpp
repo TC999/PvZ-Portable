@@ -332,6 +332,11 @@ MemoryImage* ReanimatorCache::MakeCachedZombieFrame(ZombieType theZombieType)
 	return aMemoryImage;
 }
 
+ReanimatorCache::~ReanimatorCache()
+{
+	ReanimatorCacheDispose();
+}
+
 void ReanimatorCache::ReanimatorCacheInitialize()
 {
 	mApp = (LawnApp*)gSexyAppBase;
@@ -346,7 +351,10 @@ void ReanimatorCache::ReanimatorCacheInitialize()
 void ReanimatorCache::ReanimatorCacheDispose()
 {
 	for (int i = 0; i < SeedType::NUM_SEED_TYPES; i++)
+	{
 		delete mPlantImages[i];
+		mPlantImages[i] = nullptr;
+	}
 	while (mImageVariationList.mSize != 0)
 	{
 		ReanimCacheImageVariation aImageVariation = mImageVariationList.RemoveHead();
@@ -354,9 +362,15 @@ void ReanimatorCache::ReanimatorCacheDispose()
 			delete aImageVariation.mImage;
 	}
 	for (int i = 0; i < LawnMowerType::NUM_MOWER_TYPES; i++)
+	{
 		delete mLawnMowers[i];
+		mLawnMowers[i] = nullptr;
+	}
 	for (int i = 0; i < ZombieType::NUM_ZOMBIE_TYPES; i++)
+	{
 		delete mZombieImages[i];
+		mZombieImages[i] = nullptr;
+	}
 }
 
 
