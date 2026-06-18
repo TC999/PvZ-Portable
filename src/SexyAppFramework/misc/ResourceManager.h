@@ -92,7 +92,7 @@ public: // @Patoke todo: revert to protected
 		AnimInfo mAnimInfo;
 
 		ImageRes() { mType = ResType_Image; }
-		virtual void DeleteResource();
+		void         DeleteResource() override;
 	};
 
 	struct SoundRes : public BaseRes
@@ -102,7 +102,7 @@ public: // @Patoke todo: revert to protected
 		int mPanning;
 
 		SoundRes() { mType = ResType_Sound; }
-		virtual void DeleteResource();
+		void         DeleteResource() override;
 	};
 
 	struct FontRes : public BaseRes
@@ -122,7 +122,7 @@ public: // @Patoke todo: revert to protected
 
 
 		FontRes() { mType = ResType_Font; }
-		virtual void DeleteResource();
+		void         DeleteResource() override;
 	};
 
 	typedef std::map<std::string,BaseRes*> ResMap;

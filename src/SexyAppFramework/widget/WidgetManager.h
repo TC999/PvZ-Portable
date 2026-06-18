@@ -108,17 +108,17 @@ protected:
 
 public:
 	WidgetManager(SexyAppBase* theApplet);
-	virtual ~WidgetManager();
+	~WidgetManager() override;
 	
 	void					FreeResources();		
 	void					AddBaseModal(Widget* theWidget, const FlagsMod& theBelowFlagsMod);
 	void					AddBaseModal(Widget* theWidget);
 	void					RemoveBaseModal(Widget* theWidget);
 	void					Resize(const Rect& theMouseDestRect, const Rect& theMouseSourceRect);
-	void					DisableWidget(Widget* theWidget);	
+	void					DisableWidget(Widget* theWidget) override;
 	Widget*					GetAnyWidgetAt(int x, int y, int* theWidgetX, int* theWidgetY);
 	Widget*					GetWidgetAt(int x, int y, int* theWidgetX, int* theWidgetY);
-	void					SetFocus(Widget* aWidget);
+	void					SetFocus(Widget* aWidget) override;
 	void					GotFocus();	
 	void					LostFocus();	
 	void					InitModalFlags(ModalFlags* theModalFlags);

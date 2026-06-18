@@ -50,9 +50,9 @@ public:
 public:
 	SingleDataElement();
 	SingleDataElement(const std::string theString);
-	virtual ~SingleDataElement();
+	~SingleDataElement() override;
 
-	virtual DataElement*	Duplicate();
+	DataElement*			Duplicate() override;
 };
 
 typedef std::vector<DataElement*> ElementVector;
@@ -65,11 +65,11 @@ public:
 public:
 	ListDataElement();
 	ListDataElement(const ListDataElement& theListDataElement);
-	virtual ~ListDataElement();
+	~ListDataElement() override;
 	
 	ListDataElement&		operator=(const ListDataElement& theListDataElement);
 
-	virtual DataElement*	Duplicate();
+	DataElement*			Duplicate() override;
 };
 
 typedef std::map<std::string, DataElement*> DataElementMap;

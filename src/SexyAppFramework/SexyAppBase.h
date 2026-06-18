@@ -499,8 +499,8 @@ public:
 	virtual int				GetDialogCount();
 	virtual void			ModalOpen();
 	virtual void			ModalClose();	
-	virtual void			DialogButtonPress(int theDialogId, int theButtonId);
-	virtual void			DialogButtonDepress(int theDialogId, int theButtonId);
+	void					DialogButtonPress(int theDialogId, int theButtonId) override;
+	void					DialogButtonDepress(int theDialogId, int theButtonId) override;
 
 	virtual void			GotFocus();
 	virtual void			LostFocus();

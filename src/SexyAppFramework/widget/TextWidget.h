@@ -60,22 +60,22 @@ public:
 	virtual int GetStringIndex(const std::string& theString, int thePixel);
 	
 	virtual int GetColorStringWidth(const std::string& theString);
-	virtual void Resize(int theX, int theY, int theWidth, int theHeight);
+	void         Resize(int theX, int theY, int theWidth, int theHeight) override;
 	virtual Color GetLastColor(const std::string& theString);
 	virtual void AddToPhysicalLines(int theIdx, const std::string& theLine);
 	
 	virtual void AddLine(const std::string& theString);
 	virtual bool SelectionReversed();
 	virtual void GetSelectedIndices(int theLineIdx, int* theIndices);
-	virtual void Draw(Graphics* g);
-	virtual void ScrollPosition(int theId, double thePosition);
+	void         Draw(Graphics* g) override;
+	void         ScrollPosition(int theId, double thePosition) override;
 	virtual void GetTextIndexAt(int x, int y, int* thePosArray);
 	virtual std::string GetSelection();
 
-	virtual void MouseDown(int x, int y, int theClickCount);
-	virtual void MouseDrag(int x, int y);	
+	void         MouseDown(int x, int y, int theClickCount) override;
+	void         MouseDrag(int x, int y) override;
 	
-	virtual void KeyDown(KeyCode theKey);
+	void         KeyDown(KeyCode theKey) override;
 };
 
 }
