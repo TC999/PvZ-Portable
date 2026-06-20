@@ -344,7 +344,7 @@ void AlmanacDialog::DrawPlants(Graphics* g)
 	}
 
 	g->DrawImage(Sexy::IMAGE_ALMANAC_PLANTCARD, 459, 86);
-	PlantDefinition& aPlantDef = GetPlantDefinition(mSelectedSeed);
+	const PlantDefinition& aPlantDef = GetPlantDefinition(mSelectedSeed);
 	std::string aName = Plant::GetNameString(mSelectedSeed, SEED_NONE);
 	std::string aDescriptionName = StrFormat("[%s_DESCRIPTION]", aPlantDef.mPlantName);
 	TodDrawString(g, aName, 617, 288, Sexy::FONT_DWARVENTODCRAFT18YELLOW, Color::White, DS_ALIGN_CENTER);
@@ -471,7 +471,7 @@ void AlmanacDialog::DrawZombies(Graphics* g)
 	}
 	g->DrawImage(Sexy::IMAGE_ALMANAC_ZOMBIECARD, 455, 78);
 
-	ZombieDefinition& aZombieDef = GetZombieDefinition(mSelectedZombie);
+	const ZombieDefinition& aZombieDef = GetZombieDefinition(mSelectedZombie);
 	std::string aName = ZombieHasSilhouette(mSelectedZombie) ? "???" : StrFormat("[%s]", aZombieDef.mZombieName);
 	TodDrawString(g, aName, 613, 362, Sexy::FONT_DWARVENTODCRAFT18GREENINSET, Color(190, 255, 235, 255), DS_ALIGN_CENTER);
 

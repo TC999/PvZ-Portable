@@ -162,21 +162,3 @@ uint32_t Color::ToGLColor() const
 						(static_cast<uint32_t>(mRed));
 	return ToLE32(aGLColor);
 }
-
-bool Sexy::operator==(const Color& theColor1, const Color& theColor2)
-{
-	return 
-		(theColor1.mRed == theColor2.mRed) &&
-		(theColor1.mGreen == theColor2.mGreen) &&
-		(theColor1.mBlue == theColor2.mBlue) && 
-		(theColor1.mAlpha == theColor2.mAlpha);
-}
-
-bool Sexy::operator!=(const Color& theColor1, const Color& theColor2)
-{
-	return 
-		(theColor1.mRed != theColor2.mRed) ||
-		(theColor1.mGreen != theColor2.mGreen) ||
-		(theColor1.mBlue != theColor2.mBlue) ||
-		(theColor1.mAlpha != theColor2.mAlpha);
-}
