@@ -250,7 +250,7 @@ public:
 
 public:
 	Board(LawnApp* theApp);
-	virtual ~Board();
+	~Board() override;
 
 	void							DisposeBoard();
 	int								CountSunBeingCollected();
@@ -277,23 +277,23 @@ public:
 	void							RemoveCutsceneZombies();
 	void							SpawnZombiesFromGraves();
 	PlantingReason					CanPlantAt(int theGridX, int theGridY, SeedType theSeedType);
-	virtual void					MouseMove(int x, int y);
-	virtual void					MouseDrag(int x, int y);
-	virtual void					MouseDown(int x, int y, int theClickCount);
-	virtual void					MouseUp(int x, int y, int theClickCount);
-	virtual void					KeyChar(char theChar);
-	virtual void					KeyUp(KeyCode) {}
-	virtual void					KeyDown(KeyCode theKey);
-	virtual void					Update();
+	void							MouseMove(int x, int y) override;
+	void							MouseDrag(int x, int y) override;
+	void							MouseDown(int x, int y, int theClickCount) override;
+	void							MouseUp(int x, int y, int theClickCount) override;
+	void							KeyChar(char theChar) override;
+	void							KeyUp(KeyCode) override {}
+	void							KeyDown(KeyCode theKey) override;
+	void							Update() override;
 	void							UpdateLayers();
-	virtual void					Draw(Graphics* g);
+	void							Draw(Graphics* g) override;
 	void							DrawBackdrop(Graphics* g);
-	virtual void					ButtonPress  	(int){}
-	virtual void					ButtonDepress	(int){}
-	virtual void					ButtonDownTick	(int){}
-	virtual void					ButtonMouseEnter(int){}
-	virtual void					ButtonMouseLeave(int){}
-	virtual void					ButtonMouseMove(int, int, int){}
+	void							ButtonPress  	(int) override{}
+	void							ButtonDepress	(int) override{}
+	void							ButtonDownTick	(int) override{}
+	void							ButtonMouseEnter(int) override{}
+	void							ButtonMouseLeave(int) override{}
+	void							ButtonMouseMove(int, int, int) override{}
 	/*inline*/ void					AddSunMoney(int theAmount);
 	bool							TakeSunMoney(int theAmount);
 	/*inline*/ bool					CanTakeSunMoney(int theAmount);

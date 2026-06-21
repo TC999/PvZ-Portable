@@ -58,12 +58,10 @@ public:
 	uint32_t				ToGLColor() const;
 
 	int32_t&				operator[](int32_t theIdx);
-	int32_t					operator[](int32_t theIdx) const;	
+	int32_t					operator[](int32_t theIdx) const;
+
+	bool					operator==(const Color& theColor) const = default;
 };
-
-bool operator==(const Color& theColor1, const Color& theColor2);
-bool operator!=(const Color& theColor1, const Color& theColor2);
-
 }
 
 #endif //__COLOR_H__
