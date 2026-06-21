@@ -37,8 +37,6 @@ namespace Sexy
 
 class WidgetManager;
 
-typedef std::vector<Color> ColorVector;
-
 class Widget : public WidgetContainer
 {
 public:			
@@ -49,7 +47,7 @@ public:
 	bool					mIsDown;
 	bool					mIsOver;
 	bool					mHasTransparencies;	
-	ColorVector				mColors;
+	std::vector<Color>		mColors;
 	Insets					mMouseInsets;
 	bool					mDoFinger;
 	bool					mWantsFocus;
@@ -65,7 +63,7 @@ public:
 
 public:
 	Widget();
-	virtual ~Widget();
+	~Widget() override;
 		
 	virtual void			OrderInManagerChanged();
 	virtual void			SetVisible(bool isVisible);
@@ -83,10 +81,10 @@ public:
 	virtual void			Resize(const Rect& theRect);
 	virtual void			Move(int theNewX, int theNewY);	
 	virtual bool			WantsFocus();
-	virtual void			Draw(Graphics* g); // Already translated
+	void					Draw(Graphics* g) override; // Already translated
 	virtual void			DrawOverlay(Graphics* g);
 	virtual void			DrawOverlay(Graphics* g, int thePriority);
-	virtual void			Update();
+	void					Update() override;
 //	virtual void			UpdateF(float theFrac);
 	virtual void			GotFocus();
 	virtual void			LostFocus();	

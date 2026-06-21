@@ -106,7 +106,7 @@ class LawnStoneButton : public DialogButton
 public:
 	LawnStoneButton(Image* theComponentImage, int theId, ButtonListener* theListener) : DialogButton(theComponentImage, theId, theListener) { }
 
-	virtual void			Draw(Graphics* g);
+	void					Draw(Graphics* g) override;
 	/*inline*/ void			SetLabel(const std::string& theLabel);
 };
 
@@ -123,10 +123,10 @@ public:
 
 public:
     NewLawnButton(Image* theComponentImage, int theId, ButtonListener* theListener);
-	virtual ~NewLawnButton();
+	~NewLawnButton() override;
 	
-    virtual void			Draw(Graphics* g);
-	virtual bool			IsPointVisible(int x, int y);
+    void					Draw(Graphics* g) override;
+	bool					IsPointVisible(int x, int y) override;
     void					SetLabel(const std::string& theLabel);
 	// @Patoke: user defined
 	void					SetOffset(int theX, int theY);
