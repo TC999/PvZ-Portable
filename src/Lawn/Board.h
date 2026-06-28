@@ -262,7 +262,7 @@ public:
 	/*inline*/ void					SaveGame(const std::string& theFileName);
 	bool							LoadGame(const std::string& theFileName);
 	void							InitLevel();
-	void							DisplayAdvice(const std::string& theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex);
+	void							DisplayAdvice(std::string_view theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex);
 	void							StartLevel();
 	Plant*							AddPlant(int theGridX, int theGridY, SeedType theSeedType, SeedType theImitaterType = SeedType::SEED_NONE);
 	Projectile*						AddProjectile(int theX, int theY, int theRenderOrder, int theRow, ProjectileType theProjectileType);
@@ -467,7 +467,7 @@ public:
 	void							PuzzleSaveStreak();
 	/*inline*/ void					ClearAdviceImmediately();
 	/*inline*/ bool					IsFinalScaryPotterStage();
-	/*inline*/ void					DisplayAdviceAgain(const std::string& theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex);
+	/*inline*/ void					DisplayAdviceAgain(std::string_view theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex);
 	GridItem*						GetSquirrelAt(int theGridX, int theGridY);
 	GridItem*						GetZenToolAt(int theGridX, int theGridY);
 	bool							IsPlantInGoldWateringCanRange(int theMouseX, int theMouseY, Plant* thePlant);

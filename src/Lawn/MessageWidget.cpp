@@ -71,7 +71,7 @@ void MessageWidget::ClearLabel()
 }
 
 // GOTY @Patoke: inlined 0x459715
-void MessageWidget::SetLabel(const std::string& theNewLabel, MessageStyle theMessageStyle)
+void MessageWidget::SetLabel(std::string_view theNewLabel, MessageStyle theMessageStyle)
 {
 	std::string aLabel = TodStringTranslate(theNewLabel);
 	TOD_ASSERT(aLabel.length() < MAX_MESSAGE_LENGTH - 1);

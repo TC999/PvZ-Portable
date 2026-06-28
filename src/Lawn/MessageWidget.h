@@ -57,7 +57,7 @@ public:
 	MessageWidget(LawnApp* theApp);
 	~MessageWidget() { ClearReanim(); }
 
-	/*inline*/ void		SetLabel(const std::string& theNewLabel, MessageStyle theMessageStyle);
+	/*inline*/ void		SetLabel(std::string_view theNewLabel, MessageStyle theMessageStyle);
 	void				Update();
 	void				Draw(Sexy::Graphics* g);
 	void				ClearReanim();
