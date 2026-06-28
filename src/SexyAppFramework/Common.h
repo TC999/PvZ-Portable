@@ -133,24 +133,24 @@ void				SRand(ulong theSeed);
 extern std::string	VFormat(const char* fmt, va_list argPtr);
 extern std::string	StrFormat(const char* fmt ...);
 std::string			GetAppDataFolder();
-void				SetAppDataFolder(const std::string& thePath);
+void				SetAppDataFolder(std::string_view thePath);
 std::string			GetAppDataPath(std::string_view theRelativePath);
 const std::string&	GetResourceFolder();
-void				SetResourceFolder(const std::string& thePath);
+void				SetResourceFolder(std::string_view thePath);
 std::string			GetResourcePath(std::string_view theRelativePath);
-std::string			StringToUpper(const std::string& theString);
-std::string			StringToLower(const std::string& theString);
-std::string			Upper(const std::string& theData);
-std::string			Lower(const std::string& theData);
-std::string			Trim(const std::string& theString);
+std::string			StringToUpper(std::string_view theString);
+std::string			StringToLower(std::string_view theString);
+std::string			Upper(std::string_view theData);
+std::string			Lower(std::string_view theData);
+std::string			Trim(std::string_view theString);
 bool				StringToInt(const std::string& theString, int* theIntVal);
 bool				StringToDouble(const std::string& theString, double* theDoubleVal);
 int					StrFindNoCase(const char *theStr, const char *theFind);
 bool				StrPrefixNoCase(const char *theStr, const char *thePrefix, int maxLength = 10000000);
 std::string			CommaSeperate(int theValue);
-std::string			Evaluate(const std::string& theString, const DefinesMap& theDefinesMap);
-std::string			XMLDecodeString(const std::string& theString);
-std::string			XMLEncodeString(const std::string& theString);
+std::string			Evaluate(std::string_view theString, const DefinesMap& theDefinesMap);
+std::string			XMLDecodeString(std::string_view theString);
+std::string			XMLEncodeString(std::string_view theString);
 
 bool				Deltree(std::string_view thePath);
 bool				FileExists(std::string_view theFileName);
@@ -162,14 +162,14 @@ std::string			GetCurDir();
 std::string			GetFullPath(std::string_view theRelPath);
 std::string			GetPathFrom(std::string_view theRelPath, std::string_view theDir);
 bool				IsPathRooted(std::string_view thePath);
-bool				AllowAllAccess(const std::string& theFileName);
+bool				AllowAllAccess(std::string_view theFileName);
 
 // Read memory and then move the pointer
 void				SMemR(void*& _Src, void* _Dst, size_t _Size);
 void				SMemRStr(void*& _Src, std::string& theString);
 // Write memory and then move the pointer
 void				SMemW(void*& _Dst, const void* _Src, size_t _Size);
-void				SMemWStr(void*& _Dst, const std::string& theString);
+void				SMemWStr(void*& _Dst, std::string_view theString);
 
 inline void			inlineLTrim(std::string &theData, std::string_view theChars = " \t\r\n")
 {
