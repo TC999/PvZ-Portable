@@ -41,7 +41,7 @@
 
 Rect aBackButtonRect = { 120, 35, 130, 80 };
 
-AchievementItem gAchievementList[MAX_ACHIEVEMENTS] = {
+constinit const AchievementItem gAchievementList[MAX_ACHIEVEMENTS] = {
 	{ "Home Lawn Security", "Complete Adventure Mode." },
 	{ "Nobel Peas Prize", "Get the golden sunflower trophy." },
 	{ "Better Off Dead", "Get to a streak of 10 in I, Zombie Endless" },
@@ -191,6 +191,10 @@ void AchievementsWidget::KeyDown(KeyCode theKey) {
 	else if (theKey == KEYCODE_DOWN) {
 		mScrollValue = mDefaultScrollValue;
 		mScrollDirection = -1;
+	}
+	else if (theKey == KEYCODE_ESCAPE) {
+		mApp->mGameSelector->SlideTo(0, 0);
+		mApp->mGameSelector->mWidgetManager->SetFocus(mApp->mGameSelector);
 	}
 }
 

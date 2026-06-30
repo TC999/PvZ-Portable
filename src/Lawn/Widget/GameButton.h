@@ -98,7 +98,7 @@ public:
 	/*inline*/ bool			IsMouseOver();
 	void					Update();
 	/*inline*/ void			Resize(int theX, int theY, int theWidth, int theHeight);
-	/*inline*/ void			SetLabel(const std::string& theLabel);
+	/*inline*/ void			SetLabel(std::string_view theLabel);
 };
 
 class LawnStoneButton : public DialogButton
@@ -107,7 +107,7 @@ public:
 	LawnStoneButton(Image* theComponentImage, int theId, ButtonListener* theListener) : DialogButton(theComponentImage, theId, theListener) { }
 
 	void					Draw(Graphics* g) override;
-	/*inline*/ void			SetLabel(const std::string& theLabel);
+	/*inline*/ void			SetLabel(std::string_view theLabel);
 };
 
 class NewLawnButton : public DialogButton
@@ -127,13 +127,13 @@ public:
 	
     void					Draw(Graphics* g) override;
 	bool					IsPointVisible(int x, int y) override;
-    void					SetLabel(const std::string& theLabel);
+    void					SetLabel(std::string_view theLabel);
 	// @Patoke: user defined
 	void					SetOffset(int theX, int theY);
 };
 
-LawnStoneButton*			MakeButton(int theId, ButtonListener* theListener, const std::string& theText);
-NewLawnButton*				MakeNewButton(int theId, ButtonListener* theListener, const std::string& theText, _Font* theFont, Image* theImageNormal, Image* theImageOver, Image* theImageDown);
+LawnStoneButton*			MakeButton(int theId, ButtonListener* theListener, std::string_view theText);
+NewLawnButton*				MakeNewButton(int theId, ButtonListener* theListener, std::string_view theText, _Font* theFont, Image* theImageNormal, Image* theImageOver, Image* theImageDown);
 void						DrawStoneButton(Graphics* g, int x, int y, int theWidth, int theHeight, bool isDown, bool isHighLighted, const std::string& theLabel);
 
 #endif

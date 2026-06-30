@@ -1988,7 +1988,7 @@ void Board::FadeOutLevel()
 	mApp->SetCursor(CURSOR_POINTER);
 }
 
-void Board::DisplayAdvice(const std::string& theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex)
+void Board::DisplayAdvice(std::string_view theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex)
 {
 	if (theHelpIndex != AdviceType::ADVICE_NONE)
 	{
@@ -2002,7 +2002,7 @@ void Board::DisplayAdvice(const std::string& theAdvice, MessageStyle theMessageS
 	mHelpIndex = theHelpIndex;
 }
 
-void Board::DisplayAdviceAgain(const std::string& theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex)
+void Board::DisplayAdviceAgain(std::string_view theAdvice, MessageStyle theMessageStyle, AdviceType theHelpIndex)
 {
 	if (theHelpIndex != AdviceType::ADVICE_NONE)
 	{
@@ -5231,6 +5231,7 @@ void Board::ZombiesWon(Zombie* theZombie)
 
 	GameOverDialog* aGameOverDialog = new GameOverDialog(aGameOverMsg, true);
 	mApp->AddDialog(Dialogs::DIALOG_GAME_OVER, aGameOverDialog);
+	mApp->mWidgetManager->SetFocus(aGameOverDialog);
 
 	mApp->mMusic->StopAllMusic();
 	StopAllZombieSounds();
@@ -7858,7 +7859,6 @@ static void TodCrash()
 	TOD_ASSERT(false, "Crash%s", "!!!!");
 }
 
-//0x41B950（原版中废弃）
 void Board::KeyChar(char theChar)
 {
 	if (!mApp->mDebugKeysEnabled)

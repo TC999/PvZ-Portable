@@ -156,19 +156,19 @@ void ToolTipWidget::CalculateSize()
 	mHeight = aHeight + aLines.size() * 2 - 2;
 }
 
-void ToolTipWidget::SetLabel(const std::string& theLabel)
+void ToolTipWidget::SetLabel(std::string_view theLabel)
 {
 	mLabel = TodStringTranslate(theLabel);
 	CalculateSize();
 }
 
-void ToolTipWidget::SetTitle(const std::string& theTitle)
+void ToolTipWidget::SetTitle(std::string_view theTitle)
 {
 	mTitle = TodStringTranslate(theTitle);
 	CalculateSize();
 }
 
-void ToolTipWidget::SetWarningText(const std::string& theWarningText)
+void ToolTipWidget::SetWarningText(std::string_view theWarningText)
 {
 	mWarningText = TodStringTranslate(theWarningText);
 	CalculateSize();
