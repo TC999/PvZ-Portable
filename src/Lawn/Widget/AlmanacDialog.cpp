@@ -37,7 +37,7 @@
 
 bool gZombieDefeated[NUM_ZOMBIE_TYPES] = { false };
 
-AlmanacDialog::AlmanacDialog(LawnApp* theApp) : LawnDialog(theApp, DIALOG_ALMANAC, true, "Almanac", "", "", BUTTONS_NONE)
+AlmanacDialog::AlmanacDialog(LawnApp* theApp) : LawnDialog(theApp, DIALOG_ALMANAC, true, theApp->GetString("ALMANAC_HEADER", "Almanac"), "", "", BUTTONS_NONE)
 {
 	mApp = (LawnApp*)gSexyAppBase;
 	mOpenPage = ALMANAC_PAGE_INDEX;
@@ -690,6 +690,20 @@ void AlmanacDialog::MouseDown(int x, int y, int theClickCount)
 		SetupZombie();
 		mApp->PlaySample(Sexy::SOUND_TAP);
 	}
+}
+
+void AlmanacDialog::KeyDown(KeyCode theKey)
+{
+	if (theKey == KeyCode::KEYCODE_ESCAPE)
+	{
+		if (mOpenPage == AlmanacPage::ALMANAC_PAGE_INDEX)
+			mApp->KillAlmanacDialog();
+		else
+			SetPage(AlmanacPage::ALMANAC_PAGE_INDEX);
+		return;
+	}
+
+	LawnDialog::KeyDown(theKey);
 }
 
 void AlmanacInitForPlayer()
