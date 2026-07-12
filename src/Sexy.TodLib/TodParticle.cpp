@@ -222,7 +222,7 @@ void TodParticleLoadDefinitions(const ParticleParams* theParticleParamArray, int
 			snprintf(aBuf, sizeof(aBuf), "Failed to load particle '%s'", aParticleParams.mParticleFileName);
 			TodErrorMessageBox(aBuf, "Error");
 		}
-		gSexyAppBase->mNumLoadingThreadTasks += 6;
+		gSexyAppBase->mCompletedLoadingThreadTasks += 6;
 	}
 }
 

@@ -188,7 +188,6 @@ LawnApp::~LawnApp()
 	if (mBoard)
 	{
 		mBoardResult = BoardResult::BOARDRESULT_QUIT_APP;
-		mBoard->TryToSaveGame();
 		WriteCurrentUserConfig();
 		KillBoard();
 	}
@@ -320,6 +319,16 @@ void LawnApp::Shutdown()
 	if (!mShutdown)
 	{
 		SexyAppBase::Shutdown();
+	}
+}
+
+void LawnApp::ShutdownHook()
+{
+	// Save mid-level game while the music is still alive, before Shutdown() stops it.
+	if (mBoard)
+	{
+		mBoardResult = BoardResult::BOARDRESULT_QUIT_APP;
+		mBoard->TryToSaveGame();
 	}
 }
 
@@ -1263,7 +1272,7 @@ void LawnApp::Init()
 	// @Patoke: horrible debug checks, breaks the whole exe in release mode
 //#ifdef PVZ_DEBUG
 	TodAssertInitForApp();
-	TodLog("session id: %u", mSessionID);
+	TodLogLn("session id: %u", mSessionID);
 //#endif
 
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
@@ -1754,7 +1763,7 @@ void LawnApp::LoadingThreadProc()
 	}
 	mNumLoadingThreadTasks += 636;
 	mNumLoadingThreadTasks += GetNumPreloadingTasks();
-	mNumLoadingThreadTasks += mMusic->GetNumLoadingTasks();
+	mNumLoadingThreadTasks += Music::MUSIC_LOADING_TASKS;
 
 	PerfTimer aTimer;
 	aTimer.Start();
@@ -3093,7 +3102,7 @@ int LawnApp::GetNumPreloadingTasks()
 
 void LawnApp::PreloadForUser()
 {
-	int aNumTasks = mNumLoadingThreadTasks + GetNumPreloadingTasks();
+	int aNumTasks = mCompletedLoadingThreadTasks + GetNumPreloadingTasks();
 	if (mTitleScreen && mTitleScreen->mQuickLoadKey != KeyCode::KEYCODE_UNKNOWN)
 	{
 		TodTrace("preload canceled\n");
@@ -3147,7 +3156,7 @@ void LawnApp::PreloadForUser()
 
 		for (ZombieType i = ZombieType::ZOMBIE_NORMAL; i < ZombieType::NUM_ZOMBIE_TYPES; i = static_cast<ZombieType>(static_cast<int>(i) + 1))
 		{
-			if (HasFinishedAdventure() || mPlayerInfo->mLevel >= GetZombieDefinition(i).mStartingLevel)
+			if (!HasFinishedAdventure() && mPlayerInfo->mLevel < GetZombieDefinition(i).mStartingLevel)
 			{
 				continue;
 			}

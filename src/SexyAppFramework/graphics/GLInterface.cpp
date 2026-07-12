@@ -227,8 +227,7 @@ static GLuint shaderCompile(const char *src, uint32_t srcLen, GLenum type)
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
 		char *log = (char*)malloc(logLen);
 		glGetShaderInfoLog(shader, logLen, &logLen, log);
-		Sexy::PrintF("Shader error: %s\n%s%s%s\n", log, strings[0], strings[1], strings[2]);
-		fflush(stdout);
+		Sexy::PrintF("Shader error: %s\n%s%s%s", log, strings[0], strings[1], strings[2]);
 		free(log);
 		glDeleteShader(shader);
 		if (gSexyAppBase != nullptr)
@@ -543,8 +542,8 @@ static void GetBestTextureDimensions(int &w, int &h, bool isEdge, bool usePow2, 
 			ah = ah >= gMaxTextureHeight ? gMaxTextureHeight : sGoodSizes[ah];
 		}
 	}
-	if (aw < gMinTextureWidth)  aw = gMinTextureWidth;
-	if (ah < gMinTextureHeight) ah = gMinTextureHeight;
+	aw = std::max(aw, gMinTextureWidth);
+	ah = std::max(ah, gMinTextureHeight);
 	w = aw; h = ah;
 }
 
@@ -970,6 +969,7 @@ void TextureData::BltTransformed(const SexyMatrix3 &theTrans, const Rect& theSrc
 void TextureData::BltTriangles(const TriVertex theVertices[][3], int theNumTriangles,
                                unsigned int theColor, float tx, float ty, bool clampUv)
 {
+	glUniform1i(gUfUseTexture, 1);
 	if (mMaxTotalU <= 1.0 && mMaxTotalV <= 1.0)
 	{
 		// Single-texture fast path
@@ -986,7 +986,6 @@ void TextureData::BltTriangles(const TriVertex theVertices[][3], int theNumTrian
 		};
 		glActiveTexture(GL_TEXTURE0);
 		GfxBindTexture(piece.mTexture, uvb, clampUv);
-		glUniform1i(gUfUseTexture, 1);
 
 		GfxBegin(GL_TRIANGLES);
 		GfxAddVertices(theVertices, theNumTriangles, theColor, tx, ty, mMaxTotalU, mMaxTotalV);
