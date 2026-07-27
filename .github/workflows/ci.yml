@@ -253,6 +253,10 @@ jobs:
         echo "Bundling dependencies..."
         dylibbundler -of -b -x dist/pvz-portable -d dist/libs -p @executable_path/libs/
 
+        # Homebrew's SDL2 formula is sdl2-compat, which loads SDL3 at runtime.
+        # dylibbundler cannot discover libraries loaded with dlopen(), so bundle it explicitly.
+        install -m 755 "$(brew --prefix sdl3)/lib/libSDL3.dylib" dist/libs/libSDL3.dylib
+
         codesign --force --deep -s - dist/pvz-portable
 
     - name: Upload Artifact
@@ -369,12 +373,29 @@ jobs:
         echo "Collected .so files:"
         ls -lh $JNILIBS/
 
+    - name: Decode release keystore
+      env:
+        PVZP_KEYSTORE_BASE64: ${{ secrets.PVZP_KEYSTORE_BASE64 }}
+        PVZP_KEYSTORE_PASSWORD: ${{ secrets.PVZP_KEYSTORE_PASSWORD }}
+        PVZP_KEY_ALIAS: ${{ secrets.PVZP_KEY_ALIAS }}
+        PVZP_KEY_PASSWORD: ${{ secrets.PVZP_KEY_PASSWORD }}
+      run: |
+        # Secrets are empty on fork PRs; the build then falls back to debug signing.
+        if [ -n "$PVZP_KEYSTORE_BASE64" ] && [ -n "$PVZP_KEYSTORE_PASSWORD" ] && [ -n "$PVZP_KEY_ALIAS" ] && [ -n "$PVZP_KEY_PASSWORD" ]; then
+          echo "$PVZP_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pvzp-release.keystore"
+          echo "PVZP_KEYSTORE_FILE=$RUNNER_TEMP/pvzp-release.keystore" >> "$GITHUB_ENV"
+        fi
+
     - name: Build APK with Gradle
+      env:
+        PVZP_KEYSTORE_PASSWORD: ${{ secrets.PVZP_KEYSTORE_PASSWORD }}
+        PVZP_KEY_ALIAS: ${{ secrets.PVZP_KEY_ALIAS }}
+        PVZP_KEY_PASSWORD: ${{ secrets.PVZP_KEY_PASSWORD }}
       run: |
         cd android
         echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-        # Use gradle wrapper; package pre-built native libraries into a release APK (debug-signed)
+        # Use gradle wrapper; package pre-built native libraries into a release APK
         gradle wrapper
         ./gradlew assembleRelease -PusePrebuiltLibs=true --no-daemon
 

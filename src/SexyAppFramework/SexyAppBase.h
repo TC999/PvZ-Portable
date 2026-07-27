@@ -33,6 +33,7 @@
 #include "misc/Buffer.h"
 #include <mutex>
 #include <thread>
+#include <time.h>
 #include <set>
 #include <string_view>
 #include "graphics/SharedImage.h"
@@ -126,6 +127,7 @@ enum
 	DEMO_MOUSE_WHEEL,
 	DEMO_HANDLE_COMPLETE,
 	DEMO_VIDEO_DATA,
+	DEMO_KEY_TEXT,
 	DEMO_IDLE = 31
 };
 
@@ -240,14 +242,14 @@ public:
 	time_t					mLastTime;
 	uint32_t				mLastUserInputTick;
 
-	int						mSleepCount;
-	int						mDrawCount;
-	int						mUpdateCount;
+	uint					mSleepCount;
+	uint					mDrawCount;
+	uint					mUpdateCount;
 	int						mUpdateAppState;
 	int						mUpdateAppDepth;
 	double					mUpdateMultiplier;		
 	bool					mPaused;
-	int						mFastForwardToUpdateNum;
+	uint					mFastForwardToUpdateNum;
 	bool					mFastForwardToMarker;
 	bool					mFastForwardStep;
 	uint32_t				mLastDrawTick;
@@ -268,15 +270,10 @@ public:
 	bool					mPhysMinimized;
 	bool					mIsDisabled;
 	bool					mHasFocus;
-	int						mDrawTime;
-	uint32_t				mFPSStartTick;
-	int						mFPSFlipCount;
-	int						mFPSDirtyCount;
-	int						mFPSTime;
-	int						mFPSCount;
+	uint64_t				mDrawTime;
 	bool					mShowFPS;
 	int						mShowFPSMode;
-	int						mScreenBltTime;
+	uint					mScreenBltTime;
 	bool					mAutoStartLoadingThread;
 	bool					mLoadingThreadStarted;
 	bool					mLoadingThreadCompleted;
@@ -301,19 +298,25 @@ public:
 	bool					mManualShutdown;
 	std::string				mDemoPrefix;
 	std::string				mDemoFileName;
+	bool					mHasCustomDemoFile; // an explicit file argument overrides automatic demo file selection
+	uint					mDemoRecordFileLimit;
+	size_t					mDemoPlayIndex; // -playnum: index into the timestamp/name-ordered recording list
 	Buffer					mDemoBuffer;
-	int						mDemoLength;
 	int						mLastDemoMouseX;
 	int						mLastDemoMouseY;
-	int						mLastDemoUpdateCnt;
+	uint					mLastDemoUpdateCnt;
+	uint64_t				mDemoStartTime; // wall clock at session start, base of the demo-synced clock
+	int32_t					mDemoTimeZoneOffset; // recorder's local time minus UTC in seconds, for demo-synced local time
 	bool					mDemoNeedsCommand;
 	bool					mDemoIsShortCmd;
 	int						mDemoCmdNum;
-	int						mDemoCmdOrder;
 	int						mDemoCmdBitPos;
+	uint					mDemoCmdUpdateCnt; // update tick before the current command header was read
+	uint					mDemoQueuedSince; // tick when a game-logic-owned command was queued
+	bool					mDemoCommandQueued;
 	bool					mDemoLoadingComplete;
 
-	typedef std::pair<std::string, int> DemoMarker;
+	typedef std::pair<std::string, uint32_t> DemoMarker;
 	typedef std::list<DemoMarker> DemoMarkerList;
 	DemoMarkerList			mDemoMarkerList;
 
@@ -391,8 +394,33 @@ protected:
 
 	// Demo recording helpers	
 	void					ProcessDemo();
+	inline bool				IsOnPrimaryThread() const { return std::this_thread::get_id() == mPrimaryThreadId; } // demo-synced IO is primary-thread only
 
 public:
+	// True while recording or playing back a demo session
+	inline bool				IsInDemoMode() const { return mRecordingDemoBuffer || mPlayingDemoBuffer; }
+
+	// Demo-synced wall clock: real time normally; session start time advanced by update ticks during demo record/playback
+	inline time_t			GetNowTime() const
+	{
+		if (IsInDemoMode())
+			return static_cast<time_t>(mDemoStartTime) + mUpdateCount / 100;
+		return time(nullptr);
+	}
+
+	// Demo-synced local time: localtime normally; during demo sessions the recorder's timezone is applied via UTC offset
+	inline tm				GetLocalTime(time_t theTime) const
+	{
+		if (IsInDemoMode())
+		{
+			time_t aShifted = theTime + static_cast<time_t>(mDemoTimeZoneOffset);
+			if (aShifted < 0) // MSVC/UCRT gmtime rejects pre-epoch times
+				aShifted = 0; // clamp to no earlier than 1970-01-01
+			return *gmtime(&aShifted);
+		}
+		return *localtime(&theTime);
+	}
+
 	SexyAppBase();
 	virtual ~SexyAppBase();
 
@@ -427,8 +455,7 @@ public:
 
 	virtual void			DoParseCmdLine();
 	void					SetArgs(int argc, char** argv);
-	virtual void			ParseCmdLine(const std::string& theCmdLine);
-	virtual void			HandleCmdLineParam(const std::string& theParamName, const std::string& theParamValue);
+	virtual void			HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue);
 	virtual void			HandleNotifyGameMessage(int theType); // for HWND_BROADCAST of mNotifyGameMessage (0-1000 are reserved for SexyAppBase for theType)
 	virtual void			HandleGameAlreadyRunning(); 
 
@@ -512,6 +539,7 @@ public:
 	void					InitInput();
 	bool					StartTextInput(std::string& theInput); // set theInput and return true if using soft keyboard capability and user pressed OK (e.g. Switch libnx swkbd)
 	void					StopTextInput();
+	void					SetTextInputRect(const Rect& theRect); // caret rect in logical coords; anchors the IME UI (candidate window, keyboard pan)
 	bool					Is3DAccelerated();
 	bool					Is3DAccelerationSupported();
 	bool					Is3DAccelerationRecommended();

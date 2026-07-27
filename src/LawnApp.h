@@ -159,7 +159,7 @@ public:
 	void							URLOpenSucceeded(const std::string& theURL) override;
 	bool							OpenURL(const std::string& theURL, bool shutdownOnOpen) override;
 	bool							DebugKeyDown(int theKey) override;
-	void							HandleCmdLineParam(const std::string& theParamName, const std::string& theParamValue) override;
+	void							HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue) override;
 	void							ConfirmQuit();
 	void							ConfirmCheckForUpdates() { ; }
 	void							CheckForUpdates() { ; }
@@ -193,6 +193,7 @@ public:
 	void							DoBackToMain();
 	void							DoConfirmBackToMain();
 	void							DoNewOptions(bool theFromGameSelector);
+	void							ShowZombatarTOS();
 	void							DoRegister();
 	void							DoRegisterError();
 	bool							CanDoRegisterDialog();

@@ -22,7 +22,8 @@
 #ifndef __DATAARRAY_H__
 #define __DATAARRAY_H__
 
-#include <string.h>
+#include <memory>
+#include <new>
 #include "TodDebug.h"
 #include "TodCommon.h"
 
@@ -37,34 +38,22 @@ enum
 
 template <typename T> class DataArray
 {
-public:
-	class DataArrayItem
-	{
-	public:
-		T					mItem;
-		unsigned int		mID;
-	};
-	
-public:
-	DataArrayItem*			mBlock;
-	unsigned int			mMaxUsedCount;
-	unsigned int			mMaxSize;
-	unsigned int			mFreeListHead;
-	unsigned int			mSize;
-	unsigned int			mNextKey;
-	const char*				mName;
+	// Value-initialization zeroes T's members only while this constructor stays implicit.
+	struct DataArrayItem : T {};
+
+	std::unique_ptr<DataArrayItem[]>	mItems;
+	std::unique_ptr<unsigned int[]>		mItemIds;
 
 public:
-	DataArray()
-	{
-		mBlock = nullptr;
-		mMaxUsedCount = 0U;
-		mMaxSize = 0U;
-		mFreeListHead = 0U;
-		mSize = 0U;
-		mNextKey = 1U;
-		mName = nullptr;
-	}
+	unsigned int			mMaxUsedCount = 0U;
+	unsigned int			mMaxSize = 0U;
+	unsigned int			mFreeListHead = 0U;
+	unsigned int			mSize = 0U;
+	unsigned int			mNextKey = 1U;
+	const char*				mName = nullptr;
+
+public:
+	DataArray() = default;
 
 	~DataArray()
 	{
@@ -73,8 +62,9 @@ public:
 
 	void DataArrayInitialize(unsigned int theMaxSize, const char* theName)
 	{
-		TOD_ASSERT(mBlock == nullptr);
-		mBlock = static_cast<DataArrayItem*>(operator new(sizeof(DataArrayItem) * theMaxSize));
+		TOD_ASSERT(mItems == nullptr);
+		mItems = std::make_unique<DataArrayItem[]>(theMaxSize);
+		mItemIds = std::make_unique<unsigned int[]>(theMaxSize);
 		mMaxSize = theMaxSize;
 		mNextKey = 1001U;
 		mName = theName;
@@ -82,27 +72,23 @@ public:
 
 	void DataArrayDispose()
 	{
-		if (mBlock != nullptr)
-		{
-			DataArrayFreeAll();
-			operator delete(mBlock);
-			mBlock = nullptr;
-			mMaxUsedCount = 0U;
-			mMaxSize = 0U;
-			mFreeListHead = 0U;
-			mSize = 0U;
-			mName = nullptr;
-		}
+		DataArrayFreeAll();  // no-ops when uninitialized
+		mItems.reset();
+		mItemIds.reset();
+		mMaxUsedCount = 0U;
+		mMaxSize = 0U;
+		mFreeListHead = 0U;
+		mSize = 0U;
+		mName = nullptr;
 	}
 
 	void DataArrayFree(T* theItem)
 	{
-		DataArrayItem* aItem = reinterpret_cast<DataArrayItem*>(theItem);
-		TOD_ASSERT(DataArrayGet(aItem->mID) == theItem, "Failed: DataArrayFree(0x%x) in %s", theItem, mName);
-		theItem->~T();
-		unsigned int anId = aItem->mID & DATA_ARRAY_INDEX_MASK;
-		aItem->mID = mFreeListHead;
-		mFreeListHead = anId;
+		unsigned int anIndex = static_cast<unsigned int>(static_cast<DataArrayItem*>(theItem) - mItems.get());
+		TOD_ASSERT(DataArrayGet(mItemIds[anIndex]) == theItem, "Failed: DataArrayFree(0x%x) in %s", theItem, mName);
+		DataArrayResetItemAt(anIndex);
+		mItemIds[anIndex] = mFreeListHead;
+		mFreeListHead = anIndex;
 		mSize--;
 	}
 
@@ -118,28 +104,29 @@ public:
 
 	inline unsigned int DataArrayGetID(T* theItem)
 	{
-		DataArrayItem* aItem = reinterpret_cast<DataArrayItem*>(theItem);
-		TOD_ASSERT(DataArrayGet(aItem->mID) == theItem, "Failed: DataArrayGetID(0x%x) for %s", theItem, mName);
-		return aItem->mID;
+		unsigned int anIndex = static_cast<unsigned int>(static_cast<DataArrayItem*>(theItem) - mItems.get());
+		unsigned int anId = mItemIds[anIndex];
+		TOD_ASSERT(DataArrayGet(anId) == theItem, "Failed: DataArrayGetID(0x%x) for %s", theItem, mName);
+		return anId;
 	}
 
 	bool IterateNext(T*& theItem)
 	{
-		DataArray<T>::DataArrayItem* aItem = reinterpret_cast<DataArray<T>::DataArrayItem*>(theItem);
-		if (aItem == nullptr)
-			aItem = &mBlock[0];
-		else
-			aItem++;
-
-		DataArray<T>::DataArrayItem* aLast = &mBlock[mMaxUsedCount];
-		while (aItem < aLast)
+		unsigned int anIndex = 0U;
+		if (theItem != nullptr)
 		{
-			if (aItem->mID & DATA_ARRAY_KEY_MASK)
+			DataArrayItem* aItem = static_cast<DataArrayItem*>(std::launder(theItem));
+			anIndex = static_cast<unsigned int>(aItem - mItems.get()) + 1U;
+		}
+
+		while (anIndex < mMaxUsedCount)
+		{
+			if (mItemIds[anIndex] & DATA_ARRAY_KEY_MASK)
 			{
-				theItem = reinterpret_cast<T*>(aItem);
+				theItem = &mItems[anIndex];
 				return true;
 			}
-			aItem++;
+			anIndex++;
 		}
 		return false;
 	}
@@ -154,17 +141,15 @@ public:
 		else
 		{
 			aNext = mFreeListHead;
-			mFreeListHead = mBlock[mFreeListHead].mID;
+			mFreeListHead = mItemIds[mFreeListHead];
 		}
 
-		DataArray<T>::DataArrayItem* aNewItem = &mBlock[aNext];
-		memset(aNewItem, 0, sizeof(DataArrayItem));
-		aNewItem->mID = (mNextKey++ << DATA_ARRAY_KEY_SHIFT) | aNext;
+		T& aNewItem = DataArrayResetItemAt(aNext);
+		mItemIds[aNext] = (mNextKey++ << DATA_ARRAY_KEY_SHIFT) | aNext;
 		if (mNextKey == DATA_ARRAY_MAX_SIZE) mNextKey = 1;
 		mSize++;
 
-		new (aNewItem)T();
-		return reinterpret_cast<T*>(aNewItem);
+		return &aNewItem;
 	}
 
 	T* DataArrayTryToGet(unsigned int theId)
@@ -172,14 +157,31 @@ public:
 		if (!theId || (theId & DATA_ARRAY_INDEX_MASK) >= mMaxSize)
 			return nullptr;
 
-		DataArrayItem* aBlock = &mBlock[theId & DATA_ARRAY_INDEX_MASK];
-		return (aBlock->mID == theId) ? &aBlock->mItem : nullptr;
+		unsigned int anIndex = theId & DATA_ARRAY_INDEX_MASK;
+		return (mItemIds[anIndex] == theId) ? &mItems[anIndex] : nullptr;
 	}
 
 	T* DataArrayGet(unsigned int theId)
 	{
 		TOD_ASSERT(DataArrayTryToGet(theId) != nullptr, "Failed: DataArrayGet(0x%x) for %s", theId, mName);
-		return &mBlock[static_cast<short>(theId)].mItem;
+		return &mItems[theId & DATA_ARRAY_INDEX_MASK];
+	}
+
+	T& DataArrayGetItemAt(unsigned int theIndex)
+	{
+		return mItems[theIndex];
+	}
+
+	T& DataArrayResetItemAt(unsigned int theIndex)
+	{
+		DataArrayItem* aItem = &mItems[theIndex];
+		std::destroy_at(aItem);
+		return *std::construct_at(aItem);
+	}
+
+	unsigned int& DataArrayGetIDAt(unsigned int theIndex)
+	{
+		return mItemIds[theIndex];
 	}
 };
 

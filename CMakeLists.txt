@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12...4.0)
 
 project(pvz-portable LANGUAGES C CXX ASM)
 
+include(CMake/ProjectVersion.cmake)
+
 option(BUILD_STATIC "Static link for a standalone exe (Windows, non-MSVC)" OFF)
 if(BUILD_STATIC)
 	if(WIN32 AND NOT MSVC)
@@ -26,7 +28,7 @@ if(MSVC)
 	if(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES "-static")
 		set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 	elseif(DEFINED VCPKG_TARGET_TRIPLET)
-		set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL$<$<CONFIG:Debug>:Debug>")
+		set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 	endif()
 endif()
 
@@ -135,7 +137,7 @@ option(DO_FIX_BUGS "Define DO_FIX_BUGS macro (Community fixes for original game 
 if(EMSCRIPTEN)
 	list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_MPG123=1")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_MPG123=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_MPG123=1 -fexceptions")
 else()
 	find_package(Threads REQUIRED)
 	find_package(ZLIB REQUIRED)
@@ -195,6 +197,7 @@ endif()
 
 target_include_directories(pvz-portable PRIVATE
 	${PLAT_INCLUDES}
+	${PROJECT_BINARY_DIR}
 	${PROJECT_SOURCE_DIR}/src
 	${PROJECT_SOURCE_DIR}/src/SexyAppFramework
 	${PROJECT_SOURCE_DIR}/src/SexyAppFramework/sound/SDL-Mixer-X/include
@@ -228,6 +231,7 @@ if(EMSCRIPTEN)
 		"SHELL:-sUSE_OGG=1"
 		"SHELL:-sUSE_VORBIS=1"
 		"SHELL:-sUSE_MPG123=1"
+		"SHELL:-fexceptions"
 		"SHELL:-sASYNCIFY"
 		"SHELL:-sALLOW_MEMORY_GROWTH=1"
 		"SHELL:-sMAXIMUM_MEMORY=1073741824"
@@ -285,7 +289,7 @@ elseif (NINTENDO_SWITCH)
 	nx_generate_nacp(pvz-portable.nacp
 		NAME "PvZ Portable"
 		AUTHOR "wszqkzqk, etc., a community-driven port"
-		VERSION "0.1"
+		VERSION "${PVZP_VERSION_PLAIN}"
 	)
 
 	nx_create_nro(pvz-portable
@@ -299,7 +303,6 @@ elseif (NINTENDO_3DS)
 		NAME "PvZ Portable"
 		DESCRIPTION "A community-driven re-implementation of Plants vs. Zombies GOTY Edition"
 		AUTHOR "wszqkzqk, etc., a community-driven port"
-		VERSION "0.1"
 		ICON "${CMAKE_CURRENT_SOURCE_DIR}/icon-3ds.png"
 	)
 
@@ -323,13 +326,12 @@ elseif (IOS)
 		"-framework Metal"
 	)
 
+	configure_file(ios/Info.plist.in "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" @ONLY)
 	set_target_properties(pvz-portable PROPERTIES
 		MACOSX_BUNDLE TRUE
 		MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.wszqkzqk.pvz-portable"
 		MACOSX_BUNDLE_BUNDLE_NAME "PvZ Portable"
-		MACOSX_BUNDLE_BUNDLE_VERSION "0.1"
-		MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1"
-		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ios/Info.plist.in"
+		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
 		XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
 		XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "io.github.wszqkzqk.pvz-portable"

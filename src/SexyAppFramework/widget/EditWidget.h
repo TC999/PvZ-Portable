@@ -48,7 +48,6 @@ public:
 
 	int						mId;
 	std::string				mString;
-	std::string				mPasswordDisplayString;
 	_Font*					mFont;
 
 	struct WidthCheck
@@ -63,6 +62,7 @@ public:
 	bool					mShowingCursor;
 	bool					mDrawSelOverride; // set this to true to draw selected text even when not in focus
 	bool					mHadDoubleClick;	// Used to fix a bug with double clicking to hilite a word after the widget manager started calling mouse drag before mouse down/up events
+	bool					mHadFocusBeforePress; // mHasFocus snapshot taken in WantsFocus (pre-SetFocus)
 	int						mCursorPos;
 	int						mHilitePos;
 	int						mBlinkAcc;
@@ -70,7 +70,6 @@ public:
 	int						mLeftPos;		
 	int						mMaxChars;
 	int						mMaxPixels;
-	char				mPasswordChar;
 	
 	std::string				mUndoString;
 	int						mUndoCursor;
@@ -80,14 +79,16 @@ public:
 
 protected:
 	virtual void			ProcessKey(KeyCode theKey, char theChar);
-	std::string&			GetDisplayString();
+	void					InsertTextAtCursor(std::string_view theText);
 	virtual void			HiliteWord();
 	void					UpdateCaretPos();
+	void					UpdateTextInputArea();
+	int						GetCaretXOffset();
 
 public:
 	virtual void			SetFont(_Font* theFont, _Font* theWidthCheckFont = nullptr);
 	virtual void			SetText(const std::string& theText, bool leftPosToZero = true);
-	virtual bool			IsPartOfWord(char theChar);
+	virtual bool			IsPartOfWord(char32_t theChar);
 	virtual int				GetCharAt(int x, int y);
 
 	void					Resize(int theX, int theY, int theWidth, int theHeight) override;
@@ -103,6 +104,7 @@ public:
 
 	void					KeyDown(KeyCode theKey) override;
 	void					KeyChar(char theChar) override;
+	void					KeyText(std::string_view theText) override;
 
 	void					MouseDown(int x, int y, int theClickCount) override { Widget::MouseDown(x, y, theClickCount); }
 	void					MouseDown(int x, int y, int theBtnNum, int theClickCount) override;
@@ -114,6 +116,7 @@ public:
 	void					MouseLeave() override;
 	void					ClearWidthCheckFonts();
 	void					AddWidthCheckFont(_Font *theFont, int theMaxPixels = -1); // defaults to mMaxPixels
+	void					EnforceMaxChars();
 	void					EnforceMaxPixels();
 
 public:

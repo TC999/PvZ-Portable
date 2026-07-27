@@ -104,8 +104,8 @@ ZenGarden::ZenGarden()
     mApp = (LawnApp*)gSexyAppBase;
     mBoard = nullptr;
     mGardenType = GardenType::GARDEN_MAIN;
-    mNowTime = time(0);
-    mNowTM = *localtime(&mNowTime);
+    mNowTime = time(nullptr); // constructed on the loading thread: GetNowTime() reads main-thread state; refreshed before any use
+    mNowTM = mApp->GetLocalTime(mNowTime);
 }
 
 ZenGarden::~ZenGarden()
@@ -284,8 +284,8 @@ PottedPlant* ZenGarden::PottedPlantFromIndex(intptr_t thePottedPlantIndex)
 void ZenGarden::ZenGardenInitLevel()
 {
     mBoard = mApp->mBoard;
-    mNowTime = time(0);
-    mNowTM = *localtime(&mNowTime);
+    mNowTime = mApp->GetNowTime();
+    mNowTM = mApp->GetLocalTime(mNowTime);
 
     for (int i = 0; i < mApp->mPlayerInfo->mNumPottedPlants; i++)
     {
@@ -762,7 +762,7 @@ bool ZenGarden::WasPlantNeedFulfilledToday(PottedPlant* thePottedPlant)
     }
 
     time_t aLastNeedFulfilledTime = (time_t)thePottedPlant->mLastNeedFulfilledTime;
-    tm aLastNeedFulfilledTM = *localtime(&aLastNeedFulfilledTime);
+    tm aLastNeedFulfilledTM = mApp->GetLocalTime(aLastNeedFulfilledTime);
     return mNowTM.tm_year <= aLastNeedFulfilledTM.tm_year && mNowTM.tm_yday <= aLastNeedFulfilledTM.tm_yday;
 }
 
@@ -775,7 +775,7 @@ bool ZenGarden::PlantShouldRefreshNeed(PottedPlant* thePottedPlant)
     }
     
     time_t aLastWateredTime = (time_t)thePottedPlant->mLastWateredTime;
-    tm aLastWateredTM = *localtime(&aLastWateredTime);
+    tm aLastWateredTM = mApp->GetLocalTime(aLastWateredTime);
     return mNowTM.tm_year > aLastWateredTM.tm_year || mNowTM.tm_yday > aLastWateredTM.tm_yday;
 }
 
@@ -807,6 +807,9 @@ void ZenGarden::UpdatePlantNeeds()
     {
         return;
     }
+
+    mNowTime = mApp->GetNowTime();  // the cached clock is stale on the game selector
+    mNowTM = mApp->GetLocalTime(mNowTime);
 
     for (int i = 0; i < mApp->mPlayerInfo->mNumPottedPlants; i++)
     {
@@ -1725,9 +1728,9 @@ void ZenGarden::ZenGardenUpdate()
         return;
     }
 
-    // Cache time(0) and localtime() once per frame to avoid repeated syscalls
-    mNowTime = time(0);
-    mNowTM = *localtime(&mNowTime);
+    // Cache the current time and its broken-down form once per frame to avoid repeated calls
+    mNowTime = mApp->GetNowTime();
+    mNowTM = mApp->GetLocalTime(mNowTime);
 
     mApp->UpdateCrazyDave();
     if (mBoard->mCursorObject->mCursorType != CursorType::CURSOR_TYPE_NORMAL)
@@ -2374,8 +2377,8 @@ void ZenGarden::OpenStore()
     }
     else
     {
-        mNowTime = time(0);
-        mNowTM = *localtime(&mNowTime);
+        mNowTime = mApp->GetNowTime();
+        mNowTM = mApp->GetLocalTime(mNowTime);
 
         mApp->mMusic->MakeSureMusicIsPlaying(MusicTune::MUSIC_TUNE_ZEN_GARDEN);
         if (mBoard->mTutorialState == TutorialState::TUTORIAL_ZEN_GARDEN_VISIT_STORE)

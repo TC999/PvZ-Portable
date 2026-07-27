@@ -31,19 +31,6 @@ TrailParams gLawnTrailArray[TrailType::NUM_TRAILS] = {
 	{ TrailType::TRAIL_ICE, "particles/IceTrail.trail" }
 };
 
-TrailDefinition::TrailDefinition()
-{
-	memset(this, 0, sizeof(TrailDefinition));
-	mMinPointDistance = 1.0f;
-	mMaxPoints = 2;
-	mTrailFlags = 0U;
-	mImage = nullptr;
-}
-
-TrailDefinition::~TrailDefinition()
-{
-}
-
 TrailPoint::TrailPoint()
 {
 }
@@ -71,7 +58,7 @@ void TrailLoadDefinitions(TrailParams* theTrailParamArray, int theTrailParamArra
 	gTrailParamArraySize = theTrailParamArraySize;
 	gTrailParamArray = theTrailParamArray;
 	gTrailDefCount = theTrailParamArraySize;
-	gTrailDefArray = new TrailDefinition[theTrailParamArraySize];
+	gTrailDefArray = new TrailDefinition[theTrailParamArraySize]();
 
 	for (int i = 0; i < gTrailParamArraySize; i++)
 	{
@@ -107,10 +94,6 @@ Trail::Trail()
 	mDefinition = nullptr;
 	mTrailDuration = 0;
 	mColorOverride = Color::White;
-	for (int i = 0; i < 4; i++)
-	{
-		mTrailInterp[i] = RandRangeFloat(0.0f, 1.0f);
-	}
 }
 
 void Trail::AddPoint(float x, float y)
@@ -312,6 +295,10 @@ Trail* TrailHolder::AllocTrailFromDef(int theRenderOrder, TrailDefinition* theDe
 	aTrail->mTrailHolder = this;
 	aTrail->mDefinition = theDefinition;
 
+	for (int i = 0; i < 4; i++)
+	{
+		aTrail->mTrailInterp[i] = RandRangeFloat(0.0f, 1.0f);
+	}
 	float aDurationInterp = RandRangeFloat(0.0f, 1.0f);
 	aTrail->mTrailDuration = static_cast<int>(FloatTrackEvaluate(aTrail->mDefinition->mTrailDuration, 0.0f, aDurationInterp));
 	return aTrail;

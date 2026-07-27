@@ -91,8 +91,6 @@ public:
 	int						mLastMouseY;
 	int						mDownButtons;
 	int						mActualDownButtons;
-	int						mLastInputUpdateCnt;
-	
 	bool					mKeyDown[0xFF];
 	int						mLastDownButtonId;	
 	
@@ -143,6 +141,7 @@ public:
 	bool					MouseExit(int x, int y);
 	void					MouseWheel(int theDelta);
 	bool					KeyChar(char theChar);
+	bool					KeyText(std::string_view theText);
 	bool					KeyDown(KeyCode key);
 	bool					KeyUp(KeyCode key);
 

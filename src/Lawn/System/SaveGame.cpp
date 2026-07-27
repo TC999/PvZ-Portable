@@ -41,6 +41,7 @@
 #include "misc/Buffer.h"
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 static constexpr const char* FILE_COMPILE_TIME_STRING = "Jul  2 201011:47:03"; // The compile time of 1.2.0.1073 GOTY
@@ -557,12 +558,6 @@ static void SyncGameObjectPortable(PortableSaveContext& theContext, GameObject& 
 
 static constexpr const uint32_t PORTABLE_FIELD_TAIL = 100U;
 
-template <typename T>
-static void ResetItemForRead(T& theItem)
-{
-	std::fill_n(reinterpret_cast<unsigned char*>(&theItem), sizeof(T), 0);
-}
-
 template <typename TEnum>
 static void SyncEnum32(PortableSaveContext& theContext, TEnum& theValue)
 {
@@ -866,6 +861,7 @@ static void SyncZombieTailPortable(PortableSaveContext& theContext, Zombie& theZ
 	theContext.SyncBool(theZombie.mIsFireBall);
 	SyncEnumU32(theContext, theZombie.mMoweredReanimID);
 	theContext.SyncInt32(theZombie.mLastPortalX);
+	SyncEnumU32(theContext, theZombie.mZombatarHeadReanimID);
 }
 
 static void SyncPlantTailPortable(PortableSaveContext& theContext, Plant& thePlant)
@@ -1368,8 +1364,8 @@ static void SyncDataArrayPortable(PortableSaveContext& theContext, DataArray<T>&
 
 	for (uint32_t i = 0; i < theDataArray.mMaxUsedCount; i++)
 	{
-		theContext.SyncUInt32(theDataArray.mBlock[i].mID);
-		theSyncFn(theDataArray.mBlock[i].mItem);
+		theContext.SyncUInt32(theDataArray.DataArrayGetIDAt(i));
+		theSyncFn(theDataArray.DataArrayGetItemAt(i));
 	}
 }
 
@@ -1389,7 +1385,7 @@ static void SyncDataArrayIdsOnlyPortable(PortableSaveContext& theContext, DataAr
 
 	for (uint32_t i = 0; i < theDataArray.mMaxUsedCount; i++)
 	{
-		theContext.SyncUInt32(theDataArray.mBlock[i].mID);
+		theContext.SyncUInt32(theDataArray.DataArrayGetIDAt(i));
 	}
 }
 
@@ -1409,12 +1405,12 @@ static void SyncDataArrayPortableTLV(PortableSaveContext& theContext, DataArray<
 
 	for (uint32_t i = 0; i < theDataArray.mMaxUsedCount; i++)
 	{
-		theContext.SyncUInt32(theDataArray.mBlock[i].mID);
+		theContext.SyncUInt32(theDataArray.DataArrayGetIDAt(i));
 		if (theContext.mReading)
 		{
 			uint32_t aItemSize = 0;
 			theContext.SyncUInt32(aItemSize);
-			ResetItemForRead(theDataArray.mBlock[i].mItem);
+			T& anItem = theDataArray.DataArrayResetItemAt(i);
 			std::vector<unsigned char> aItemData;
 			aItemData.resize(aItemSize);
 			if (aItemSize > 0)
@@ -1429,17 +1425,17 @@ static void SyncDataArrayPortableTLV(PortableSaveContext& theContext, DataArray<
 				const unsigned char* aFieldData = nullptr;
 				if (!aReader.ReadBytes(aFieldData, aFieldSize))
 					break;
-				theReadFn(aFieldId, aFieldData, aFieldSize, theDataArray.mBlock[i].mItem);
+				theReadFn(aFieldId, aFieldData, aFieldSize, anItem);
 			}
 		}
 		else
 		{
-			bool aActive = (theDataArray.mBlock[i].mID & DATA_ARRAY_KEY_MASK) != 0;
+			bool aActive = (theDataArray.DataArrayGetIDAt(i) & DATA_ARRAY_KEY_MASK) != 0;
 			uint32_t aItemSize = 0;
 			std::vector<unsigned char> aItemData;
 			if (aActive)
 			{
-				theWriteFn(aItemData, theDataArray.mBlock[i].mItem);
+				theWriteFn(aItemData, theDataArray.DataArrayGetItemAt(i));
 				aItemSize = static_cast<uint32_t>(aItemData.size());
 			}
 			theContext.SyncUInt32(aItemSize);
@@ -2354,7 +2350,7 @@ static bool WriteChunkV4(std::vector<unsigned char>& thePayload, uint32_t theChu
 	aChunkWriter.OpenMemory(0x200);
 	aChunkWriter.WriteUInt32(SAVE4_CHUNK_VERSION);
 	aChunkWriter.WriteUInt32(1U);
-	aChunkWriter.WriteUInt32(static_cast<uint32_t>(aFieldWriter.GetDataLen()));
+	aChunkWriter.WriteUInt32(aFieldWriter.GetDataLen());
 	aChunkWriter.WriteBytes(aFieldWriter.GetDataPtr(), aFieldWriter.GetDataLen());
 
 	std::vector<unsigned char> aChunk;
@@ -2635,8 +2631,15 @@ public:
 public:
 	inline int		ByteLeftToRead() { return (mBuffer.mDataBitSize - mBuffer.mReadBitPos + 7) / 8; }
 	void			SyncBytes(void* theDest, int theReadSize);
-	void			SyncInt(int& theInt);
-	inline void		SyncUint(uint32_t& theInt) { SyncInt((signed int&)theInt); }
+	void			SyncInt32(int32_t& theInt32);
+	void			SyncUInt32(uint32_t& theUInt32);
+	inline void		SyncInt(int& theInt)
+	{
+		int32_t aValue = theInt;
+		SyncInt32(aValue);
+		if (mReading)
+			theInt = aValue;
+	}
 	void			SyncReanimationDef(ReanimatorDefinition*& theDefinition);
 	void			SyncParticleDef(TodParticleDefinition*& theDefinition);
 	void			SyncTrailDef(TrailDefinition*& theDefinition);
@@ -2653,11 +2656,11 @@ void SaveGameContext::SyncBytes(void* theDest, int theReadSize)
 			mFailed = true;
 		}
 
-		aReadSize = mFailed ? 0 : mBuffer.ReadLong();
+		aReadSize = mFailed ? 0 : mBuffer.ReadInt32();
 	}
 	else
 	{
-		mBuffer.WriteLong(theReadSize);
+		mBuffer.WriteInt32(theReadSize);
 	}
 
 	if (mReading)
@@ -2682,7 +2685,7 @@ void SaveGameContext::SyncBytes(void* theDest, int theReadSize)
 	}
 }
 
-void SaveGameContext::SyncInt(int& theInt)
+void SaveGameContext::SyncInt32(int32_t& theInt32)
 {
 	if (mReading)
 	{
@@ -2691,11 +2694,28 @@ void SaveGameContext::SyncInt(int& theInt)
 			mFailed = true;
 		}
 
-		theInt = mFailed ? 0 : mBuffer.ReadLong();
+		theInt32 = mFailed ? 0 : mBuffer.ReadInt32();
 	}
 	else
 	{
-		mBuffer.WriteLong(theInt);
+		mBuffer.WriteInt32(theInt32);
+	}
+}
+
+void SaveGameContext::SyncUInt32(uint32_t& theUInt32)
+{
+	if (mReading)
+	{
+		if (ByteLeftToRead() < 4)
+		{
+			mFailed = true;
+		}
+
+		theUInt32 = mFailed ? 0 : mBuffer.ReadUInt32();
+	}
+	else
+	{
+		mBuffer.WriteUInt32(theUInt32);
 	}
 }
 
@@ -2966,12 +2986,39 @@ static void SyncTrail(Board* theBoard, Trail* theTrail, SaveGameContext& theCont
 	}
 }
 
+template <typename T>
+struct LegacyDataArrayItem
+{
+	alignas(T) unsigned char mItem[sizeof(T)];
+	unsigned int mID;
+};
+
 template <typename T> inline static void SyncDataArray(SaveGameContext& theContext, DataArray<T>& theDataArray)
 {
-	theContext.SyncUint(theDataArray.mFreeListHead);
-	theContext.SyncUint(theDataArray.mMaxUsedCount);
-	theContext.SyncUint(theDataArray.mSize);
-	theContext.SyncBytes(theDataArray.mBlock, theDataArray.mMaxUsedCount * sizeof(*theDataArray.mBlock));
+	theContext.SyncUInt32(theDataArray.mFreeListHead);
+	theContext.SyncUInt32(theDataArray.mMaxUsedCount);
+	theContext.SyncUInt32(theDataArray.mSize);
+	auto aBlock = std::make_unique<LegacyDataArrayItem<T>[]>(theDataArray.mMaxUsedCount);
+	if (!theContext.mReading)
+	{
+		for (uint32_t i = 0; i < theDataArray.mMaxUsedCount; i++)
+		{
+			auto& aSlot = aBlock[i];
+			std::copy_n(reinterpret_cast<unsigned char*>(&theDataArray.DataArrayGetItemAt(i)), sizeof(T), aSlot.mItem);
+			aSlot.mID = theDataArray.DataArrayGetIDAt(i);
+		}
+	}
+	theContext.SyncBytes(aBlock.get(), theDataArray.mMaxUsedCount * sizeof(aBlock[0]));
+	if (!theContext.mReading)
+		return;
+
+	for (uint32_t i = 0; i < theDataArray.mMaxUsedCount; i++)
+	{
+		auto& aSlot = aBlock[i];
+		theDataArray.DataArrayGetIDAt(i) = aSlot.mID;
+		if (aSlot.mID & DATA_ARRAY_KEY_MASK)
+			std::copy_n(aSlot.mItem, sizeof(T), reinterpret_cast<unsigned char*>(&theDataArray.DataArrayGetItemAt(i)));
+	}
 }
 
 static void SyncBoard(SaveGameContext& theContext, Board* theBoard)
@@ -3029,14 +3076,14 @@ static void SyncBoard(SaveGameContext& theContext, Board* theBoard)
 			theContext.mFailed = true;
 		}
 
-		if (theContext.mFailed || static_cast<uint32_t>(theContext.mBuffer.ReadLong()) != SAVE_FILE_MAGIC_NUMBER)
+		if (theContext.mFailed || theContext.mBuffer.ReadUInt32() != SAVE_FILE_MAGIC_NUMBER)
 		{
 			theContext.mFailed = true;
 		}
 	}
 	else
 	{
-		theContext.mBuffer.WriteLong(SAVE_FILE_MAGIC_NUMBER);
+		theContext.mBuffer.WriteUInt32(SAVE_FILE_MAGIC_NUMBER);
 	}
 }
 

@@ -142,6 +142,7 @@ StoreScreen::StoreScreen(LawnApp* theApp) : Dialog(nullptr, nullptr, DIALOG_STOR
         mNextButton->SetDisabled(true);
     }
     mDrawnOnce = false;
+    mAddedAtUpdateCount = mApp->mUpdateCount;
     mGoToTreeNow = false;
     mPurchasedFullVersion = false;
     mTrialLockedWhenStoreOpened = mApp->IsTrialStageLocked();
@@ -216,7 +217,7 @@ bool StoreScreen::IsItemSoldOut(StoreItem theStoreItem)
     else if (theStoreItem == STORE_ITEM_BONUS_LAWN_MOWER)
         return aPlayer->mPurchases[STORE_ITEM_BONUS_LAWN_MOWER] >= 2;
     else if (IsPottedPlant(theStoreItem))
-        return mApp->mZenGarden->IsZenGardenFull(true) || aPlayer->mPurchases[theStoreItem] == GetCurrentDaysSince2000();
+        return mApp->mZenGarden->IsZenGardenFull(true) || aPlayer->mPurchases[theStoreItem] == static_cast<uint32_t>(GetCurrentDaysSince2000(mApp->GetNowTime()));
     else return aPlayer->mPurchases[theStoreItem];
 
     unreachable();
@@ -655,7 +656,9 @@ void StoreScreen::Update()
 
     if (mApp->mCrazyDaveState == CRAZY_DAVE_OFF)
     {
-        if (mDrawnOnce)
+        // demo sessions preload by update tick instead of the frame-scheduled mDrawnOnce
+        bool aShouldPreload = mApp->IsInDemoMode() ? (mApp->mUpdateCount - mAddedAtUpdateCount >= 2U) : mDrawnOnce;
+        if (aShouldPreload)
         {
             StorePreload();
         }
@@ -988,7 +991,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
             }
             else if (theStoreItem == STORE_ITEM_STINKY_THE_SNAIL)
             {
-                uint32_t aTime = static_cast<uint32_t>(time(0));
+                uint32_t aTime = static_cast<uint32_t>(mApp->GetNowTime());
                 if (aTime == 0) aTime = 1;
                 mApp->mPlayerInfo->mPurchases[theStoreItem] = aTime;
             }
@@ -1011,7 +1014,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
             else if (theStoreItem == STORE_ITEM_TREE_OF_WISDOM)
             {
                 mApp->mPlayerInfo->mPurchases[theStoreItem] = 1;
-                mApp->mPlayerInfo->mChallengeRecords[GAMEMODE_TREE_OF_WISDOM] = 1;
+                mApp->mPlayerInfo->mChallengeRecords[GAMEMODE_TREE_OF_WISDOM - GAMEMODE_SURVIVAL_NORMAL_STAGE_1] = 1;
 
                 LawnDialog* aDialog = (LawnDialog*)mApp->DoDialog(
                     DIALOG_STORE_PURCHASE, 
@@ -1039,7 +1042,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
                 mApp->mZenGarden->AddPottedPlant(&mPottedPlantSpecs);
                 mPottedPlantSpecs.InitializePottedPlant(SEED_MARIGOLD);
                 mPottedPlantSpecs.mDrawVariation = (DrawVariation)RandRangeInt(VARIATION_MARIGOLD_WHITE, VARIATION_MARIGOLD_LIGHT_GREEN);
-                mApp->mPlayerInfo->mPurchases[theStoreItem] = GetCurrentDaysSince2000();
+                mApp->mPlayerInfo->mPurchases[theStoreItem] = GetCurrentDaysSince2000(mApp->GetNowTime());
             }
             else
             {

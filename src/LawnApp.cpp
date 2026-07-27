@@ -27,6 +27,7 @@
 #include "Lawn/Zombie.h"
 #include "Lawn/Cutscene.h"
 #include "GameConstants.h"
+#include "ProjectVersion.h"
 #include "Lawn/Challenge.h"
 #include "Lawn/ZenGarden.h"
 #include "Sexy.TodLib/Trail.h"
@@ -59,6 +60,7 @@
 #include "Lawn/System/ReanimationLawn.h"
 #include "Lawn/Widget/ChallengeScreen.h"
 #include "Lawn/Widget/NewOptionsDialog.h"
+#include "Lawn/Widget/ZombatarTOS.h"
 #include "Lawn/Widget/SeedChooserScreen.h"
 #include "widget/WidgetManager.h"
 #include "misc/ResourceManager.h"
@@ -151,6 +153,9 @@ LawnApp::LawnApp()
 	mAutoStartLoadingThread = false;
 	mDebugKeysEnabled = false;
 	mProdName = "io.github.wszqkzqk.pvz-portable";
+	mProductVersion = PVZP_VERSION;
+	mBuildNum = PVZP_BUILD_NUMBER;
+	mCommitDate = PVZP_COMMIT_DATE;
 	std::string aTitleName = "PvZ Portable";
 	mTitle = aTitleName;
 	mCustomCursorsEnabled = false;
@@ -726,6 +731,14 @@ void LawnApp::DoNewOptions(bool theFromGameSelector)
 	mWidgetManager->SetFocus(aDialog);
 }
 
+void LawnApp::ShowZombatarTOS()
+{
+	ZombatarTOS* aDialog = new ZombatarTOS(this);
+	CenterDialog(aDialog, aDialog->mWidth, aDialog->mHeight);
+	AddDialog(Dialogs::DIALOG_ZOMBATAR_TOS, aDialog);
+	mWidgetManager->SetFocus(aDialog);
+}
+
 // GOTY @Patoke: 0x453410
 AlmanacDialog* LawnApp::DoAlmanacDialog(SeedType theSeedType, ZombieType theZombieType)
 {
@@ -1269,6 +1282,9 @@ void LawnApp::Init()
 	if (mShutdown) // MakeWindow() failed
 		return;
 
+	if (mRecordingDemoBuffer || mPlayingDemoBuffer)
+		mAppRandSeed = mRandSeed; // demo sessions derive the app-level seed from the recorded one
+
 	// @Patoke: horrible debug checks, breaks the whole exe in release mode
 //#ifdef PVZ_DEBUG
 	TodAssertInitForApp();
@@ -1377,7 +1393,7 @@ bool LawnApp::DebugKeyDown(int theKey)
 	return SexyAppBase::DebugKeyDown(theKey);
 }
 
-void LawnApp::HandleCmdLineParam(const std::string& theParamName, const std::string& theParamValue)
+void LawnApp::HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue)
 {
 	if (theParamName == "-tod")
 	{
@@ -1745,6 +1761,7 @@ void LawnApp::LoadingThreadProc()
 		return;
 
 	TodStringListLoad("Properties/LawnStrings.txt");
+	TodStringListReadFile("Properties/ZombatarTOS.txt");
 
 	// Load localized properties AFTER LawnStrings so they can override string values
 	LoadProperties("properties/default.xml", false, false);
