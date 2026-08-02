@@ -32,6 +32,7 @@
 #include "../Sexy.TodLib/Reanimator.h"
 #include "../Sexy.TodLib/Attachment.h"
 #include "Widget/AchievementsScreen.h"
+#include <algorithm>
 
 constinit const ProjectileDefinition gProjectileDefinition[] = {
 	{ .mProjectileType = ProjectileType::PROJECTILE_PEA, .mImageRow = 0, .mDamage = 20 },
@@ -83,7 +84,7 @@ void Projectile::ProjectileInitialize(int theX, int theY, int theRenderOrder, in
 	mCobTargetRow = 0;
 	mTargetZombieID = ZombieID::ZOMBIEID_NULL;
 	mOnHighGround = mBoard->mGridSquareType[aGridX][theRow] == GridSquareType::GRIDSQUARE_HIGH_GROUND;
-	if (mBoard->StageHasRoof())
+	if (mBoard->StageHasRoof() && theX < 480)
 	{
 		mShadowY -= 12.0f;
 	}
@@ -157,9 +158,10 @@ Plant* Projectile::FindCollisionTargetPlant()
 {
 	Rect aProjectileRect = GetProjectileRect();
 
-	Plant* aPlant = nullptr;
-	while (mBoard->IteratePlants(aPlant))
+	for (Plant* aPlant : mBoard->mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mRow != mRow)
 			continue;
 
@@ -199,9 +201,10 @@ bool Projectile::PeaAboutToHitTorchwood()
 	if (mProjectileType != ProjectileType::PROJECTILE_PEA && mProjectileType != ProjectileType::PROJECTILE_SNOWPEA)
 		return false;
 
-	Plant* aPlant = nullptr;
-	while (mBoard->IteratePlants(aPlant))
+	for (Plant* aPlant : mBoard->mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == SeedType::SEED_TORCHWOOD && aPlant->mRow == mRow && !aPlant->NotOnGround() && mHitTorchwoodGridX != aPlant->mPlantCol)
 		{
 			Rect aPlantAttackRect = aPlant->GetPlantAttackRect(PlantWeapon::WEAPON_PRIMARY);
@@ -227,12 +230,13 @@ Zombie* Projectile::FindCollisionTarget()
 	Zombie* aBestZombie = nullptr;
 	int aMinX = 0;
 
-	Zombie* aZombie = nullptr;
-	while (mBoard->IterateZombies(aZombie))
+	for (Zombie* aZombie : mBoard->mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if ((aZombie->mZombieType == ZombieType::ZOMBIE_BOSS || aZombie->mRow == mRow) && aZombie->EffectedByDamage(static_cast<unsigned int>(mDamageRangeFlags)))
 		{
-			if (aZombie->mZombiePhase == ZombiePhase::PHASE_SNORKEL_WALKING_IN_POOL && mPosZ >= 45.0f)
+			if (aZombie->mZombiePhase == ZombiePhase::PHASE_SNORKEL_WALKING_IN_POOL && mPosZ <= 45.0f)
 			{
 				continue;
 			}
@@ -243,7 +247,7 @@ Zombie* Projectile::FindCollisionTarget()
 			}
 
 			Rect aZombieRect = aZombie->GetZombieRect();
-			if (GetRectOverlap(aProjectileRect, aZombieRect) > 0)
+			if (GetRectOverlap(aProjectileRect, aZombieRect) >= 0)
 			{
 				if (aBestZombie == nullptr || aZombie->mX < aMinX)
 				{
@@ -286,7 +290,7 @@ void Projectile::CheckForCollision()
 		return;
 	}
 
-	if (mProjectileType == ProjectileType::PROJECTILE_STAR && (mPosY > 600.0f || mPosY < 0.0f))
+	if (mProjectileType == ProjectileType::PROJECTILE_STAR && (mPosY > 600.0f || mPosY < 40.0f))
 	{
 		Die();
 		return;
@@ -458,9 +462,10 @@ void Projectile::DoSplashDamage(Zombie* theZombie)
 	const ProjectileDefinition& aProjectileDef = GetProjectileDef();
 
 	int aZombiesGetSplashed = 0;
-	Zombie* aZombie = nullptr;
-	while (mBoard->IterateZombies(aZombie))
+	for (Zombie* aZombie : mBoard->mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie != theZombie && IsZombieHitBySplash(aZombie))
 		{
 			aZombiesGetSplashed++;
@@ -482,9 +487,10 @@ void Projectile::DoSplashDamage(Zombie* theZombie)
 		aSplashDamage = std::max(aSplashDamage, 1);
 	}
 
-	aZombie = nullptr;
-	while (mBoard->IterateZombies(aZombie))
+	for (Zombie* aZombie : mBoard->mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (IsZombieHitBySplash(aZombie))
 		{
 			unsigned int aDamageFlags = GetDamageFlags(aZombie);
@@ -921,7 +927,7 @@ void Projectile::DoImpact(Zombie* theZombie)
 				aPosX -= 60.0f;
 			}
 
-			aPosY = ClampFloat(aPosY, 20.0f, 100.0f);
+			aPosY = std::clamp(aPosY, 20.0f, 100.0f);
 			theZombie->AddAttachedParticle(aPosX, aPosY, aEffect);
 		}
 		else
@@ -1138,7 +1144,7 @@ void Projectile::DrawShadow(Graphics* g)
 
 	if (mMotionType == ProjectileMotion::MOTION_LOBBED)
 	{
-		float aHeight = ClampFloat(-mPosZ, 0.0f, 200.0f);
+		float aHeight = std::clamp(-mPosZ, 0.0f, 200.0f);
 		aScale *= 200.0f / (aHeight + 200.0f);
 	}
 

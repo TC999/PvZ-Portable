@@ -28,6 +28,7 @@
 #include "../Sexy.TodLib/TodCommon.h"
 #include "../Sexy.TodLib/Reanimator.h"
 #include "../Sexy.TodLib/TodStringFile.h"
+#include <algorithm>
 
 //(0x4081F1)
 MessageWidget::MessageWidget(LawnApp* theApp)
@@ -42,7 +43,11 @@ MessageWidget::MessageWidget(LawnApp* theApp)
 	mSlideOffTime = 100;
 	mReanimType = ReanimationType::REANIM_NONE;
 	mTextReanimCount = 0;
-	memset(mTextReanimID, static_cast<int>(ReanimationID::REANIMATIONID_NULL), MAX_MESSAGE_LENGTH);
+	for (int i = 0; i < MAX_MESSAGE_LENGTH; i++)
+	{
+		mTextReanimID[i] = ReanimationID::REANIMATIONID_NULL;
+		mTextReanimByteOffset[i] = 0;
+	}
 }
 
 void MessageWidget::ClearReanim()
@@ -70,11 +75,37 @@ void MessageWidget::ClearLabel()
 	}
 }
 
+// Enforce the label limits (buffer size, line count) in this single place;
+// the rest of the class relies on them.
+static void TruncateLabel(std::string& theLabel)
+{
+	size_t aBytePos = 0;
+	int aLineCount = 1;
+	while (aBytePos < theLabel.size())
+	{
+		size_t aNext = aBytePos;
+		char32_t aChar;
+		if (!UTF8DecodeNext(theLabel, aNext, aChar))
+		{
+			theLabel.resize(aBytePos); // drop everything from the invalid byte on
+			return;
+		}
+		if (aNext > MAX_MESSAGE_LENGTH - 1 || (aChar == U'\n' && aLineCount == MAX_REANIM_LINES))
+		{
+			theLabel.resize(aBytePos);
+			return;
+		}
+		if (aChar == U'\n')
+			aLineCount++;
+		aBytePos = aNext;
+	}
+}
+
 // GOTY @Patoke: inlined 0x459715
 void MessageWidget::SetLabel(std::string_view theNewLabel, MessageStyle theMessageStyle)
 {
 	std::string aLabel = TodStringTranslate(theNewLabel);
-	TOD_ASSERT(aLabel.length() < MAX_MESSAGE_LENGTH - 1);
+	TruncateLabel(aLabel);
 
 	if (mReanimType != ReanimationType::REANIM_NONE && mDuration > 0)
 	{
@@ -273,7 +304,7 @@ void MessageWidget::DrawReanimatedText(Graphics* g, _Font* theFont, const Color&
 		ReanimatorTransform aTransform;
 		aTextReanim->GetCurrentTransform(2, &aTransform);
 
-		int anAlpha = ClampInt(FloatRoundToInt(theColor.mAlpha * aTransform.mAlpha), 0, 255);
+		int anAlpha = std::clamp(FloatRoundToInt(theColor.mAlpha * aTransform.mAlpha), 0, 255);
 		if (anAlpha <= 0)
 		{
 			break;  // 文本动画完全透明时，直接返回
@@ -443,7 +474,7 @@ void MessageWidget::Draw(Graphics* g)
 		}
 		if (aFadeOut)
 		{
-			aColor.mAlpha = ClampInt(mDuration * 15, 0, 255);
+			aColor.mAlpha = std::clamp(mDuration * 15, 0, 255);
 			aOutlineColor.mAlpha = aColor.mAlpha;
 		}
 

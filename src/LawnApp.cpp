@@ -19,14 +19,16 @@
  * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
  */
 
-//#include <corecrt.h>
 #include <time.h>
 #include "LawnApp.h"
+#include "Resources.h"
+#include "Lawn/LawnCommon.h"
 #include "Lawn/Board.h"
 #include "Lawn/Plant.h"
 #include "Lawn/Zombie.h"
 #include "Lawn/Cutscene.h"
 #include "GameConstants.h"
+#include "ProjectVersion.h"
 #include "Lawn/Challenge.h"
 #include "Lawn/ZenGarden.h"
 #include "Sexy.TodLib/Trail.h"
@@ -59,9 +61,11 @@
 #include "Lawn/System/ReanimationLawn.h"
 #include "Lawn/Widget/ChallengeScreen.h"
 #include "Lawn/Widget/NewOptionsDialog.h"
+#include "Lawn/Widget/ZombatarTOS.h"
 #include "Lawn/Widget/SeedChooserScreen.h"
 #include "widget/WidgetManager.h"
 #include "misc/ResourceManager.h"
+#include <algorithm>
 
 #include "widget/Checkbox.h"
 #include "widget/Dialog.h"
@@ -106,6 +110,10 @@ bool LawnHasUsedCheatKeys()
 
 LawnApp::LawnApp()
 {
+	// Replace the base-class resource manager with the Tod-capable subclass.
+	delete mResourceManager;
+	mResourceManager = new TodResourceManager(this);
+
 	mBoard = nullptr;
 	mGameSelector = nullptr;
 	mChallengeScreen = nullptr;
@@ -151,6 +159,9 @@ LawnApp::LawnApp()
 	mAutoStartLoadingThread = false;
 	mDebugKeysEnabled = false;
 	mProdName = "io.github.wszqkzqk.pvz-portable";
+	mProductVersion = PVZP_VERSION;
+	mBuildNum = PVZP_BUILD_NUMBER;
+	mCommitDate = PVZP_COMMIT_DATE;
 	std::string aTitleName = "PvZ Portable";
 	mTitle = aTitleName;
 	mCustomCursorsEnabled = false;
@@ -188,7 +199,6 @@ LawnApp::~LawnApp()
 	if (mBoard)
 	{
 		mBoardResult = BoardResult::BOARDRESULT_QUIT_APP;
-		mBoard->TryToSaveGame();
 		WriteCurrentUserConfig();
 		KillBoard();
 	}
@@ -320,6 +330,16 @@ void LawnApp::Shutdown()
 	if (!mShutdown)
 	{
 		SexyAppBase::Shutdown();
+	}
+}
+
+void LawnApp::ShutdownHook()
+{
+	// Save mid-level game while the music is still alive, before Shutdown() stops it.
+	if (mBoard)
+	{
+		mBoardResult = BoardResult::BOARDRESULT_QUIT_APP;
+		mBoard->TryToSaveGame();
 	}
 }
 
@@ -714,6 +734,14 @@ void LawnApp::DoNewOptions(bool theFromGameSelector)
 	NewOptionsDialog* aDialog = new NewOptionsDialog(this, theFromGameSelector);
 	CenterDialog(aDialog, IMAGE_OPTIONS_MENUBACK->mWidth, IMAGE_OPTIONS_MENUBACK->mHeight);
 	AddDialog(Dialogs::DIALOG_NEWOPTIONS, aDialog);
+	mWidgetManager->SetFocus(aDialog);
+}
+
+void LawnApp::ShowZombatarTOS()
+{
+	ZombatarTOS* aDialog = new ZombatarTOS(this);
+	CenterDialog(aDialog, aDialog->mWidth, aDialog->mHeight);
+	AddDialog(Dialogs::DIALOG_ZOMBATAR_TOS, aDialog);
 	mWidgetManager->SetFocus(aDialog);
 }
 
@@ -1260,10 +1288,13 @@ void LawnApp::Init()
 	if (mShutdown) // MakeWindow() failed
 		return;
 
+	if (mRecordingDemoBuffer || mPlayingDemoBuffer)
+		mAppRandSeed = mRandSeed; // demo sessions derive the app-level seed from the recorded one
+
 	// @Patoke: horrible debug checks, breaks the whole exe in release mode
 //#ifdef PVZ_DEBUG
 	TodAssertInitForApp();
-	TodLog("session id: %u", mSessionID);
+	TodLogLn("session id: %u", mSessionID);
 //#endif
 
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
@@ -1368,7 +1399,7 @@ bool LawnApp::DebugKeyDown(int theKey)
 	return SexyAppBase::DebugKeyDown(theKey);
 }
 
-void LawnApp::HandleCmdLineParam(const std::string& theParamName, const std::string& theParamValue)
+void LawnApp::HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue)
 {
 	if (theParamName == "-tod")
 	{
@@ -1736,6 +1767,7 @@ void LawnApp::LoadingThreadProc()
 		return;
 
 	TodStringListLoad("Properties/LawnStrings.txt");
+	TodStringListReadFile("Properties/ZombatarTOS.txt");
 
 	// Load localized properties AFTER LawnStrings so they can override string values
 	LoadProperties("properties/default.xml", false, false);
@@ -1754,7 +1786,7 @@ void LawnApp::LoadingThreadProc()
 	}
 	mNumLoadingThreadTasks += 636;
 	mNumLoadingThreadTasks += GetNumPreloadingTasks();
-	mNumLoadingThreadTasks += mMusic->GetNumLoadingTasks();
+	mNumLoadingThreadTasks += Music::MUSIC_LOADING_TASKS;
 
 	PerfTimer aTimer;
 	aTimer.Start();
@@ -1767,6 +1799,7 @@ void LawnApp::LoadingThreadProc()
 	LoadGroup("LoadingFonts", 54);
 	if (mLoadingFailed || mShutdown || mCloseRequest)
 		return;
+	mDefaultFont = FONT_PICO129; // framework widgets fall back to this when no font is set
 
 	aHesitationResources.EndBracket();
 	TodTrace("loading '%s' %d ms", "resources", static_cast<int>(aTimer.GetDuration()));
@@ -2078,7 +2111,7 @@ void LawnApp::PlayFoleyPitch(FoleyType theFoleyType, float thePitch)
 
 std::string LawnApp::GetStageString(int theLevel)
 {
-	int aArea = ClampInt((theLevel - 1) / LEVELS_PER_AREA + 1, 1, ADVENTURE_AREAS + 1);
+	int aArea = std::clamp((theLevel - 1) / LEVELS_PER_AREA + 1, 1, ADVENTURE_AREAS + 1);
 	int aSub = theLevel - (aArea - 1) * LEVELS_PER_AREA;
 	return StrFormat("%d-%d", aArea, aSub);
 }
@@ -3093,7 +3126,7 @@ int LawnApp::GetNumPreloadingTasks()
 
 void LawnApp::PreloadForUser()
 {
-	int aNumTasks = mNumLoadingThreadTasks + GetNumPreloadingTasks();
+	int aNumTasks = mCompletedLoadingThreadTasks + GetNumPreloadingTasks();
 	if (mTitleScreen && mTitleScreen->mQuickLoadKey != KeyCode::KEYCODE_UNKNOWN)
 	{
 		TodTrace("preload canceled\n");
@@ -3147,7 +3180,7 @@ void LawnApp::PreloadForUser()
 
 		for (ZombieType i = ZombieType::ZOMBIE_NORMAL; i < ZombieType::NUM_ZOMBIE_TYPES; i = static_cast<ZombieType>(static_cast<int>(i) + 1))
 		{
-			if (HasFinishedAdventure() || mPlayerInfo->mLevel >= GetZombieDefinition(i).mStartingLevel)
+			if (!HasFinishedAdventure() && mPlayerInfo->mLevel < GetZombieDefinition(i).mStartingLevel)
 			{
 				continue;
 			}

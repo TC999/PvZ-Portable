@@ -237,6 +237,13 @@ void Widget::Update()
 
 void Widget::KeyChar(char){}
 
+void Widget::KeyText(std::string_view theText)
+{
+	for (const char aChar : theText) // legacy widgets get ASCII via KeyChar; non-ASCII needs an override
+		if (static_cast<unsigned char>(aChar) >= 32 && static_cast<unsigned char>(aChar) < 128)
+			KeyChar(aChar);
+}
+
 void Widget::KeyDown(KeyCode theKey)
 {
 	if (theKey == KEYCODE_TAB)
@@ -372,7 +379,7 @@ int Widget::GetWordWrappedHeight(Graphics* g, int theWidth, std::string_view the
 
 int Widget::GetNumDigits(int theNumber)
 {		
-	int aDivisor = 10;
+	int64_t aDivisor = 10;
 	int aNumDigits = 1;
 	while (theNumber >= aDivisor)
 	{
@@ -385,7 +392,7 @@ int Widget::GetNumDigits(int theNumber)
 
 void Widget::WriteNumberFromStrip(Graphics* g, int theNumber, int theX, int theY, Image* theNumberStrip, int aSpacing)
 {
-	int aDivisor = 10;
+	int64_t aDivisor = 10;
 	int aNumDigits = 1;
 	while (theNumber >= aDivisor)
 	{

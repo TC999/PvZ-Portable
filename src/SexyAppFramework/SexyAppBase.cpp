@@ -27,14 +27,20 @@
 //#define SEXY_MEMTRACE
 
 #include <string>
+#include <string_view>
 #include <fstream>
 #include <time.h>
 #include <math.h>
 #include <vector>
 #include <algorithm>
+#include <cinttypes>
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
+#include <charconv>
 #include <filesystem>
+#include <system_error>
+#include <tuple>
 
 #include <SDL.h>
 
@@ -50,7 +56,6 @@
 #endif
 
 #include "SexyAppBase.h"
-//#include "misc/SEHCatcher.h"
 #include "widget/WidgetManager.h"
 #include "widget/Widget.h"
 #include "misc/Debug.h"
@@ -58,7 +63,6 @@
 #include "graphics/GLInterface.h"
 #include "graphics/GLImage.h"
 #include "graphics/MemoryImage.h"
-//#include "misc/HTTPTransfer.h"
 #include "widget/Dialog.h"
 #include "imagelib/ImageLib.h"
 #include "sound/SDLSoundManager.h"
@@ -68,7 +72,6 @@
 #include "misc/PerfTimer.h"
 #include "misc/MTRand.h"
 #include "misc/ModVal.h"
-//#include "graphics/SysFont.h"
 #include "misc/ResourceManager.h"
 #include "sound/SDLMusicInterface.h"
 #include <mutex>
@@ -80,8 +83,8 @@
 
 using namespace Sexy;
 
-const int DEMO_FILE_ID = 0x42BEEF78;
-const int DEMO_VERSION = 2;
+constexpr int DEMO_FILE_ID = 0x42BEEF78;
+constexpr int DEMO_VERSION = 6; // v6: text input is recorded as UTF-8 (DEMO_KEY_TEXT)
 
 SexyAppBase* Sexy::gSexyAppBase = nullptr;
 
@@ -316,11 +319,6 @@ SexyAppBase::SexyAppBase()
 	mAutoMuteCount = 0;
 	mDemoMute = false;
 	mMuteOnLostFocus = false;
-	mFPSTime = 0;
-	mFPSStartTick = SDL_GetTicks();
-	mFPSFlipCount = 0;
-	mFPSCount = 0;
-	mFPSDirtyCount = 0;
 	mShowFPS = false;
 	mShowFPSMode = FPS_ShowFPS;
 	mDrawTime = 0;
@@ -383,18 +381,24 @@ SexyAppBase::SexyAppBase()
 
 	mDemoPrefix = "sexyapp";
 	mDemoFileName = mDemoPrefix + ".dmo";
+	mHasCustomDemoFile = false;
+	mDemoRecordFileLimit = 0;
+	mDemoPlayIndex = 0;
 	mPlayingDemoBuffer = false;
 	mManualShutdown = false;
 	mRecordingDemoBuffer = false;
 	mLastDemoMouseX = 0;
 	mLastDemoMouseY = 0;
 	mLastDemoUpdateCnt = 0;
+	mDemoStartTime = 0;
+	mDemoTimeZoneOffset = 0;
 	mDemoNeedsCommand = true;
 	mDemoLoadingComplete = false;
-	mDemoLength = 0;
 	mDemoCmdNum = 0;
-	mDemoCmdOrder = -1; // Means we haven't processed any demo commands yet
 	mDemoCmdBitPos = 0;
+	mDemoCmdUpdateCnt = 0;
+	mDemoQueuedSince = 0;
+	mDemoCommandQueued = false;
 
 	mWidgetManager = new WidgetManager(this);
 	mResourceManager = new ResourceManager(this);
@@ -407,6 +411,8 @@ SexyAppBase::SexyAppBase()
 SexyAppBase::~SexyAppBase()
 {
 	Shutdown();
+
+	WaitForLoadingThread();
 
 	DialogMap::iterator aDialogItr = mDialogMap.begin();
 	while (aDialogItr != mDialogMap.end())
@@ -447,8 +453,6 @@ SexyAppBase::~SexyAppBase()
 		}
 	}
 
-	WaitForLoadingThread();	
-
 	gSexyAppBase = nullptr;
 
 	WriteDemoBuffer();
@@ -475,6 +479,8 @@ bool SexyAppBase::AppCanRestore()
 
 bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 {
+	theError = "Invalid demo file.";
+
 	std::ifstream aFile(PathFromU8(mDemoFileName), std::ios::in | std::ios::binary);
 	if (!aFile)
 	{
@@ -484,6 +490,7 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 
 	uint32_t aFileID;
 	if (!aFile.read(reinterpret_cast<char*>(&aFileID), sizeof(aFileID))) return false;
+	aFileID = FromLE32(aFileID);
 
 	DBG_ASSERTE(aFileID == DEMO_FILE_ID);
 	if (aFileID != DEMO_FILE_ID)
@@ -495,24 +502,31 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 
 	uint32_t aVersion;
 	if (!aFile.read(reinterpret_cast<char*>(&aVersion), sizeof(aVersion))) return false;
-	
-	if (!aFile.read(reinterpret_cast<char*>(&mRandSeed), sizeof(mRandSeed))) return false;
-	SRand(mRandSeed);
+	aVersion = FromLE32(aVersion);
 
-	ushort aStrLen = 4;
-	if (!aFile.read(reinterpret_cast<char*>(&aStrLen), sizeof(aStrLen))) return false;
-	if (aStrLen > 255)
-		aStrLen = 255;
-	char aStr[256];
-	if (!aFile.read(aStr, aStrLen)) return false;
-	aStr[aStrLen] = '\0';
-
-	DBG_ASSERTE(mProductVersion == aStr);
-	if (mProductVersion != aStr)
+	if (aVersion != DEMO_VERSION)
 	{
-		theError = "This demo file appears to be for '" + std::string(aStr) + "'";
+		theError = "Incompatible demo file version.";
 		return false;
 	}
+	
+	if (!aFile.read(reinterpret_cast<char*>(&mRandSeed), sizeof(mRandSeed))) return false;
+	mRandSeed = FromLE32(mRandSeed);
+	SRand(mRandSeed);
+
+	if (!aFile.read(reinterpret_cast<char*>(&mDemoStartTime), sizeof(mDemoStartTime))) return false;
+	mDemoStartTime = FromLE64(mDemoStartTime);
+
+	uint32_t aTimeZoneOffsetLE;
+	if (!aFile.read(reinterpret_cast<char*>(&aTimeZoneOffsetLE), sizeof(aTimeZoneOffsetLE))) return false;
+	mDemoTimeZoneOffset = static_cast<int32_t>(FromLE32(aTimeZoneOffsetLE));
+
+	// Legacy product-version field, consumed but ignored; compatibility is gated by DEMO_VERSION.
+	uint16_t aStrLen = 4;
+	if (!aFile.read(reinterpret_cast<char*>(&aStrLen), sizeof(aStrLen))) return false;
+	aStrLen = std::min<uint16_t>(FromLE16(aStrLen), 255);
+	char aStr[256];
+	if (!aFile.read(aStr, aStrLen)) return false;
 
 	std::streampos aFilePos = aFile.tellg();
 	aFile.seekg(0, std::ios::end);
@@ -524,11 +538,12 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 	// read marker list
 	if (aVersion >= 2) 
 	{
-		int aSize;
+		int32_t aSize;
 		if (!aFile.read(reinterpret_cast<char*>(&aSize), sizeof(aSize))) return false;
+		aSize = static_cast<int32_t>(FromLE32(static_cast<uint32_t>(aSize)));
 		aBytesLeft -= 4;
 
-		if (aSize >= aBytesLeft)
+		if (aSize < 0 || aSize >= aBytesLeft)
 		{
 			theError = "Invalid demo file.";
 			return false;
@@ -541,14 +556,14 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 		aMarkerBuffer.WriteBytes(aBuffer, aSize);
 		aMarkerBuffer.SeekFront();
 
-		int aNumItems = aMarkerBuffer.ReadLong();
-		int i;
+		uint32_t aNumItems = aMarkerBuffer.ReadUInt32();
+		uint32_t i;
 		for (i=0; i<aNumItems && !aMarkerBuffer.AtEnd(); i++)
 		{
 			mDemoMarkerList.push_back(DemoMarker());
 			DemoMarker &aMarker = mDemoMarkerList.back();
 			aMarker.first = aMarkerBuffer.ReadString();
-			aMarker.second = aMarkerBuffer.ReadLong();
+			aMarker.second = aMarkerBuffer.ReadUInt32();
 		}
 
 		if (i!=aNumItems)
@@ -563,7 +578,8 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 	}
 
 	// Read demo commands
-	if (!aFile.read(reinterpret_cast<char*>(&mDemoLength), sizeof(mDemoLength))) return false;
+	uint32_t aDemoLengthLE; // unused by playback; consumed only to keep the stream aligned
+	if (!aFile.read(reinterpret_cast<char*>(&aDemoLengthLE), sizeof(aDemoLengthLE))) return false;
 	aBytesLeft -= 4;
 	
 	if (aBytesLeft <= 0)
@@ -583,6 +599,49 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 	return true;
 }
 
+// Matches the reserved automatic naming pattern: theDemoPrefix + "-YYYYMMDD-HHMMSS[-N].dmo"
+static bool IsStampedDemoFileName(std::string_view theDemoPrefix, std::string_view theName)
+{
+	const size_t aStampLen = theDemoPrefix.size() + 16; // "-YYYYMMDD-HHMMSS"
+	if (theName.size() < aStampLen + 4 || !theName.starts_with(theDemoPrefix) || !theName.ends_with(".dmo"))
+		return false;
+
+	auto aDigits = [](std::string_view theStr) {
+		return !theStr.empty() && std::all_of(theStr.begin(), theStr.end(), [](char c) { return c >= '0' && c <= '9'; });
+	};
+	const std::string_view aStamp(theName.data() + theDemoPrefix.size(), 16);
+	if (aStamp[0] != '-' || aStamp[9] != '-' || !aDigits(aStamp.substr(1, 8)) || !aDigits(aStamp.substr(10, 6)))
+		return false;
+
+	const std::string_view aSuffix(theName.data() + aStampLen, theName.size() - aStampLen - 4);
+	return aSuffix.empty() || (aSuffix[0] == '-' && aDigits(aSuffix.substr(1)));
+}
+
+static std::vector<std::string> FindDemoFiles(std::string_view theDemoPrefix, bool theStampedOnly = false)
+{
+	std::vector<std::string> aFiles;
+
+	const std::string aFilter = std::string(theDemoPrefix) + '-';
+	std::error_code anError;
+	for (const std::filesystem::directory_entry& anEntry : std::filesystem::directory_iterator(".", anError))
+	{
+		std::error_code aTypeError;
+		std::string aName = PathToU8(anEntry.path().filename());
+		if (anEntry.is_regular_file(aTypeError) && aName.starts_with(aFilter) && aName.ends_with(".dmo") &&
+			(!theStampedOnly || IsStampedDemoFileName(theDemoPrefix, aName))) // automatic management is stamped-only; playback is permissive
+			aFiles.push_back(aName);
+	}
+
+	const size_t aStampLen = theDemoPrefix.size() + 16; // "-YYYYMMDD-HHMMSS"
+	auto aKeyOf = [aStampLen](const std::string& theName) {
+		return std::make_tuple(std::string_view(theName).substr(0, aStampLen), theName.size(), std::string_view(theName));
+	};
+	std::sort(aFiles.begin(), aFiles.end(), [&aKeyOf](const std::string& theA, const std::string& theB) {
+		return aKeyOf(theA) > aKeyOf(theB); // stamp, then longer (suffixed) name, then lexicographic
+	});
+	return aFiles;
+}
+
 void SexyAppBase::WriteDemoBuffer()
 {
 	if (mRecordingDemoBuffer)
@@ -590,33 +649,53 @@ void SexyAppBase::WriteDemoBuffer()
 		std::ofstream aFile(PathFromU8(mDemoFileName), std::ios::out | std::ios::binary | std::ios::trunc);
 		if (aFile)
 		{
-			uint32_t aFileID = DEMO_FILE_ID;
+			// Demo file format is little-endian; ToLE*/FromLE* are no-ops on little-endian machines
+			uint32_t aFileID = ToLE32(DEMO_FILE_ID);
 			aFile.write(reinterpret_cast<const char*>(&aFileID), sizeof(aFileID));		
 
-			uint32_t aVersion = DEMO_VERSION;
+			uint32_t aVersion = ToLE32(DEMO_VERSION);
 			aFile.write(reinterpret_cast<const char*>(&aVersion), sizeof(aVersion));
-			
-			aFile.write(reinterpret_cast<const char*>(&mRandSeed), sizeof(mRandSeed));
 
-			ushort aStrLen = mProductVersion.length();
-			aFile.write(reinterpret_cast<const char*>(&aStrLen), sizeof(aStrLen));		
-			aFile.write(mProductVersion.c_str(), static_cast<std::streamsize>(mProductVersion.length()));
+			uint32_t aRandSeed = ToLE32(mRandSeed);
+			aFile.write(reinterpret_cast<const char*>(&aRandSeed), sizeof(aRandSeed));
+
+			uint64_t aDemoStartTime = ToLE64(mDemoStartTime);
+			aFile.write(reinterpret_cast<const char*>(&aDemoStartTime), sizeof(aDemoStartTime));
+
+			uint32_t aTimeZoneOffsetLE = ToLE32(static_cast<uint32_t>(mDemoTimeZoneOffset));
+			aFile.write(reinterpret_cast<const char*>(&aTimeZoneOffsetLE), sizeof(aTimeZoneOffsetLE));
+
+			// Legacy product-version field; kept empty so older builds that still validate it accept recordings from this build.
+			uint16_t aStrLen = ToLE16(0);
+			aFile.write(reinterpret_cast<const char*>(&aStrLen), sizeof(aStrLen));
 
 			Buffer aMarkerBuffer;
-			aMarkerBuffer.WriteLong(mDemoMarkerList.size());
+			aMarkerBuffer.WriteUInt32(static_cast<uint32_t>(mDemoMarkerList.size()));
 			for (DemoMarkerList::iterator aMarkerItr = mDemoMarkerList.begin(); aMarkerItr != mDemoMarkerList.end(); ++aMarkerItr)
 			{
 				aMarkerBuffer.WriteString(aMarkerItr->first);
-				aMarkerBuffer.WriteLong(aMarkerItr->second);
+				aMarkerBuffer.WriteUInt32(aMarkerItr->second);
 			}
 			int aMarkerBufferSize = aMarkerBuffer.GetDataLen();
-			aFile.write(reinterpret_cast<const char*>(&aMarkerBufferSize), sizeof(aMarkerBufferSize));
+			uint32_t aMarkerBufferSizeLE = ToLE32(static_cast<uint32_t>(aMarkerBufferSize));
+			aFile.write(reinterpret_cast<const char*>(&aMarkerBufferSizeLE), sizeof(aMarkerBufferSizeLE));
 			aFile.write(reinterpret_cast<const char*>(aMarkerBuffer.GetDataPtr()), aMarkerBufferSize);
 
-			uint32_t aDemoLength = mUpdateCount;
+			uint32_t aDemoLength = ToLE32(static_cast<uint32_t>(mUpdateCount));
 			aFile.write(reinterpret_cast<const char*>(&aDemoLength), sizeof(aDemoLength));
 
 			aFile.write(reinterpret_cast<const char*>(mDemoBuffer.GetDataPtr()), mDemoBuffer.GetDataLen());
+			aFile.close();
+			// Prune only files matching the automatic naming pattern; explicit targets never trigger retention
+			if (aFile && mDemoRecordFileLimit != 0 && !mHasCustomDemoFile && IsStampedDemoFileName(mDemoPrefix, mDemoFileName))
+			{
+				auto aDemoFiles = FindDemoFiles(mDemoPrefix, true);
+				for (size_t i = mDemoRecordFileLimit; i < aDemoFiles.size(); ++i)
+				{
+					std::error_code anError;
+					std::filesystem::remove(PathFromU8(aDemoFiles[i]), anError);
+				}
+			}
 		}		
 	}
 }
@@ -634,7 +713,7 @@ void SexyAppBase::DemoSyncBuffer(Buffer* theBuffer)
 		DBG_ASSERTE(!mDemoIsShortCmd);
 		DBG_ASSERTE(mDemoCmdNum == DEMO_SYNC);
 
-		uint32_t aLen = mDemoBuffer.ReadLong();
+		uint32_t aLen = mDemoBuffer.ReadUInt32();
 		
 		theBuffer->Clear();
 		for (int i = 0; i < static_cast<int>(aLen); i++)
@@ -645,7 +724,7 @@ void SexyAppBase::DemoSyncBuffer(Buffer* theBuffer)
 		WriteDemoTimingBlock();
 		mDemoBuffer.WriteNumBits(0, 1);
 		mDemoBuffer.WriteNumBits(DEMO_SYNC, 5);		
-		mDemoBuffer.WriteLong(theBuffer->GetDataLen());
+		mDemoBuffer.WriteUInt32(static_cast<uint32_t>(theBuffer->GetDataLen()));
 		mDemoBuffer.WriteBytes(theBuffer->GetDataPtr(), theBuffer->GetDataLen());
 	}
 }
@@ -661,9 +740,9 @@ void SexyAppBase::DemoSyncString(std::string* theString)
 void SexyAppBase::DemoSyncInt(int* theInt)
 {
 	Buffer aBuffer;
-	aBuffer.WriteLong(*theInt);
+	aBuffer.WriteInt32(*theInt);
 	DemoSyncBuffer(&aBuffer);
-	*theInt = aBuffer.ReadLong();
+	*theInt = aBuffer.ReadInt32();
 }
 
 void SexyAppBase::DemoSyncBool(bool* theBool)
@@ -707,7 +786,7 @@ void SexyAppBase::DemoAddMarker(const std::string& theString)
 	}
 	else if (mRecordingDemoBuffer)
 	{
-		mDemoMarkerList.push_back(DemoMarker(theString,mUpdateCount));
+		mDemoMarkerList.push_back(DemoMarker(theString, static_cast<uint32_t>(mUpdateCount)));
 	}
 }
 
@@ -724,7 +803,7 @@ void SexyAppBase::DemoAssertIntEqual(int theInt)
 		DBG_ASSERTE(!mDemoIsShortCmd);
 		DBG_ASSERTE(mDemoCmdNum == DEMO_ASSERT_INT_EQUAL);
 
-		int anInt = mDemoBuffer.ReadLong();
+		int anInt = mDemoBuffer.ReadInt32();
 		(void)anInt; // unused in Release mode
 		DBG_ASSERTE(anInt == theInt);
 	}
@@ -733,7 +812,7 @@ void SexyAppBase::DemoAssertIntEqual(int theInt)
 		WriteDemoTimingBlock();
 		mDemoBuffer.WriteNumBits(0, 1);
 		mDemoBuffer.WriteNumBits(DEMO_ASSERT_INT_EQUAL, 5);				
-		mDemoBuffer.WriteLong(theInt);
+		mDemoBuffer.WriteInt32(theInt);
 	}
 }
 
@@ -915,16 +994,8 @@ std::string SexyAppBase::GetProductVersion(const std::string& thePath)
 
 void SexyAppBase::WaitForLoadingThread()
 {
-#ifdef __EMSCRIPTEN__
-	return;
-#endif
-	int ms = 20;
-
-	timespec ts;
-	ts.tv_sec = ms / 1000;
-	ts.tv_nsec = (ms % 1000) * 1000000;
-	while ((mLoadingThreadStarted) && (!mLoadingThreadCompleted))
-		nanosleep(&ts, &ts);
+	if (mLoadingThread.joinable())
+		mLoadingThread.join();
 }
 
 void SexyAppBase::SetCursorImage(int theCursorNum, Image* theImage)
@@ -956,7 +1027,7 @@ bool SexyAppBase::RegistryWrite(const std::string& theValueName, uint32_t theTyp
 	if (mRegKey.length() == 0)
 		return false;
 
-	if (mPlayingDemoBuffer)
+	if ((mPlayingDemoBuffer) && IsOnPrimaryThread())
 	{
 		if (mManualShutdown)
 			return true;
@@ -988,7 +1059,7 @@ bool SexyAppBase::RegistryWrite(const std::string& theValueName, uint32_t theTyp
 
 	if (!regemu::RegistryWrite(aKeyName, aValueName, theType, theValue, theLength))
 	{
-		if (mRecordingDemoBuffer)
+		if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 		{
 			WriteDemoTimingBlock();
 			mDemoBuffer.WriteNumBits(0, 1);
@@ -999,7 +1070,7 @@ bool SexyAppBase::RegistryWrite(const std::string& theValueName, uint32_t theTyp
 		return false;
 	}
 
-	if (mRecordingDemoBuffer)
+	if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 	{
 		WriteDemoTimingBlock();
 		mDemoBuffer.WriteNumBits(0, 1);
@@ -1050,7 +1121,7 @@ bool SexyAppBase::RegistryEraseKey(const std::string& _theKeyName)
 	if (mRegKey.length() == 0)
 		return false;
 
-	if (mPlayingDemoBuffer)
+	if ((mPlayingDemoBuffer) && IsOnPrimaryThread())
 	{
 		if (mManualShutdown)
 			return true;
@@ -1068,7 +1139,7 @@ bool SexyAppBase::RegistryEraseKey(const std::string& _theKeyName)
 
 	if (!regemu::RegistryEraseKey(aKeyName))
 	{
-		if (mRecordingDemoBuffer)
+		if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 		{
 			WriteDemoTimingBlock();
 			mDemoBuffer.WriteNumBits(0, 1);
@@ -1079,7 +1150,7 @@ bool SexyAppBase::RegistryEraseKey(const std::string& _theKeyName)
 		return false;
 	}
 
-	if (mRecordingDemoBuffer)
+	if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 	{
 		WriteDemoTimingBlock();
 		mDemoBuffer.WriteNumBits(0, 1);
@@ -1124,7 +1195,7 @@ bool SexyAppBase::RegistryReadKey(const std::string& theValueName, uint32_t* the
 	if (mRegKey.length() == 0)
 		return false;
 
-	if (mPlayingDemoBuffer)
+	if ((mPlayingDemoBuffer) && IsOnPrimaryThread())
 	{
 		if (mManualShutdown)
 			return false;
@@ -1139,14 +1210,20 @@ bool SexyAppBase::RegistryReadKey(const std::string& theValueName, uint32_t* the
 		if (!success)
 			return false;
 
-		*theType = mDemoBuffer.ReadLong();
+		*theType = mDemoBuffer.ReadUInt32();
 
-		uint32_t aLen = mDemoBuffer.ReadLong();
+		uint32_t aLen = mDemoBuffer.ReadUInt32();
 		*theLength = aLen;
-		
+
 		if (*theLength >= aLen)
-		{			
-			mDemoBuffer.ReadBytes(theValue, aLen);
+		{
+			if ((*theType == regemu::REGEMU_DWORD) && (aLen == sizeof(uint32_t)))
+			{
+				uint32_t aValue = mDemoBuffer.ReadUInt32();
+				memcpy(theValue, &aValue, sizeof(aValue));
+			}
+			else
+				mDemoBuffer.ReadBytes(theValue, aLen);
 			return true;
 		}
 		else
@@ -1174,21 +1251,28 @@ bool SexyAppBase::RegistryReadKey(const std::string& theValueName, uint32_t* the
 
 		if (regemu::RegistryRead(aKeyName, aValueName, (uint32_t*)theType, theValue, (uint32_t*)theLength))
 		{
-			if (mRecordingDemoBuffer)
+			if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 			{
 				WriteDemoTimingBlock();
 				mDemoBuffer.WriteNumBits(0, 1);
 				mDemoBuffer.WriteNumBits(DEMO_REGISTRY_READ, 5);
 				mDemoBuffer.WriteNumBits(1, 1); // success
-				mDemoBuffer.WriteLong(*theType);
-				mDemoBuffer.WriteLong(*theLength);
-				mDemoBuffer.WriteBytes(theValue, *theLength);
+				mDemoBuffer.WriteUInt32(*theType);
+				mDemoBuffer.WriteUInt32(*theLength);
+				if ((*theType == regemu::REGEMU_DWORD) && (*theLength == sizeof(uint32_t)))
+				{
+					uint32_t aValue;
+					memcpy(&aValue, theValue, sizeof(aValue));
+					mDemoBuffer.WriteUInt32(aValue);
+				}
+				else
+					mDemoBuffer.WriteBytes(theValue, *theLength);
 			}
 
 			return true;
 		}
 
-		if (mRecordingDemoBuffer)
+		if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 		{
 			WriteDemoTimingBlock();
 			mDemoBuffer.WriteNumBits(0, 1);
@@ -1298,7 +1382,7 @@ void SexyAppBase::ReadFromRegistry()
 
 bool SexyAppBase::WriteBytesToFile(const std::string& theFileName, const void *theData, unsigned long theDataLen)
 {
-	if (mPlayingDemoBuffer)
+	if ((mPlayingDemoBuffer) && IsOnPrimaryThread())
 	{
 		if (mManualShutdown)
 			return true;
@@ -1320,7 +1404,7 @@ bool SexyAppBase::WriteBytesToFile(const std::string& theFileName, const void *t
 	std::ofstream aFile(PathFromU8(theFileName), std::ios::out | std::ios::binary | std::ios::trunc);
 	if (!aFile)
 	{
-		if (mRecordingDemoBuffer)
+		if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 		{
 			WriteDemoTimingBlock();
 			mDemoBuffer.WriteNumBits(0, 1);
@@ -1335,7 +1419,7 @@ bool SexyAppBase::WriteBytesToFile(const std::string& theFileName, const void *t
 	if (!aFile)
 		return false;
 
-	if (mRecordingDemoBuffer)
+	if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 	{
 		WriteDemoTimingBlock();
 		mDemoBuffer.WriteNumBits(0, 1);
@@ -1354,7 +1438,7 @@ bool SexyAppBase::WriteBufferToFile(const std::string& theFileName, const Buffer
 
 bool SexyAppBase::ReadBufferFromFile(const std::string& theFileName, Buffer* theBuffer, bool dontWriteToDemo)
 {
-	if ((mPlayingDemoBuffer) && (!dontWriteToDemo))
+	if ((mPlayingDemoBuffer) && (!dontWriteToDemo) && IsOnPrimaryThread())
 	{
 		if (mManualShutdown)
 			return false;
@@ -1369,7 +1453,7 @@ bool SexyAppBase::ReadBufferFromFile(const std::string& theFileName, Buffer* the
 		if (!success)
 			return false;
 
-		uint32_t aLen = mDemoBuffer.ReadLong();		
+		uint32_t aLen = mDemoBuffer.ReadUInt32();
 				
 		theBuffer->Clear();
 		for (int i = 0; i < static_cast<int>(aLen); i++)
@@ -1383,7 +1467,7 @@ bool SexyAppBase::ReadBufferFromFile(const std::string& theFileName, Buffer* the
 
 		if (aFP == nullptr)
 		{
-			if ((mRecordingDemoBuffer) && (!dontWriteToDemo))
+			if ((mRecordingDemoBuffer) && (!dontWriteToDemo) && IsOnPrimaryThread())
 			{
 				WriteDemoTimingBlock();
 				mDemoBuffer.WriteNumBits(0, 1);
@@ -1406,13 +1490,13 @@ bool SexyAppBase::ReadBufferFromFile(const std::string& theFileName, Buffer* the
 		theBuffer->Clear();
 		theBuffer->SetData(aData, aFileSize);
 
-		if ((mRecordingDemoBuffer) && (!dontWriteToDemo))
+		if ((mRecordingDemoBuffer) && (!dontWriteToDemo) && IsOnPrimaryThread())
 		{
 			WriteDemoTimingBlock();
 			mDemoBuffer.WriteNumBits(0, 1);
 			mDemoBuffer.WriteNumBits(DEMO_FILE_READ, 5);
 			mDemoBuffer.WriteNumBits(1, 1); // success			
-			mDemoBuffer.WriteLong(aFileSize);
+			mDemoBuffer.WriteUInt32(static_cast<uint32_t>(aFileSize));
 			mDemoBuffer.WriteBytes(aData, aFileSize);
 		}
 
@@ -1433,7 +1517,7 @@ bool SexyAppBase::ReadUTF8StringFromFile(const std::string& theFileName, std::st
 
 bool SexyAppBase::FileExists(const std::string& theFileName)
 {
-	if (mPlayingDemoBuffer)
+	if ((mPlayingDemoBuffer) && IsOnPrimaryThread())
 	{
 		if (mManualShutdown)
 			return true;
@@ -1451,7 +1535,7 @@ bool SexyAppBase::FileExists(const std::string& theFileName)
 	{
 		PFILE* aFP = p_fopen(theFileName.c_str(), "rb");
 
-		if (mRecordingDemoBuffer)
+		if ((mRecordingDemoBuffer) && IsOnPrimaryThread())
 		{
 			WriteDemoTimingBlock();
 			mDemoBuffer.WriteNumBits(0, 1);
@@ -1515,6 +1599,13 @@ void SexyAppBase::Shutdown()
 	}
 	else if (!mShutdown)
 	{
+		if (mRecordingDemoBuffer) // every quit path converges here; close the stream before any shutdown IO
+		{
+			WriteDemoTimingBlock();
+			mDemoBuffer.WriteNumBits(0, 1);
+			mDemoBuffer.WriteNumBits(DEMO_CLOSE, 5);
+		}
+
 		mExitToTop = true;
 		mShutdown = true;
 		ShutdownHook();
@@ -1587,10 +1678,7 @@ void SexyAppBase::UpdateFrames()
 	mUpdateCount++;	
 
 	if (!mMinimized)
-	{		
-		if (mWidgetManager->UpdateFrame())
-			++mFPSDirtyCount;
-	}
+		mWidgetManager->UpdateFrame();
 
 	mMusicInterface->Update();	
 	CleanSharedImages();
@@ -1619,10 +1707,10 @@ bool SexyAppBase::DoUpdateFrames()
 			LoadingThreadCompleted();
 		}
 
-		// Hrrm not sure why we check (mUpdateCount != mLastDemoUpdateCnt) here
-		if ((mLoaded == mDemoLoadingComplete) && (mUpdateCount != mLastDemoUpdateCnt))		
+		// a queued command waits on game logic; let the tick advance so it can be claimed or judged diverged
+		if ((mLoaded == mDemoLoadingComplete) && ((mUpdateCount != mLastDemoUpdateCnt) || mDemoCommandQueued))
 		{
-			UpdateFrames();		
+			UpdateFrames();
 			return true;
 		}
 
@@ -1665,8 +1753,6 @@ void SexyAppBase::Redraw(Rect* theClipRect)
 		return;
 
 	mGLInterface->Redraw(theClipRect);
-
-	mFPSFlipCount++;
 }
 
 ///////////////////////////// FPS Stuff
@@ -1773,9 +1859,6 @@ bool SexyAppBase::DrawDirtyStuff()
 
 		uint32_t aMidTime = SDL_GetTicks();
 
-		mFPSCount++;
-		mFPSTime += aMidTime - aStartTime;
-
 		mDrawTime += aMidTime - aStartTime;
 
 		if (mShowFPS)
@@ -1879,13 +1962,17 @@ void SexyAppBase::Popup(const std::string& theString)
 
 	BeginPopup();
 	if (!mShutdown)
+	{
 		Sexy::PrintF("FATAL ERROR\n===\n%s\n", theString.c_str());
-
-#ifdef __SWITCH__
-	ErrorApplicationConfig c;
-	errorApplicationCreate(&c, "Fatal error", theString.c_str());
-	errorApplicationShow(&c);
+#if defined(__SWITCH__)
+		ErrorApplicationConfig c;
+		errorApplicationCreate(&c, "Fatal error", theString.c_str());
+		errorApplicationShow(&c);
+#elif !defined(__3DS__) && !defined(__EMSCRIPTEN__)
+		if (std::this_thread::get_id() == mPrimaryThreadId)
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL ERROR", theString.c_str(), NULL);
 #endif
+	}
 
 	EndPopup();
 }
@@ -1984,7 +2071,7 @@ void SexyAppBase::ClearKeysDown()
 void SexyAppBase::WriteDemoTimingBlock()
 {
 	// Demo writing functions can only be called from the main thread and after SexyAppBase::Init
-	DBG_ASSERTE(std::this_thread::get_id() == mPrimaryThreadId);
+	DBG_ASSERTE(IsOnPrimaryThread());
 
 	while (mUpdateCount - mLastDemoUpdateCnt > 15)
 	{
@@ -1993,12 +2080,10 @@ void SexyAppBase::WriteDemoTimingBlock()
 
 		mDemoBuffer.WriteNumBits(0, 1);
 		mDemoBuffer.WriteNumBits(DEMO_IDLE, 5);
-		mDemoCmdOrder++;
 	}
 	
 	mDemoBuffer.WriteNumBits(mUpdateCount - mLastDemoUpdateCnt, 4);
 	mLastDemoUpdateCnt = mUpdateCount;
-	mDemoCmdOrder++;
 }
 
 int aNumBigMoveMessages = 0;
@@ -2011,6 +2096,9 @@ bool SexyAppBase::PrepareDemoCommand([[maybe_unused]] bool required)
 	if (mDemoNeedsCommand)
 	{
 		mDemoCmdBitPos = mDemoBuffer.mReadBitPos;
+		mDemoCmdUpdateCnt = mLastDemoUpdateCnt;
+		if (required) // a game-logic call site claimed the queued command
+			mDemoCommandQueued = false;
 
 		mLastDemoUpdateCnt += mDemoBuffer.ReadNumBits(4, false);
 
@@ -2022,23 +2110,24 @@ bool SexyAppBase::PrepareDemoCommand([[maybe_unused]] bool required)
 			mDemoCmdNum = mDemoBuffer.ReadNumBits(5, false);
 
 		mDemoNeedsCommand = false;
-
-		mDemoCmdOrder++;
 	}
 
-	DBG_ASSERTE((mUpdateCount == mLastDemoUpdateCnt) || (!required));
+	DBG_ASSERTE((mUpdateCount >= mLastDemoUpdateCnt) || (!required));
 
-	return mUpdateCount == mLastDemoUpdateCnt;
+	return mUpdateCount >= mLastDemoUpdateCnt;
 }
 
 void SexyAppBase::ProcessDemo()
 {
 	if (mPlayingDemoBuffer)
 	{
-		// At end of demo buffer?  How dare you!
-		DBG_ASSERTE(!mDemoBuffer.AtEnd());
+		if (mDemoBuffer.AtEnd()) // a recording that didn't end with DEMO_CLOSE: treat stream end as end of demo
+		{
+			Shutdown();
+			return;
+		}
 
-		while ((!mShutdown) && (mUpdateCount == mLastDemoUpdateCnt) && (!mDemoBuffer.AtEnd()))
+		while ((!mShutdown) && (mUpdateCount >= mLastDemoUpdateCnt) && (!mDemoBuffer.AtEnd()))
 		{
 			if (PrepareDemoCommand(false))
 			{
@@ -2142,6 +2231,13 @@ void SexyAppBase::ProcessDemo()
 							mWidgetManager->KeyChar(aChar);
 						}
 						break;
+					case DEMO_KEY_TEXT:
+						{
+							std::string aText = mDemoBuffer.ReadString();
+							if (!aText.empty())
+								mWidgetManager->KeyText(aText);
+						}
+						break;
 					case DEMO_CLOSE:
 						Shutdown();
 						break;
@@ -2163,6 +2259,27 @@ void SexyAppBase::ProcessDemo()
 						break;
 					case DEMO_IDLE:
 						break;
+					case DEMO_REGISTRY_GETSUBKEYS:
+					case DEMO_REGISTRY_READ:
+					case DEMO_REGISTRY_WRITE:
+					case DEMO_REGISTRY_ERASE:
+					case DEMO_FILE_EXISTS:
+					case DEMO_FILE_READ:
+					case DEMO_FILE_WRITE:
+					case DEMO_SYNC:
+					case DEMO_ASSERT_STRING_EQUAL:
+					case DEMO_ASSERT_INT_EQUAL:
+						if (mDemoCommandQueued && mUpdateCount != mDemoQueuedSince) // queued across a tick with no claim: the replay has diverged
+						{
+							Shutdown();
+							return;
+						}
+						mDemoQueuedSince = mUpdateCount;
+						mDemoCommandQueued = true;
+						mDemoBuffer.mReadBitPos = mDemoCmdBitPos; // leave queued for the game-logic call site to consume
+						mLastDemoUpdateCnt = mDemoCmdUpdateCnt;
+						mDemoNeedsCommand = true;
+						return;
 					default:
 						DBG_ASSERTE("Invalid Demo Command" == 0);
 						break;
@@ -2279,7 +2396,7 @@ void SexyAppBase::StartLoadingThread()
 		LoadingThreadProcStub(this);
 #else
 		//_beginthread(LoadingThreadProcStub, 0, this);
-		std::thread(LoadingThreadProcStub, this).detach();
+		mLoadingThread = std::thread(LoadingThreadProcStub, this); // keep joinable: detach() throws on devkitA64/libnx
 #endif
 	}
 }
@@ -2509,7 +2626,7 @@ bool SexyAppBase::Process(bool allowSleep)
 			while (mUpdateCount < mFastForwardToUpdateNum || mFastForwardToMarker)
 			{
 				ClearUpdateBacklog();
-				int aLastUpdateCount = mUpdateCount;
+				uint aLastUpdateCount = mUpdateCount;
 								
 				// Actual updating code below
 				//////////////////////////////////////////////////////////////////////////
@@ -2850,7 +2967,7 @@ bool SexyAppBase::UpdateAppStep(bool* updated)
 		}
 		else
 		{
-			int anOldUpdateCnt = mUpdateCount;
+			uint anOldUpdateCnt = mUpdateCount;
 			Process();		
 			if (updated != nullptr)
 				*updated = mUpdateCount != anOldUpdateCnt;			
@@ -2931,14 +3048,14 @@ void SexyAppBase::Start()
 
 	Sexy::PrintF("Seconds       = %g\r\n", (SDL_GetTicks() - aStartTime) / 1000.0);
 	//Sexy::PrintF("Count         = %d\r\n", aCount);
-	Sexy::PrintF("Sleep Count   = %d\r\n", mSleepCount);
-	Sexy::PrintF("Update Count  = %d\r\n", mUpdateCount);
-	Sexy::PrintF("Draw Count    = %d\r\n", mDrawCount);
-	Sexy::PrintF("Draw Time     = %d\r\n", mDrawTime);
-	Sexy::PrintF("Screen Blt    = %d\r\n", mScreenBltTime);
+	Sexy::PrintF("Sleep Count   = %u\r\n", mSleepCount);
+	Sexy::PrintF("Update Count  = %u\r\n", mUpdateCount);
+	Sexy::PrintF("Draw Count    = %u\r\n", mDrawCount);
+	Sexy::PrintF("Draw Time     = %" PRIu64 "\r\n", mDrawTime);
+	Sexy::PrintF("Screen Blt    = %u\r\n", mScreenBltTime);
 	if (mDrawTime+mScreenBltTime > 0)
 	{
-		Sexy::PrintF("Avg FPS       = %d\r\n", (mDrawCount*1000)/(mDrawTime+mScreenBltTime));
+		Sexy::PrintF("Avg FPS       = %" PRIu64 "\r\n", static_cast<uint64_t>(mDrawCount) * 1000 / (mDrawTime+mScreenBltTime));
 	}
 
 	//timeEndPeriod(1);	
@@ -2997,9 +3114,34 @@ void SexyAppBase::LoadResourceManifest()
 
 void SexyAppBase::ShowResourceError(bool doExit)
 {
-	Popup(mResourceManager->GetErrorText());	
+	const std::string& aError = mResourceManager->GetErrorText();
+#if defined(__IPHONEOS__)
+	// Documents folder is only shown in the Files app / iTunes once it contains a file
+	const std::filesystem::path aResourceDir(GetResourceFolder());
+	const bool aHasGameResources = !aResourceDir.empty() &&
+		std::filesystem::is_regular_file(aResourceDir / "main.pak") &&
+		std::filesystem::is_directory(aResourceDir / "properties");
+	if (!aHasGameResources)
+	{
+		const std::filesystem::path aReadmePath = aResourceDir / "README.txt";
+		if (!aResourceDir.empty() && !std::filesystem::exists(aReadmePath))
+			std::ofstream(aReadmePath, std::ios::out | std::ios::trunc)
+				<< "Place your `main.pak` and `properties/` folder here to play the game.\n";
+	}
+	std::string aMessage =
+		"Please place main.pak and the properties/ folder into the "
+		"PvZ Portable folder using the Files app or Finder/iTunes file sharing.";
+	if (!aError.empty())
+		aMessage += "\n\n(" + aError + ")";
+#else
+	std::string aMessage;
+	if (!aError.empty())
+		aMessage = aError + "\n\n";
+	aMessage += "Please place main.pak and the properties/ folder into:\n" + GetResourceFolder();
+#endif
+	Popup(aMessage);
 	if (doExit)
-		DoExit(0);
+		DoExit(1);
 }
 
 bool SexyAppBase::GetBoolean(std::string_view theId)
@@ -3126,25 +3268,73 @@ void SexyAppBase::SetDouble(const std::string& theId, double theValue)
 		aPair.first->second = theValue;
 }
 
+static std::string GetTimestampedDemoFileName(std::string_view theDemoPrefix)
+{
+	time_t aNow = time(nullptr);
+	tm aNowTM = *localtime(&aNow);
+
+	std::string aBaseName = StrFormat((std::string(theDemoPrefix) + "-%04d%02d%02d-%02d%02d%02d").c_str(),
+		aNowTM.tm_year + 1900, aNowTM.tm_mon + 1, aNowTM.tm_mday, aNowTM.tm_hour, aNowTM.tm_min, aNowTM.tm_sec);
+	std::string aName = aBaseName + ".dmo";
+	const std::string aSuffixPrefix = aBaseName + '-';
+	auto aDemoFiles = FindDemoFiles(theDemoPrefix, true);
+	for (const std::string& aFileName : aDemoFiles)
+	{
+		if (aFileName == aName)
+			return aBaseName + "-2.dmo";
+		if (aFileName.starts_with(aSuffixPrefix))
+			return StrFormat("%s-%d.dmo", aBaseName.c_str(), atoi(aFileName.c_str() + aSuffixPrefix.length()) + 1);
+	}
+
+	return aName;
+}
+
+static bool ParamTakesValue(std::string_view theParamName)
+{
+	static constexpr std::string_view kValueParams[] = {
+		"-play", "-playnum", "-record", "-recnum", "-resdir", "-savedir",
+	};
+	return std::ranges::find(kValueParams, theParamName) != std::end(kValueParams);
+}
+
 void SexyAppBase::DoParseCmdLine()
 {
 	if (mArgv != nullptr)
 	{
 		for (int i = 1; i < mArgc; i++)
 		{
-			std::string aCurParamName = mArgv[i];
-			std::string aCurParamValue;
+			std::string_view aParam = mArgv[i];
+			std::string_view aValue;
 
-			size_t anEqualsPos = aCurParamName.find('=');
-			if (anEqualsPos != std::string::npos)
+			size_t anEqualsPos = aParam.find('=');
+			if (anEqualsPos != std::string_view::npos)
 			{
-				aCurParamValue = aCurParamName.substr(anEqualsPos + 1);
-				aCurParamName = aCurParamName.substr(0, anEqualsPos);
+				aValue = aParam.substr(anEqualsPos + 1);
+				aParam = aParam.substr(0, anEqualsPos);
+			}
+			else if (i + 1 < mArgc && mArgv[i + 1][0] != '-' && ParamTakesValue(aParam))
+			{
+				aValue = mArgv[++i];
 			}
 
-			HandleCmdLineParam(aCurParamName, aCurParamValue);
+			HandleCmdLineParam(aParam, aValue);
 		}
 	}
+
+	// Resolve the demo file only after all params are parsed, so explicit files win regardless of order
+	if (mPlayingDemoBuffer && !mHasCustomDemoFile)
+	{
+		auto aDemoFiles = FindDemoFiles(mDemoPrefix);
+		if (aDemoFiles.empty())
+		{
+			Popup("No demo recordings found");
+			DoExit(1);
+			return;
+		}
+		mDemoFileName = aDemoFiles[std::min(mDemoPlayIndex, aDemoFiles.size() - 1)];
+	}
+	else if (mRecordingDemoBuffer && !mHasCustomDemoFile)
+		mDemoFileName = GetTimestampedDemoFileName(mDemoPrefix);
 
 	mCmdLineParsed = true;
 }
@@ -3155,106 +3345,48 @@ void SexyAppBase::SetArgs(int argc, char** argv)
 	mArgv = argv;
 }
 
-void SexyAppBase::ParseCmdLine(const std::string& theCmdLine)
+void SexyAppBase::HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue)
 {
-	// Command line example:  -play -demofile="game demo.dmo"
-	// Results in HandleCmdLineParam("-play", ""); HandleCmdLineParam("-demofile", "game demo.dmo");
-	std::string aCurParamName;
-	std::string aCurParamValue;
-
-	//int aSpacePos = 0; // Unused
-	bool inQuote = false;
-	bool onValue = false;
-
-	for (size_t i = 0; i < theCmdLine.length(); i++)
+	if (theParamName == "-play" || theParamName == "-playnum")
 	{
-		char c = theCmdLine[i];
-		bool atEnd = false;
-		
-		if (c == '"')
+		mHasCustomDemoFile = false; // each occurrence fully redefines the request: last one wins
+		mDemoPlayIndex = 0;
+		if (theParamName == "-play" && !theParamValue.empty())
 		{
-			inQuote = !inQuote;
-
-			if (!inQuote)
-				atEnd = true;
+			mDemoFileName = std::string(theParamValue);
+			mHasCustomDemoFile = true;
 		}
-		else if ((c == ' ') && (!inQuote))
-			atEnd = true;
-		else if (c == '=')
-			onValue = true;
-		else if (onValue)
-			aCurParamValue += c;
+		else if (theParamName == "-playnum")
+		{
+			int aNum = 0;
+			std::from_chars(theParamValue.data(), theParamValue.data() + theParamValue.size(), aNum);
+			mDemoPlayIndex = static_cast<size_t>(std::max(aNum, 1) - 1);
+		}
+		mPlayingDemoBuffer = true;
+		mRecordingDemoBuffer = false;
+	}
+	else if (theParamName == "-record" || theParamName == "-recnum")
+	{
+		if (theParamName == "-recnum") // keep only the first N recordings in timestamp/name order
+		{
+			int aNum = 0;
+			std::from_chars(theParamValue.data(), theParamValue.data() + theParamValue.size(), aNum);
+			if (aNum <= 0)
+				aNum = 5;
+			mDemoRecordFileLimit = static_cast<uint>(aNum);
+		}
 		else
-			aCurParamName += c;
-		
-		if (i == theCmdLine.length() - 1)
-			atEnd = true;
-		
-		if (atEnd && !aCurParamName.empty())
 		{
-			HandleCmdLineParam(aCurParamName, aCurParamValue);
-			aCurParamName = "";
-			aCurParamValue = "";
-			onValue = false;
-		}	
-	}
-}
-
-static int GetMaxDemoFileNum(const std::string& theDemoPrefix, int theMaxToKeep, bool doErase)
-{
-	(void)theDemoPrefix;
-	(void)theMaxToKeep;
-	(void)doErase;
-	// Demo file enumeration not implemented
-	return 0;
-}
-
-void SexyAppBase::HandleCmdLineParam(const std::string& theParamName, const std::string& theParamValue)
-{
-	if (theParamName == "-play")
-	{
-		mPlayingDemoBuffer = true;
-		mRecordingDemoBuffer = false;
-	}
-	else if (theParamName == "-recnum")
-	{
-		int aNum = atoi(theParamValue.c_str());
-		if (aNum<=0)
-			aNum=5;
-
-		int aDemoFileNum = GetMaxDemoFileNum(mDemoPrefix, aNum, true) + 1;
-		mDemoFileName = StrFormat((mDemoPrefix + "%d.dmo").c_str(), aDemoFileNum);
-		if (mDemoFileName.length() < 2)
-		{
-			mDemoFileName = GetAppDataPath(mDemoFileName);
+			mHasCustomDemoFile = false;
+			if (!theParamValue.empty())
+			{
+				mDemoFileName = std::string(theParamValue);
+				mHasCustomDemoFile = true;
+			}
 		}
 		mRecordingDemoBuffer = true;
 		mPlayingDemoBuffer = false;
 	}
-	else if (theParamName == "-playnum")
-	{
-		int aNum = atoi(theParamValue.c_str())-1;
-		if (aNum<0)
-			aNum=0;
-
-		int aDemoFileNum = GetMaxDemoFileNum(mDemoPrefix, aNum, false)-aNum;
-		mDemoFileName = StrFormat((mDemoPrefix + "%d.dmo").c_str(), aDemoFileNum);
-		mRecordingDemoBuffer = false;
-		mPlayingDemoBuffer = true;
-	}
-	else if (theParamName == "-record")
-	{
-		mRecordingDemoBuffer = true;
-		mPlayingDemoBuffer = false;
-	}
-	else if (theParamName == "-demofile")
-	{
-		mDemoFileName = theParamValue;
-		if (mDemoFileName.length() < 2)
-		{
-			mDemoFileName = GetAppDataPath(mDemoFileName);
-		}
-	}	
 	else if (theParamName == "-crash")
 	{
 		// Try to access nullptr
@@ -3267,16 +3399,16 @@ void SexyAppBase::HandleCmdLineParam(const std::string& theParamName, const std:
 	}
 	else if (theParamName == "-resdir")
 	{
-		mResourceDir = theParamValue;
+		mResourceDir = std::string(theParamValue);
 	}
 	else if (theParamName == "-savedir")
 	{
-		mCustomSaveDir = theParamValue;
+		mCustomSaveDir = std::string(theParamValue);
 	}
 	else
 	{
-		Popup(GetString("INVALID_COMMANDLINE_PARAM", "Invalid command line parameter: ") + theParamName);
-		DoExit(0);
+		Popup(GetString("INVALID_COMMANDLINE_PARAM", "Invalid command line parameter: ").append(theParamName));
+		DoExit(1);
 	}
 }
 
@@ -3314,9 +3446,16 @@ void SexyAppBase::InitHook()
 {
 }
 
+// Seconds since 1970-01-01 00:00 for broken-down fields, timezone-agnostic
+static inline int64_t DemoWallSeconds(const tm& theTM)
+{
+	auto aDays = std::chrono::sys_days{std::chrono::year{theTM.tm_year + 1900} / (theTM.tm_mon + 1) / theTM.tm_mday};
+	return aDays.time_since_epoch().count() * 86400LL + theTM.tm_hour * 3600 + theTM.tm_min * 60 + theTM.tm_sec;
+}
+
 void SexyAppBase::Init()
 {
-	mPrimaryThreadId = std::this_thread::get_id();	
+	mPrimaryThreadId = std::this_thread::get_id();
 	
 	if (mShutdown)
 		return;
@@ -3328,6 +3467,19 @@ void SexyAppBase::Init()
 	}
 
 	gPakInterface->AddPakFile(GetResourcePath("main.pak"));
+
+	// Set up demo recording stuff
+	if (mPlayingDemoBuffer) // must load before any demo-synced ops
+	{
+		std::string anError;
+		if (!ReadDemoBuffer(anError))
+		{
+			mPlayingDemoBuffer = false;
+			Popup(anError);
+			DoExit(1);
+			return;
+		}
+	}
 
 	InitPropertiesHook();
 
@@ -3380,18 +3532,17 @@ void SexyAppBase::Init()
 
 	ReadFromRegistry();	
 
-	mRandSeed = SDL_GetTicks();
-	SRand(mRandSeed);
-
-	// Set up demo recording stuff
-	if (mPlayingDemoBuffer)
+	if (!mPlayingDemoBuffer) // demo playback restores mRandSeed from the demo file
 	{
-		std::string anError;
-		if (!ReadDemoBuffer(anError))
+		mRandSeed = SDL_GetTicks();
+		SRand(mRandSeed);
+
+		if (mRecordingDemoBuffer)
 		{
-			mPlayingDemoBuffer = false;
-			Popup(anError);
-			DoExit(0);
+			time_t aNow = time(nullptr);
+			mDemoStartTime = static_cast<uint64_t>(aNow); // synthetic clock base; mUpdateCount is still 0 here
+			tm aLocalTM = *localtime(&aNow);
+			mDemoTimeZoneOffset = static_cast<int32_t>(DemoWallSeconds(aLocalTM) - aNow); // local minus UTC; pure arithmetic, exact around DST
 		}
 	}
 
@@ -3411,7 +3562,7 @@ void SexyAppBase::Init()
 
 	if (mGLInterface == nullptr)
 	{
-		fprintf(stderr, "FATAL: Failed to create OpenGL interface.\n");
+		Sexy::LogError("FATAL: Failed to create OpenGL interface.");
 		mShutdown = true;
 		return;
 	}
@@ -3635,14 +3786,10 @@ void SexyAppBase::ColorizeImage(Image* theImage, const Color& theColor)
 			int aGreen = (((aColor >> 8) & 0xFF) * theColor.mGreen) / 255;
 			int aBlue = ((aColor & 0xFF) * theColor.mBlue) / 255;
 
-			if (aAlpha > 255)
-				aAlpha = 255;
-			if (aRed > 255)
-				aRed = 255;
-			if (aGreen > 255)
-				aGreen = 255;
-			if (aBlue > 255)
-				aBlue = 255;
+			aAlpha = std::min(aAlpha, 255);
+			aRed = std::min(aRed, 255);
+			aGreen = std::min(aGreen, 255);
+			aBlue = std::min(aBlue, 255);
 
 			aBits[i] = (aAlpha << 24) | (aRed << 16) | (aGreen << 8) | (aBlue);
 		}
@@ -3707,14 +3854,10 @@ GLImage* SexyAppBase::CreateColorizedImage(Image* theImage, const Color& theColo
 			int aGreen = (((aColor >> 8) & 0xFF) * theColor.mGreen) / 255;
 			int aBlue = ((aColor & 0xFF) * theColor.mBlue) / 255;
 
-			if (aAlpha > 255)
-				aAlpha = 255;
-			if (aRed > 255)
-				aRed = 255;
-			if (aGreen > 255)
-				aGreen = 255;
-			if (aBlue > 255)
-				aBlue = 255;
+			aAlpha = std::min(aAlpha, 255);
+			aRed = std::min(aRed, 255);
+			aGreen = std::min(aGreen, 255);
+			aBlue = std::min(aBlue, 255);
 
 			aDestBits[i] = (aAlpha << 24) | (aRed << 16) | (aGreen << 8) | (aBlue);
 		}
@@ -3842,12 +3985,10 @@ void SexyAppBase::RotateImageHue(Sexy::MemoryImage *theImage, int theDelta)
 
 		int aColorDiv = (6 * h) / 256;
 		int x = static_cast<int>(y + (v - y) * ((h - (aColorDiv * 256 / 6)) * 6) / 255);
-		if (x > 255)
-			x = 255;
+		x = std::min(x, 255);
 
 		int z = static_cast<int>(v - (v - y) * ((h - (aColorDiv * 256 / 6)) * 6) / 255);
-		if (z < 0)
-			z = 0;
+		z = std::max(z, 0);
 		
 		switch (aColorDiv)
 		{
@@ -3880,12 +4021,10 @@ uint32_t SexyAppBase::HSLToRGB(int h, int s, int l)
 
 	int aColorDiv = (6 * h) / 256;
 	int x = static_cast<int>(y + (v - y) * ((h - (aColorDiv * 256 / 6)) * 6) / 255);
-	if (x > 255)
-		x = 255;
+	x = std::min(x, 255);
 
 	int z = static_cast<int>(v - (v - y) * ((h - (aColorDiv * 256 / 6)) * 6) / 255);
-	if (z < 0)
-		z = 0;
+	z = std::max(z, 0);
 	
 	switch (aColorDiv)
 	{

@@ -33,6 +33,7 @@
 #include "../../Sexy.TodLib/TodStringFile.h"
 #include "widget/WidgetManager.h"
 #include <SDL.h>
+#include <algorithm>
 
 constinit const ChallengeDefinition gChallengeDefs[NUM_CHALLENGE_MODES] = {
 	{ .mChallengeMode = GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1, .mChallengeIconIndex = 0, .mPage = ChallengePage::CHALLENGE_PAGE_SURVIVAL, .mRow = 0, .mCol = 0, .mChallengeName = "[SURVIVAL_DAY_NORMAL]" },
@@ -123,7 +124,7 @@ ChallengeScreen::ChallengeScreen(LawnApp* theApp, ChallengePage thePage)
 	mUnlockStateCounter = 0;
 	mLimboPageUnlocked = false;
 	mClickCount = 0;
-	mLastClickTime = 0;
+	mLastClickUpdateCnt = 0;
 	mLoadedResourceNames.push_back("DelayLoad_ChallengeScreen");
 
 	for (std::string& resource : mLoadedResourceNames)
@@ -298,7 +299,7 @@ int ChallengeScreen::MoreTrophiesNeeded(int theChallengeIndex)
 
 			if (aDef.mChallengeMode < GAMEMODE_SCARY_POTTER_4 || mApp->HasFinishedAdventure() || aLevelsCompleted < 3)
 			{
-				return ClampInt(aDef.mChallengeMode - GAMEMODE_SCARY_POTTER_1 - aLevelsCompleted, 0, 9);
+				return std::clamp(aDef.mChallengeMode - GAMEMODE_SCARY_POTTER_1 - aLevelsCompleted, 0, 9);
 			}
 			else
 			{
@@ -318,7 +319,7 @@ int ChallengeScreen::MoreTrophiesNeeded(int theChallengeIndex)
 
 			if (aDef.mChallengeMode < GAMEMODE_PUZZLE_I_ZOMBIE_4 || mApp->HasFinishedAdventure() || aLevelsCompleted < 3)
 			{
-				return ClampInt(aDef.mChallengeMode - GAMEMODE_PUZZLE_I_ZOMBIE_1 - aLevelsCompleted, 0, 9);
+				return std::clamp(aDef.mChallengeMode - GAMEMODE_PUZZLE_I_ZOMBIE_1 - aLevelsCompleted, 0, 9);
 			}
 			else
 			{
@@ -770,13 +771,13 @@ void ChallengeScreen::MouseDown(int x, int y, int theClickCount)
 	if (mLimboPageUnlocked)
 		return;
 
-	constexpr int MAX_GAP_MS = 200;
+	constexpr uint MAX_GAP_TICKS = 20; // 200 ms at 100 update ticks/sec
 	constexpr int CLICKS_NEEDED = 5;
 
-	uint32_t aNow = SDL_GetTicks();
-	if (aNow - mLastClickTime > MAX_GAP_MS)
+	uint aNow = mApp->mUpdateCount;
+	if (aNow - mLastClickUpdateCnt > MAX_GAP_TICKS)
 		mClickCount = 0;
-	mLastClickTime = aNow;
+	mLastClickUpdateCnt = aNow;
 	mClickCount++;
 	if (mClickCount >= CLICKS_NEEDED)
 	{

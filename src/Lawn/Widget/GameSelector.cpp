@@ -20,8 +20,10 @@
  */
 
 #include "../Board.h"
+#include "../LawnCommon.h"
 #include "GameButton.h"
 #include "StoreScreen.h"
+#include "ZombatarWidget.h"
 #include "../ZenGarden.h"
 #include "GameSelector.h"
 #include "../../LawnApp.h"
@@ -41,6 +43,7 @@
 #include "../../Sexy.TodLib/TodParticle.h"
 #include "widget/Dialog.h"
 #include "widget/WidgetManager.h"
+#include <algorithm>
 
 static float gFlowerCenter[3][2] = { { 765.0f, 483.0f }, { 663.0f, 455.0f }, { 701.0f, 439.0f } };
 
@@ -61,6 +64,7 @@ GameSelector::GameSelector(LawnApp* theApp)
 {
 	TodHesitationTrace("pregameselector");
 	mLoadedResourceNames.push_back("DelayLoad_Zombatar");
+	mLoadedResourceNames.push_back("DelayLoad_Almanac");
 
 	for (std::string& resource : mLoadedResourceNames)
 		TodLoadResources(resource.c_str());
@@ -354,8 +358,7 @@ GameSelector::GameSelector(LawnApp* theApp)
 	mStartY = 0;
 	mDestX = 0;
 	mDestY = 0;
-	//mZombatarWidget = new ZombatarWidget(this);
-	//mZombatarWidget->Resize(800, 0, mApp->mWidth, mApp->mHeight);
+	mZombatarWidget = new ZombatarWidget(this);
 	mAchievementsWidget = new AchievementsWidget(this->mApp);
 	mAchievementsWidget->Move(0, mApp->mHeight);
 
@@ -391,8 +394,8 @@ GameSelector::~GameSelector()
 	// @Patoke: new widgets
 	if (mZombatarButton)
 		delete mZombatarButton;
-	//if (mZombatarWidget) // todo @Patoke: add zombatar
-	//	delete mZombatarWidget;
+	if (mZombatarWidget)
+		delete mZombatarWidget;
 	if (mAchievementsButton)
 		delete mAchievementsButton;
 	if (mAchievementsWidget)
@@ -661,7 +664,7 @@ void GameSelector::DrawOverlay(Graphics* g)
 		float aTransSubX = aTransAreaX;
 		float aTransSubY = aTransAreaY;
 
-		int aStage = ClampInt((mLevel - 1) / 10 + 1, 1, 6);  // 大关
+		int aStage = std::clamp((mLevel - 1) / 10 + 1, 1, 6);  // 大关
 		int aSub = mLevel - (aStage - 1) * 10;  // 小关
 		if (mApp->IsTrialStageLocked() && (mLevel >= 25 || mApp->HasFinishedAdventure()))
 		{
@@ -789,6 +792,7 @@ void GameSelector::Update()
 
 		// @Patoke: not from the original binaries but fixes bugs
 		mOverlayWidget->Move(aNewX, aNewY);
+		mZombatarWidget->Move(aNewX + BOARD_WIDTH, aNewY);
 		mAchievementsWidget->mY = aNewY + mApp->mHeight;
 		mAdventureButton->SetOffset(aNewX, aNewY);
 		mMinigameButton->SetOffset(aNewX, aNewY);
@@ -1028,7 +1032,7 @@ void GameSelector::AddedToManager(WidgetManager* theWidgetManager)
 	theWidgetManager->AddWidget(mChangeUserButton);
 	theWidgetManager->AddWidget(mOverlayWidget);
 	theWidgetManager->AddWidget(mZombatarButton); // @Patoke: add new widgets
-	//theWidgetManager->AddWidget(mZombatarWidget);
+	theWidgetManager->AddWidget(mZombatarWidget);
 	theWidgetManager->AddWidget(mAchievementsButton);
 	theWidgetManager->AddWidget(mAchievementsWidget);
 	//theWidgetManager->AddWidget(mQuickPlayButton);
@@ -1051,7 +1055,7 @@ void GameSelector::RemovedFromManager(WidgetManager* theWidgetManager)
 	theWidgetManager->RemoveWidget(mChangeUserButton);
 	theWidgetManager->RemoveWidget(mOverlayWidget);
 	theWidgetManager->RemoveWidget(mZombatarButton); // @Patoke: new widgets
-	//theWidgetManager->RemoveWidget(mZombatarWidget);
+	theWidgetManager->RemoveWidget(mZombatarWidget);
 	theWidgetManager->RemoveWidget(mAchievementsButton);
 	theWidgetManager->RemoveWidget(mAchievementsWidget);
 	//theWidgetManager->RemoveWidget(mQuickPlayButton);
@@ -1074,6 +1078,7 @@ void GameSelector::OrderInManagerChanged()
 	mWidgetManager->PutInfront(mChangeUserButton, this);
 	mWidgetManager->PutInfront(mZombatarButton, this); // @Patoke: z order for new widgets
 	mWidgetManager->PutInfront(mAchievementsButton, this);
+	mWidgetManager->BringToFront(mZombatarWidget);
 	//mWidgetManager->PutInfront(mQuickPlayButton, this);
 }
 
@@ -1168,7 +1173,7 @@ void GameSelector::KeyChar(char theChar)
 
 	if ((gIsPartnerBuild || mApp->mDebugKeysEnabled) && theChar == 'u' && mApp->mPlayerInfo)
 	{
-		TodTraceAndLog("Selector cheat key '%c'", theChar);
+		TodTraceAndLogLn("Selector cheat key '%c'", theChar);
 
 		mApp->mPlayerInfo->mFinishedAdventure = 2;
 		mApp->mPlayerInfo->AddCoins(50000);
@@ -1177,7 +1182,7 @@ void GameSelector::KeyChar(char theChar)
 		mApp->mPlayerInfo->mHasUnlockedPuzzleMode = true;
 		mApp->mPlayerInfo->mHasUnlockedSurvivalMode = true;
 
-		for (int i = 1; i < 100; i++)
+		for (int i = 1; i <= 100; i++)
 			if (i != static_cast<int>(GameMode::GAMEMODE_TREE_OF_WISDOM) && i != static_cast<int>(GameMode::GAMEMODE_SCARY_POTTER_ENDLESS) &&
 				i != static_cast<int>(GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_ENDLESS) && i != static_cast<int>(GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_3))
 				mApp->mPlayerInfo->mChallengeRecords[i - 1] = 20;
@@ -1189,7 +1194,7 @@ void GameSelector::KeyChar(char theChar)
 
 	if (mApp->mDebugKeysEnabled)
 	{
-		TodTraceAndLog("Selector cheat key '%c'", theChar);
+		TodTraceAndLogLn("Selector cheat key '%c'", theChar);
 		if (theChar == 'c' || theChar == 'C')
 		{
 			mMinigamesLocked = false;
@@ -1369,10 +1374,7 @@ void GameSelector::ButtonDepress(int theId)
 			mApp->mZenGarden->SetupForZenTutorial();
 		break;
 	case GameSelector::GameSelector_Zombatar:
-		//if (mApp->mPlayerInfo->mAckZombatarTOS)
-		//	GameSelector::ShowZombatarScreen();
-		//else
-		//	LawnApp::ShowZombatarTOS();
+		ShowZombatarScreen();
 		break;
 	case GameSelector::GameSelector_AchievementsBack: // @Patoke: seems to be unused
 		//SlideTo(0, 0);
@@ -1480,10 +1482,10 @@ void GameSelector::AddPreviewProfiles()
 		aProfile->mPurchases[StoreItem::STORE_ITEM_TREE_OF_WISDOM] = 1;
 
 		aProfile->mChallengeRecords[static_cast<int>(GameMode::GAMEMODE_TREE_OF_WISDOM) - 1] = 1;
-		for (int i = 1; i < 100; i++)
+		for (int i = 1; i <= 100; i++)
 			if (i != static_cast<int>(GameMode::GAMEMODE_TREE_OF_WISDOM) && i != static_cast<int>(GameMode::GAMEMODE_SCARY_POTTER_ENDLESS) &&
 				i != static_cast<int>(GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_ENDLESS) && i != static_cast<int>(GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_3))
-				mApp->mPlayerInfo->mChallengeRecords[i - 1] = 20;
+				aProfile->mChallengeRecords[i - 1] = 20;
 
 		aProfile->SaveDetails();
 	}
@@ -1491,7 +1493,8 @@ void GameSelector::AddPreviewProfiles()
 
 // @Patoke: implemented functions
 // GOTY @Patoke: 0x450140
-void GameSelector::SlideTo(int theX, int theY) {
+void GameSelector::SlideTo(int theX, int theY)
+{
 	if (mSlideCounter > 0)
 		return;
 
@@ -1502,8 +1505,19 @@ void GameSelector::SlideTo(int theX, int theY) {
 	mStartY = mY;
 }
 
+void GameSelector::ShowZombatarScreen()
+{
+	if (!mZombatarWidget)
+		return;
+	if (mApp->mPlayerInfo && !mApp->mPlayerInfo->mZombatarAccepted)
+		mApp->ShowZombatarTOS();
+	else
+		mZombatarWidget->Open();
+}
+
 // GOTY @Patoke: 0x450200
-void GameSelector::ShowAchievementsScreen() {
+void GameSelector::ShowAchievementsScreen()
+{
 	SlideTo(0, -mApp->mHeight);
 	mWidgetManager->SetFocus(mAchievementsWidget);
 }

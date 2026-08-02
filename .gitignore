@@ -223,11 +223,8 @@ _pkginfo.txt
 *.appxbundle
 *.appxupload
 
-# Visual Studio cache files
-# files ending in .cache can be ignored
+# Cache files and directories
 *.[Cc]ache
-# but keep track of directories ending in .cache
-!?*.[Cc]ache/
 
 # Others
 ClientBin/
@@ -415,3 +412,47 @@ tools/read-compiled/target
 *.sublime-workspace
 
 build-*/
+
+# AI agent tooling
+# Vendor-neutral agent skills & config
+.agents/
+# Claude Code
+.claude/
+# OpenAI Codex CLI
+.codex/
+# opencode
+.opencode/
+# Gemini CLI
+.gemini/
+# GitHub Copilot
+.github/copilot/
+# Cursor
+.cursor/
+.cursorignore
+# Windsurf
+.windsurf/
+# Aider
+.aider*
+# Continue
+.continue/
+# Sourcegraph Cody
+.cody/
+# Roo Code
+.roo/
+# Cline
+.cline/
+# Kilo Code
+.kilocode/
+# Augment
+.augment/
+# Qwen Code
+.qwen/
+# Kiro
+.kiro/
+# Kimi Code
+.kimi-code/
+# Kimi CLI (legacy)
+.kimi/
+
+# Game recordings
+*.dmo

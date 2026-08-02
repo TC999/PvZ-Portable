@@ -25,6 +25,7 @@
 #include "Reanimator.h"
 #include "ReanimAtlas.h"
 #include "misc/PerfTimer.h"
+#include "graphics/Graphics.h"
 #include "graphics/MemoryImage.h"
 
 ReanimAtlas::ReanimAtlas()
@@ -97,8 +98,7 @@ int ReanimAtlas::PickAtlasWidth()
 	{
 		ReanimAtlasImage* aImage = &mImageArray[i];
 		totalArea += aImage->mWidth * aImage->mHeight;
-		if (aMaxWidth <= aImage->mWidth + 2)
-			aMaxWidth = aImage->mWidth + 2;
+		aMaxWidth = std::max(aMaxWidth, aImage->mWidth + 2);
 	}
 
 	int aWidth = FloatRoundToInt(sqrt(totalArea));  // 假定为正方向区域时，正方向的边长

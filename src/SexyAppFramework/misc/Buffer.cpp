@@ -25,6 +25,7 @@
 #include "Buffer.h"
 #include <SDL_stdinc.h>
 #include <array>
+#include <bit>
 #define POLYNOMIAL 0x04c11db7L
 
 using namespace Sexy;
@@ -235,7 +236,7 @@ void Buffer::FromWebString(std::string_view theString)
 		else if ((aChar >= 'A') && (aChar <= 'F'))
 			aVal = (aChar - 'A') + 10;
 		else if ((aChar >= 'a') && (aChar <= 'f'))
-			aVal = (aChar - 'f') + 10;
+			aVal = (aChar - 'a') + 10;
 
 		aSizeBits += (aVal << ((7 - aDigitNum) * 4));
 	}
@@ -279,8 +280,7 @@ void Buffer::WriteByte(uchar theByte)
 	}
 
 	mWriteBitPos += 8;
-	if (mWriteBitPos > mDataBitSize)
-		mDataBitSize = mWriteBitPos;
+	mDataBitSize = std::max(mDataBitSize, mWriteBitPos);
 }
 
 void Buffer::WriteNumBits(int theNum, int theBits)
@@ -294,8 +294,7 @@ void Buffer::WriteNumBits(int theNum, int theBits)
 		mWriteBitPos++;
 	}
 
-	if (mWriteBitPos > mDataBitSize)
-		mDataBitSize = mWriteBitPos;
+	mDataBitSize = std::max(mDataBitSize, mWriteBitPos);
 }
 
 int Buffer::GetBitsRequired(int theNum, bool isSigned)
@@ -324,12 +323,17 @@ void Buffer::WriteShort(short theShort)
 	WriteByte((uchar)(theShort >> 8));
 }
 
-void Buffer::WriteLong(int32_t theLong)
+void Buffer::WriteUInt32(uint32_t theValue)
 {
-	WriteByte((uchar)theLong);
-	WriteByte((uchar)(theLong >> 8));
-	WriteByte((uchar)(theLong >> 16));
-	WriteByte((uchar)(theLong >> 24));
+	WriteByte(static_cast<uchar>(theValue));
+	WriteByte(static_cast<uchar>(theValue >> 8));
+	WriteByte(static_cast<uchar>(theValue >> 16));
+	WriteByte(static_cast<uchar>(theValue >> 24));
+}
+
+void Buffer::WriteInt32(int32_t theValue)
+{
+	WriteUInt32(std::bit_cast<uint32_t>(theValue));
 }
 
 void Buffer::WriteString(const std::string& theString)
@@ -346,9 +350,9 @@ void Buffer::WriteLine(const std::string& theString)
 
 void Buffer::WriteBuffer(const ByteVector& theBuffer)
 {
-	WriteLong((short) theBuffer.size());
-	for (int i = 0; i < (int)theBuffer.size(); i++)
-		WriteByte(theBuffer[i]);
+	WriteUInt32(static_cast<uint32_t>(theBuffer.size()));
+	for (uchar aByte : theBuffer)
+		WriteByte(aByte);
 }
 
 void Buffer::WriteBytes(const uchar* theByte, int theCount)
@@ -436,14 +440,19 @@ short Buffer::ReadShort() const
 	return aShort;	
 }
 
-int32_t Buffer::ReadLong() const
+uint32_t Buffer::ReadUInt32() const
 {
-	int32_t aLong = ReadByte();
-	aLong |= ((int32_t) ReadByte()) << 8;
-	aLong |= ((int32_t) ReadByte()) << 16;
-	aLong |= ((int32_t) ReadByte()) << 24;
+	uint32_t aValue = ReadByte();
+	aValue |= static_cast<uint32_t>(ReadByte()) << 8;
+	aValue |= static_cast<uint32_t>(ReadByte()) << 16;
+	aValue |= static_cast<uint32_t>(ReadByte()) << 24;
 
-	return aLong;
+	return aValue;
+}
+
+int32_t Buffer::ReadInt32() const
+{
+	return std::bit_cast<int32_t>(ReadUInt32());
 }
 
 std::string	Buffer::ReadString() const
@@ -485,9 +494,9 @@ void Buffer::ReadBuffer(ByteVector* theByteVector) const
 {
 	theByteVector->clear();
 	
-	uint32_t aLength = ReadLong();
+	uint32_t aLength = ReadUInt32();
 	theByteVector->resize(aLength);
-	ReadBytes(&(*theByteVector)[0], aLength);
+	ReadBytes(theByteVector->data(), static_cast<int>(aLength));
 }
 
 const uchar* Buffer::GetDataPtr() const

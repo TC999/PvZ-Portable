@@ -24,6 +24,7 @@
 #include <SDL.h>
 #include "ZenGarden.h"
 #include "BoardInclude.h"
+#include "LawnCommon.h"
 #include "System/Music.h"
 #include "System/SaveGame.h"
 #include "Widget/LawnDialog.h"
@@ -42,7 +43,6 @@
 #include "widget/Dialog.h"
 #include "misc/MTRand.h"
 #include "../Sexy.TodLib/TodParticle.h"
-//#include "graphics/SysFont.h"
 #include "../Sexy.TodLib/EffectSystem.h"
 #include "../Sexy.TodLib/TodStringFile.h"
 #include "graphics/ImageFont.h"
@@ -55,8 +55,17 @@
 #include "misc/PerfTimer.h"
 #include "Widget/AchievementsScreen.h"
 
-//#define SEXY_MEMTRACE
-//#include "../SexyAppFramework/memmgr.h"
+constexpr const int ZOMBIE_COUNTDOWN_FIRST_WAVE = 1800;
+constexpr const int ZOMBIE_COUNTDOWN = 2500;
+constexpr const int ZOMBIE_COUNTDOWN_RANGE = 600;
+constexpr const int ZOMBIE_COUNTDOWN_BEFORE_FLAG = 4500;
+constexpr const int ZOMBIE_COUNTDOWN_BEFORE_REPICK = 5499;
+constexpr const int ZOMBIE_COUNTDOWN_MIN = 400;
+constexpr const int SUN_COUNTDOWN = 425;
+constexpr const int SUN_COUNTDOWN_RANGE = 275;
+constexpr const int SUN_COUNTDOWN_MAX = 950;
+constexpr const int FOG_BLOW_RETURN_TIME = 2000;
+constexpr const int FLAG_RAISE_TIME = 100;
 
 bool gShownMoreSunTutorial = false;
 
@@ -142,7 +151,7 @@ Board::Board(LawnApp* theApp)
 	mIntervalDrawTime = 0;
 	mIntervalDrawCountStart = 0;
 	mPreloadTime = 0;
-	mGameID = time(0);
+	mGameID = mApp->GetNowTime();
 	mMinFPS = 1000.0f;
 	mGravesCleared = 0;
 	mPlantsEaten = 0;
@@ -180,6 +189,7 @@ Board::Board(LawnApp* theApp)
 	mAdvice = new MessageWidget(mApp);
 	mBackground = BackgroundType::BACKGROUND_1_DAY;
 	mMainCounter = 0;
+	mBoardUpdateCounter = 0;
 	mTutorialState = TutorialState::TUTORIAL_OFF;
 	mTutorialTimer = -1;
 	mTutorialParticleID = ParticleSystemID::PARTICLESYSTEMID_NULL;
@@ -284,9 +294,10 @@ void Board::DisposeBoard()
 
 bool Board::AreEnemyZombiesOnScreen()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mHasHead && !aZombie->IsDeadOrDying() && !aZombie->mMindControlled)
 		{
 			return true;
@@ -299,9 +310,10 @@ bool Board::AreEnemyZombiesOnScreen()
 int Board::CountZombiesOnScreen()
 {
 	int aCount = 0;
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mHasHead && !aZombie->IsDeadOrDying() && !aZombie->mMindControlled && aZombie->IsOnBoard())
 		{
 			aCount++;
@@ -313,9 +325,10 @@ int Board::CountZombiesOnScreen()
 // GOTY @Patoke: 0x40B3B0
 int Board::GetLiveGargantuarCount() {
 	int aCount = 0;
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mHasHead && !aZombie->IsDeadOrDying() && aZombie->IsOnBoard() && (aZombie->mZombieType == ZombieType::ZOMBIE_GARGANTUAR || aZombie->mZombieType == ZombieType::ZOMBIE_REDEYE_GARGANTUAR))
 		{
 			aCount++;
@@ -327,9 +340,10 @@ int Board::GetLiveGargantuarCount() {
 int Board::CountUntriggerLawnMowers()
 {
 	int aCount = 0;
-	LawnMower* aLawnMower = nullptr;
-	while (IterateLawnMowers(aLawnMower))
+	for (LawnMower* aLawnMower : mLawnMowers)
 	{
+		if (aLawnMower->mDead)
+			continue;
 		if (aLawnMower->mMowerState != LawnMowerState::MOWER_TRIGGERED && aLawnMower->mMowerState != LawnMowerState::MOWER_SQUISHED)
 		{
 			aCount++;
@@ -399,9 +413,10 @@ bool Board::LoadGame(const std::string& theFileName)
 
 GridItem* Board::GetGridItemAt(GridItemType theGridItemType, int theGridX, int theGridY)
 {
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridX == theGridX && aGridItem->mGridY == theGridY && aGridItem->mGridItemType == theGridItemType)
 		{
 			return aGridItem;
@@ -412,9 +427,10 @@ GridItem* Board::GetGridItemAt(GridItemType theGridItemType, int theGridX, int t
 
 GridItem* Board::GetRake()
 {
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridItemType == GridItemType::GRIDITEM_RAKE)
 		{
 			return aGridItem;
@@ -462,9 +478,10 @@ bool Board::CanAddGraveStoneAt(int theGridX, int theGridY)
 		return false;
 	}
 
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridX == theGridX && aGridItem->mGridY == theGridY)
 		{
 			if (aGridItem->mGridItemType == GridItemType::GRIDITEM_GRAVESTONE || 
@@ -615,7 +632,7 @@ void Board::PickZombieWaves()
 		}
 		else
 		{
-			mNumWaves = gZombieWaves[ClampInt(mLevel - 1, 0, 49)];
+			mNumWaves = gZombieWaves[std::clamp(mLevel - 1, 0, 49)];
 			if (!mApp->IsFirstTimeAdventureMode() && !mApp->IsMiniBossLevel())
 			{
 				mNumWaves = mNumWaves < 10 ? 20 : mNumWaves + 10;
@@ -1231,7 +1248,7 @@ bool Board::IsZombieWaveDistributionOk()
 	{
 		if (aZombieType != ZombieType::ZOMBIE_YETI && CanZombieSpawnOnLevel(aZombieType, mLevel) && aZombieTypeCount[aZombieType] == 0)
 		{
-			TodTraceAndLog("Didn't spawn required zombie %s, level %d", GetZombieDefinition(aZombieType).mZombieName, mLevel);
+			TodTraceAndLogLn("Didn't spawn required zombie %s, level %d", GetZombieDefinition(aZombieType).mZombieName, mLevel);
 			return false;
 		}
 	}
@@ -1279,9 +1296,10 @@ void Board::InitZombieWaves()
 
 void Board::FreezeEffectsForCutscene(bool theFreeze)
 {
-	TodParticleSystem* aParticle = nullptr;
-	while (IterateParticles(aParticle))
+	for (TodParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
 	{
+		if (aParticle->mDead)
+			continue;
 		if (aParticle->mEffectType == ParticleEffect::PARTICLE_GRAVE_BUSTER)
 		{
 			aParticle->mDontUpdate = theFreeze;
@@ -1292,9 +1310,10 @@ void Board::FreezeEffectsForCutscene(bool theFreeze)
 		}
 	}
 
-	Reanimation* aReanim = nullptr;
-	while (IterateReanimations(aReanim))
+	for (Reanimation* aReanim : mApp->mEffectSystem->mReanimationHolder->mReanimations)
 	{
+		if (aReanim->mDead)
+			continue;
 		if (aReanim->mReanimationType == ReanimationType::REANIM_SLEEPING)
 		{
 			aReanim->mAnimRate = theFreeze ? 0.0f : RandRangeFloat(6, 8);
@@ -1387,6 +1406,7 @@ void Board::GetZenButtonRect(GameObjectType theObjectType, Rect& theRect)
 void Board::InitLevel()
 {
 	mMainCounter = 0;
+	mBoardUpdateCounter = 0;
 	mEnableGraveStones = false;
 	mSodPosition = 0;
 	mPrevBoardResult = mApp->mBoardResult;
@@ -1616,9 +1636,10 @@ void Board::PlaceRake()
 	int aGridX = 7;
 	if (mApp->IsScaryPotterLevel())
 	{
-		GridItem* aGridItem = nullptr;
-		while (IterateGridItems(aGridItem))
+		for (GridItem* aGridItem : mGridItems)
 		{
+			if (aGridItem->mDead)
+				continue;
 			if (aGridItem->mGridItemType == GridItemType::GRIDITEM_SCARY_POT && aGridItem->mGridX <= aGridX && aGridItem->mGridX > 0)
 			{
 				aGridX = aGridItem->mGridX - 1;
@@ -1734,10 +1755,11 @@ void Board::StartLevel()
 
 LawnMower* Board::GetBottomLawnMower()
 {
-	LawnMower* aLawnMower = nullptr;
 	LawnMower* aBottomMower = nullptr;
-	while (IterateLawnMowers(aLawnMower))
+	for (LawnMower* aLawnMower : mLawnMowers)
 	{
+		if (aLawnMower->mDead)
+			continue;
 		if (aLawnMower->mMowerState == LawnMowerState::MOWER_TRIGGERED || aLawnMower->mMowerState == LawnMowerState::MOWER_SQUISHED)
 			continue;
 
@@ -1839,7 +1861,7 @@ void Board::UpdateLevelEndSequence()
 			if (aSoundInstance)
 			{
 				aSoundInstance->Play(false, true);
-				float aPitch = ClampFloat(6 - CountUntriggerLawnMowers(), 0.0f, 6.0f);
+				float aPitch = std::clamp(6 - CountUntriggerLawnMowers(), 0, 6);
 				aSoundInstance->AdjustPitch(aPitch);
 			}
 			aLawnMower->Die();
@@ -1851,9 +1873,10 @@ void Board::CompleteEndLevelSequenceForSaving()
 {
 	if (CanDropLoot())
 	{
-		LawnMower* aLawnMower = nullptr;
-		while (IterateLawnMowers(aLawnMower))
+		for (LawnMower* aLawnMower : mLawnMowers)
 		{
+			if (aLawnMower->mDead)
+				continue;
 			if (aLawnMower->mMowerState != LawnMowerState::MOWER_TRIGGERED && aLawnMower->mMowerState != LawnMowerState::MOWER_SQUISHED)
 			{
 				int aCoinValue = Coin::GetCoinValue(CoinType::COIN_GOLD);
@@ -1863,9 +1886,10 @@ void Board::CompleteEndLevelSequenceForSaving()
 		}
 	}
 
-	Coin* aCoin = nullptr;
-	while (IterateCoins(aCoin))
+	for (Coin* aCoin : mCoins)
 	{
+		if (aCoin->mDead)
+			continue;
 		if (aCoin->mIsBeingCollected)
 		{
 			aCoin->ScoreCoin();
@@ -1966,9 +1990,10 @@ void Board::FadeOutLevel()
 			mScoreNextMowerCounter = 200;
 		}
 
-		Coin* aCoin = nullptr;
-		while (IterateCoins(aCoin))
+		for (Coin* aCoin : mCoins)
 		{
+			if (aCoin->mDead)
+				continue;
 			aCoin->TryAutoCollectAfterLevelAward();
 		}
 	}
@@ -2187,9 +2212,10 @@ Plant* Board::AddPlant(int theGridX, int theGridY, SeedType theSeedType, SeedTyp
 // GOTY @Patoke: 0x40FBA0
 Plant* Board::GetPumpkinAt(int theGridX, int theGridY)
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mPlantCol == theGridX && aPlant->mRow == theGridY && !aPlant->NotOnGround() && aPlant->mSeedType == SeedType::SEED_PUMPKINSHELL)
 		{
 			return aPlant;
@@ -2200,9 +2226,10 @@ Plant* Board::GetPumpkinAt(int theGridX, int theGridY)
 
 Plant* Board::GetFlowerPotAt(int theGridX, int theGridY)
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mPlantCol == theGridX && aPlant->mRow == theGridY && !aPlant->NotOnGround() && aPlant->mSeedType == SeedType::SEED_FLOWERPOT)
 		{
 			return aPlant;
@@ -2224,9 +2251,10 @@ void Board::GetPlantsOnLawn(int theGridX, int theGridY, PlantsOnLawn* thePlantOn
 	if (mApp->IsWallnutBowlingLevel() && !mCutScene->IsInShovelTutorial())
 		return;
 
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		SeedType aSeedType = aPlant->mSeedType;
 		if (aSeedType == SeedType::SEED_IMITATER && aPlant->mImitaterType != SeedType::SEED_NONE)
 		{
@@ -2325,9 +2353,10 @@ Plant* Board::GetTopPlantAt(int theGridX, int theGridY, PlantPriority thePriorit
 int Board::CountSunFlowers()
 {
 	int aCount = 0;
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->MakesSun())
 		{
 			aCount++;
@@ -2339,9 +2368,10 @@ int Board::CountSunFlowers()
 int Board::CountPlantByType(SeedType theSeedType)
 {
 	int aCount = 0;
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == theSeedType)
 		{
 			aCount++;
@@ -2353,9 +2383,10 @@ int Board::CountPlantByType(SeedType theSeedType)
 int Board::CountEmptyPotsOrLilies(SeedType theSeedType)
 {
 	int aCount = 0;
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == theSeedType && !GetTopPlantAt(aPlant->mPlantCol, aPlant->mRow, PlantPriority::TOPPLANT_ONLY_NORMAL_POSITION))
 		{
 			aCount++;
@@ -2387,9 +2418,10 @@ bool Board::IsValidCobCannonSpot(int theGridX, int theGridY)
 
 bool Board::HasValidCobCannonSpot()
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == SeedType::SEED_KERNELPULT && IsValidCobCannonSpot(aPlant->mPlantCol, aPlant->mRow))
 		{
 			return true;
@@ -2419,7 +2451,7 @@ bool Board::CanZombieSpawnOnLevel(ZombieType theZombieType, int theLevel)
 	}
 
 	TOD_ASSERT(gZombieAllowedLevels[theZombieType].mZombieType == theZombieType);
-	return gZombieAllowedLevels[theZombieType].mAllowedOnLevel[ClampInt(theLevel - 1, 0, 49)];
+	return gZombieAllowedLevels[theZombieType].mAllowedOnLevel[std::clamp(theLevel - 1, 0, 49)];
 }
 
 ZombieType Board::GetIntroducedZombieType()
@@ -2731,9 +2763,10 @@ Zombie* Board::AddZombie(ZombieType theZombieType, int theFromWave)
 
 void Board::RemoveAllZombies()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (!aZombie->IsDeadOrDying())
 		{
 			aZombie->DieNoLoot();
@@ -2743,9 +2776,10 @@ void Board::RemoveAllZombies()
 
 void Board::RemoveZombiesForRepick()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (!aZombie->IsDeadOrDying() && aZombie->mMindControlled && aZombie->mPosX > 720)
 		{
 			aZombie->DieNoLoot();
@@ -2755,9 +2789,10 @@ void Board::RemoveZombiesForRepick()
 
 void Board::RemoveCutsceneZombies()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mFromWave == Zombie::ZOMBIE_WAVE_CUTSCENE)
 		{
 			aZombie->DieNoLoot();
@@ -3116,9 +3151,8 @@ void Board::MouseDrag(int x, int y)
 
 Zombie* Board::ZombieHitTest(int theMouseX, int theMouseY)
 {
-	Zombie* aZombie = nullptr;
 	Zombie* aRecord = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
 		// 排除已死亡的僵尸
 		if (aZombie->mDead || aZombie->IsDeadOrDying())
@@ -3168,9 +3202,10 @@ void Board::HighlightPlantsForMouse(int theMouseX, int theMouseY)
 {
 	if (mCursorObject->mCursorType == CursorType::CURSOR_TYPE_WATERING_CAN && mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_GOLD_WATERINGCAN])
 	{
-		Plant* aPlant = nullptr;
-		while (IteratePlants(aPlant))
+		for (Plant* aPlant : mPlants)
 		{
+			if (aPlant->mDead)
+				continue;
 			if (IsPlantInGoldWateringCanRange(theMouseX, theMouseY, aPlant))
 			{
 				aPlant->mHighlighted = true;
@@ -3204,9 +3239,10 @@ void Board::UpdateMousePosition()
 {
 	UpdateCursor();
 	UpdateToolTip();
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		aPlant->mHighlighted = false;
 	}
 
@@ -3217,9 +3253,10 @@ void Board::UpdateMousePosition()
 	// 破罐者关卡中，检测并高亮鼠标悬浮的罐子
 	if (mApp->IsScaryPotterLevel())
 	{
-		GridItem* aGridItem = nullptr;
-		while (IterateGridItems(aGridItem))
+		for (GridItem* aGridItem : mGridItems)
 		{
+			if (aGridItem->mDead)
+				continue;
 			if (aGridItem->mGridItemType == GridItemType::GRIDITEM_SCARY_POT)
 			{
 				aGridItem->mHighlighted = false;
@@ -4142,9 +4179,10 @@ void Board::MouseDownWithTool(int x, int y, int theClickCount, CursorType theCur
 
 Plant* Board::SpecialPlantHitTest(int x, int y)
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == SeedType::SEED_PUMPKINSHELL)
 		{
 			float aMinDist = GetTopPlantAt(aPlant->mPlantCol, aPlant->mRow, PlantPriority::TOPPLANT_ONLY_NORMAL_POSITION) ? 25 : 0;
@@ -4258,10 +4296,11 @@ bool Board::MouseHitTest(int x, int y, HitResult* theHitResult)
 
 	if (mCursorObject->mCursorType == CursorType::CURSOR_TYPE_NORMAL || mCursorObject->mCursorType == CursorType::CURSOR_TYPE_HAMMER)
 	{
-		Coin* aCoin = nullptr;
 		Coin* aTopCoin = nullptr;
-		while (IterateCoins(aCoin))
+		for (Coin* aCoin : mCoins)
 		{
+			if (aCoin->mDead)
+				continue;
 			HitResult aHitResultCoin;
 			if (aCoin->MouseHitTest(x, y, &aHitResultCoin))
 			{
@@ -4524,10 +4563,7 @@ void Board::MouseDown(int x, int y, int theClickCount)
 		mNextSurvivalStageCounter = 2;
 		for (int i = 0; i < MAX_GRID_SIZE_Y; i++)
 		{
-			if (mIceTimer[i] > 2)
-			{
-				mIceTimer[i] = 2;
-			}
+			mIceTimer[i] = std::min(mIceTimer[i], 2);
 		}
 	}
 
@@ -4791,9 +4827,10 @@ int Board::GetGraveStonesCount()
 {
 	int aCount = 0;
 
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridItemType == GridItemType::GRIDITEM_GRAVESTONE)
 		{
 			aCount++;
@@ -4805,11 +4842,12 @@ int Board::GetGraveStonesCount()
 
 void Board::PickSpecialGraveStone()
 {
-	GridItem* aGridItem = nullptr;
 	GridItem* aPicks[MAX_GRAVE_STONES];
 	int aPickCount = 0;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridItemType == GridItemType::GRIDITEM_GRAVESTONE)
 		{
 			TOD_ASSERT(aPickCount < MAX_GRAVE_STONES);
@@ -4860,10 +4898,7 @@ void Board::SpawnZombiesFromPool()
 		}
 	}
 
-	if (aGridArrayCount < 0)
-	{
-		aGridArrayCount = 0;
-	}
+	aGridArrayCount = std::max(aGridArrayCount, 0);
 	for (int i = 0; i < aCount; i++)
 	{
 		TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aGridArray, aGridArrayCount);
@@ -4878,10 +4913,7 @@ void Board::SpawnZombiesFromPool()
 
 		aZombie->RiseFromGrave(aGrid->mX, aGrid->mY);
 		aZombiePoints -= GetZombieDefinition(aZombieType).mZombieValue;
-		if (aZombiePoints < 1)
-		{
-			aZombiePoints = 1;
-		}
+		aZombiePoints = std::max(aZombiePoints, 1);
 	}
 }
 
@@ -4938,10 +4970,7 @@ void Board::SpawnZombiesFromSky()
 	
 	BungeeDropGrid aBungeeDropGrid;
 	SetupBungeeDrop(&aBungeeDropGrid);
-	if (aCount > aBungeeDropGrid.mGridArrayCount)
-	{
-		aCount = aBungeeDropGrid.mGridArrayCount;
-	}
+	aCount = std::min(aCount, aBungeeDropGrid.mGridArrayCount);
 
 	if (aBungeeDropGrid.mGridArrayCount == 0 || aCount <= 0)
 		return;
@@ -4951,10 +4980,7 @@ void Board::SpawnZombiesFromSky()
 		ZombieType aZombieType = PickGraveRisingZombieType();
 		BungeeDropZombie(&aBungeeDropGrid, aZombieType);
 		aZombiePoints -= GetZombieDefinition(aZombieType).mZombieValue;
-		if (aZombiePoints < 1)
-		{
-			aZombiePoints = 1;
-		}
+		aZombiePoints = std::max(aZombiePoints, 1);
 	}
 }
 
@@ -4974,9 +5000,10 @@ void Board::SpawnZombiesFromGraves()
 	}
 	
 //	int aZombiePoints = GetGraveStonesCount();
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridItemType != GridItemType::GRIDITEM_GRAVESTONE || aGridItem->mGridItemCounter < 100)
 		{
 			continue;
@@ -5007,9 +5034,10 @@ void Board::SpawnZombiesFromGraves()
 int Board::TotalZombiesHealthInWave(int theWaveIndex)
 {
 	int aTotalHealth = 0;
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mFromWave == theWaveIndex && !aZombie->mMindControlled && !aZombie->IsDeadOrDying() &&
 			aZombie->mZombieType != ZombieType::ZOMBIE_BUNGEE && aZombie->mRelatedZombieID == ZombieID::ZOMBIEID_NULL)
 		{
@@ -5067,7 +5095,7 @@ void Board::SpawnZombieWave()
 
 	if (mCurrentWave == mNumWaves - 1 && !mApp->IsContinuousChallenge())
 	{
-		mRiseFromGraveCounter = 210;
+		mRiseFromGraveCounter = 200;
 	}
 	if (IsFlagWave(mCurrentWave))
 	{
@@ -5079,33 +5107,38 @@ void Board::SpawnZombieWave()
 
 void Board::UpdateGameObjects()
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		aPlant->Update();
 	}
 
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		aZombie->Update();
 	}
 
-	Projectile* aProjectile = nullptr;
-	while (IterateProjectiles(aProjectile))
+	for (Projectile* aProjectile : mProjectiles)
 	{
+		if (aProjectile->mDead)
+			continue;
 		aProjectile->Update();
 	}
 
-	Coin* aCoin = nullptr;
-	while (IterateCoins(aCoin))
+	for (Coin* aCoin : mCoins)
 	{
+		if (aCoin->mDead)
+			continue;
 		aCoin->Update();
 	}
 
-	LawnMower* aLawnMower = nullptr;
-	while (IterateLawnMowers(aLawnMower))
+	for (LawnMower* aLawnMower : mLawnMowers)
 	{
+		if (aLawnMower->mDead)
+			continue;
 		aLawnMower->Update();
 	}
 
@@ -5120,9 +5153,10 @@ void Board::UpdateGameObjects()
 
 void Board::StopAllZombieSounds()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		aZombie->StopZombieSound();
 	}
 }
@@ -5176,9 +5210,10 @@ void Board::ZombiesWon(Zombie* theZombie)
 	ClearAdvice(AdviceType::ADVICE_NONE);
 	mApp->mBoardResult = BoardResult::BOARDRESULT_LOST;
 
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie == theZombie)
 			continue;
 
@@ -5531,7 +5566,7 @@ void Board::UpdateIce()
 				}
 			}
 
-			int anAlpha = ClampInt(mIceTimer[aRow] / 10, 0, 255);
+			int anAlpha = std::clamp(mIceTimer[aRow] / 10, 0, 255);
 			aParticleIce->OverrideColor(nullptr, Color(255, 255, 255, anAlpha));
 		}
 	}
@@ -5595,7 +5630,7 @@ void Board::UpdateProgressMeter()
 		}
 
 		// 计算当前应当的进度条长度，并将长度的范围限定在 [1, 150] 之间
-		int aLength = ClampInt(aCurrentWaveLength + FloatRoundToInt((aNextWaveLength - aCurrentWaveLength) * aFraction), 1, 150);
+		int aLength = std::clamp(aCurrentWaveLength + FloatRoundToInt((aNextWaveLength - aCurrentWaveLength) * aFraction), 1, 150);
 		// 取得当前实际与理论的进度条长度之差
 		int aDelta = aLength - mProgressMeterWidth;
 		// 当差值不超过一波的长度时，每 20cs 调整一次长度；否则，每 5cs 调整一次长度
@@ -5826,6 +5861,7 @@ void Board::Update()
 	Widget::Update();
 	MarkDirty();
 
+	mBoardUpdateCounter++;
 	mCutScene->Update();
 	UpdateMousePosition();
 	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN)
@@ -5901,7 +5937,7 @@ void Board::Update()
 	{
 		mApp->mPoolEffect->mPoolCounter++;
 	}
-	if (mBackground == BackgroundType::BACKGROUND_3_POOL && mPoolSparklyParticleID == ParticleSystemID::PARTICLESYSTEMID_NULL && mDrawCount > 0)
+	if (mBackground == BackgroundType::BACKGROUND_3_POOL && mPoolSparklyParticleID == ParticleSystemID::PARTICLESYSTEMID_NULL)
 	{
 		int aRenderPosition = MakeRenderOrder(RenderLayer::RENDER_LAYER_GROUND, 2, 0);
 		TodParticleSystem* aPoolParticle = mApp->AddTodParticle(450, 295, aRenderPosition, ParticleEffect::PARTICLE_POOL_SPARKLY);
@@ -5952,7 +5988,7 @@ void Board::DrawIce(Graphics* g, int theGridY)
 	int aPosY = GridToPixelY(8, theGridY) + 20;
 	int aHeight = Sexy::IMAGE_ICE->GetHeight();
 	int aWidth = Sexy::IMAGE_ICE->GetWidth();
-	int anAlpha = ClampInt(255 * mIceTimer[theGridY] / 10, 0, 255);
+	int anAlpha = std::clamp(255 * mIceTimer[theGridY] / 10, 0, 255);
 	if (anAlpha < 255)
 	{
 		g->SetColorizeImages(true);
@@ -6208,9 +6244,10 @@ void Board::DrawGameObjects(Graphics* g)
 	int aRenderItemCount = 0;
 
 	{
-		Plant* aPlant = nullptr;
-		while (IteratePlants(aPlant))
+		for (Plant* aPlant : mPlants)
 		{
+			if (aPlant->mDead)
+				continue;
 			if (aPlant->mOnBungeeState == PlantOnBungeeState::NOT_ON_BUNGEE)
 			{
 				AddGameObjectRenderItemPlant(aRenderList, aRenderItemCount, RenderObjectType::RENDER_ITEM_PLANT, aPlant);
@@ -6236,16 +6273,18 @@ void Board::DrawGameObjects(Graphics* g)
 		}
 	}
 	{
-		Coin* aCoin = nullptr;
-		while (IterateCoins(aCoin))
+		for (Coin* aCoin : mCoins)
 		{
+			if (aCoin->mDead)
+				continue;
 			AddGameObjectRenderItemCoin(aRenderList, aRenderItemCount, RenderObjectType::RENDER_ITEM_COIN, aCoin);
 		}
 	}
 	{
-		Zombie* aZombie = nullptr;
-		while (IterateZombies(aZombie))
+		for (Zombie* aZombie : mZombies)
 		{
+			if (aZombie->mDead)
+				continue;
 			if (aZombie->mZombieType == ZombieType::ZOMBIE_BOSS)
 			{
 				AddBossRenderItem(aRenderList, aRenderItemCount, aZombie);
@@ -6275,9 +6314,10 @@ void Board::DrawGameObjects(Graphics* g)
 		}
 	}
 	{
-		Projectile* aProjectile = nullptr;
-		while (IterateProjectiles(aProjectile))
+		for (Projectile* aProjectile : mProjectiles)
 		{
+			if (aProjectile->mDead)
+				continue;
 			AddGameObjectRenderItemProjectile(aRenderList, aRenderItemCount, RenderObjectType::RENDER_ITEM_PROJECTILE, aProjectile);
 
 			RenderItem& aRenderItem = aRenderList[aRenderItemCount];
@@ -6288,9 +6328,10 @@ void Board::DrawGameObjects(Graphics* g)
 		}
 	}
 	{
-		LawnMower* aLawnMower = nullptr;
-		while (IterateLawnMowers(aLawnMower))
+		for (LawnMower* aLawnMower : mLawnMowers)
 		{
+			if (aLawnMower->mDead)
+				continue;
 			RenderItem& aRenderItem = aRenderList[aRenderItemCount];
 			aRenderItem.mRenderObjectType = RenderObjectType::RENDER_ITEM_MOWER;
 			aRenderItem.mZPos = aLawnMower->mRenderOrder;
@@ -6299,9 +6340,10 @@ void Board::DrawGameObjects(Graphics* g)
 		}
 	}
 	{
-		TodParticleSystem* aParticle = nullptr;
-		while (IterateParticles(aParticle))
+		for (TodParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
 		{
+			if (aParticle->mDead)
+				continue;
 			if (!aParticle->mIsAttachment)
 			{
 				RenderItem& aRenderItem = aRenderList[aRenderItemCount];
@@ -6313,9 +6355,10 @@ void Board::DrawGameObjects(Graphics* g)
 		}
 	}
 	{
-		Reanimation* aReanimation = nullptr;
-		while (IterateReanimations(aReanimation))
+		for (Reanimation* aReanimation : mApp->mEffectSystem->mReanimationHolder->mReanimations)
 		{
+			if (aReanimation->mDead)
+				continue;
 			if (!aReanimation->mIsAttachment)
 			{
 				RenderItem& aRenderItem = aRenderList[aRenderItemCount];
@@ -6327,9 +6370,10 @@ void Board::DrawGameObjects(Graphics* g)
 		}
 	}
 	{
-		GridItem* aGridItem = nullptr;
-		while (IterateGridItems(aGridItem))
+		for (GridItem* aGridItem : mGridItems)
 		{
+			if (aGridItem->mDead)
+				continue;
 			RenderItem& aRenderItem = aRenderList[aRenderItemCount];
 			aRenderItem.mRenderObjectType = RenderObjectType::RENDER_ITEM_GRID_ITEM;
 			aRenderItem.mZPos = aGridItem->mRenderOrder;
@@ -6685,13 +6729,13 @@ void Board::DrawProgressMeter(Graphics* g)
 	}
 	else if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_SLOT_MACHINE)
 	{
-		int aSunMoney = ClampInt(mSunMoney, 0, 2000);
+		int aSunMoney = std::clamp(mSunMoney, 0, 2000);
 		std::string aMatchStr = StrFormat("%d/%d %s", aSunMoney, 2000, TodStringTranslate("[SUN]").c_str());
 		TodDrawString(g, aMatchStr, aPosX, 589, Sexy::FONT_DWARVENTODCRAFT12, aColor, DrawStringJustification::DS_ALIGN_CENTER);
 	}
 	else if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZOMBIQUARIUM)
 	{
-		int aSunMoney = ClampInt(mSunMoney, 0, 1000);
+		int aSunMoney = std::clamp(mSunMoney, 0, 1000);
 		std::string aMatchStr = StrFormat("%d/%d %s", aSunMoney, 1000, TodStringTranslate("[SUN]").c_str());
 		TodDrawString(g, aMatchStr, aPosX, 589, Sexy::FONT_DWARVENTODCRAFT12, aColor, DrawStringJustification::DS_ALIGN_CENTER);
 	}
@@ -7220,9 +7264,10 @@ void Board::DrawDebugObjectRects(Graphics* g)
 		return;
 
 	{
-		Plant* aPlant = nullptr;
-		while (IteratePlants(aPlant))
+		for (Plant* aPlant : mPlants)
 		{
+			if (aPlant->mDead)
+				continue;
 			Rect aRect = aPlant->GetPlantRect();
 			g->SetColor(Color(0, 255, 0));
 			g->DrawRect(aRect);
@@ -7243,9 +7288,10 @@ void Board::DrawDebugObjectRects(Graphics* g)
 		}
 	}
 	{
-		Zombie* aZombie = nullptr;
-		while (IterateZombies(aZombie))
+		for (Zombie* aZombie : mZombies)
 		{
+			if (aZombie->mDead)
+				continue;
 			if (!aZombie->IsDeadOrDying())
 			{
 				Rect aRect = aZombie->GetZombieRect();
@@ -7259,18 +7305,20 @@ void Board::DrawDebugObjectRects(Graphics* g)
 		}
 	}
 	{
-		LawnMower* aLawnMower = nullptr;
-		while (IterateLawnMowers(aLawnMower))
+		for (LawnMower* aLawnMower : mLawnMowers)
 		{
+			if (aLawnMower->mDead)
+				continue;
 			Rect aAttackRect = aLawnMower->GetLawnMowerAttackRect();
 			g->SetColor(Color(255, 0, 0));
 			g->DrawRect(aAttackRect);
 		}
 	}
 	{
-		Projectile* aProjectile = nullptr;
-		while (IterateProjectiles(aProjectile))
+		for (Projectile* aProjectile : mProjectiles)
 		{
+			if (aProjectile->mDead)
+				continue;
 			g->SetColor(Color(255, 0, 0));
 			Rect aDamageRect = aProjectile->GetProjectileRect();
 			g->DrawRect(aDamageRect);
@@ -7397,7 +7445,7 @@ void Board::DrawUICoinBank(Graphics* g)
 	}
 
 	g->SetColorizeImages(true);
-	int anAlpha = ClampInt(255 * mCoinBankFadeCount / 15, 0, 255);
+	int anAlpha = std::clamp(255 * mCoinBankFadeCount / 15, 0, 255);
 	g->SetColor(Color(255, 255, 255, anAlpha));
 	g->DrawImage(Sexy::IMAGE_COINBANK, aPosX, aPosY);
 
@@ -7486,9 +7534,10 @@ void Board::UpdateFog()
 		}
 	}
 
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->NotOnGround())
 			continue;
 
@@ -7664,9 +7713,10 @@ void Board::SetMustacheMode(bool theEnableMustache)
 	mMustacheMode = theEnableMustache;
 	mApp->mMustacheMode = theEnableMustache;
 
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		aZombie->EnableMustache(theEnableMustache);
 	}
 }
@@ -7677,9 +7727,10 @@ void Board::SetFutureMode(bool theEnableFuture)
 	mFutureMode = theEnableFuture;
 	mApp->mFutureMode = theEnableFuture;
 
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		aZombie->EnableFuture(theEnableFuture);
 	}
 }
@@ -7697,13 +7748,11 @@ void Board::SetDanceMode(bool theEnableDance)
 	mDanceMode = theEnableDance;
 	mApp->mDanceMode = theEnableDance;
 
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
-		if (!aZombie->mDead)
-		{
-			aZombie->EnableDance();
-		}
+		if (aZombie->mDead)
+			continue;
+		aZombie->EnableDance();
 	}
 }
 
@@ -7713,9 +7762,10 @@ void Board::SetSuperMowerMode(bool theEnableSuperMower)
 	mSuperMowerMode = theEnableSuperMower;
 	mApp->mSuperMowerMode = theEnableSuperMower;
 
-	LawnMower* aLawnMower = nullptr;
-	while (IterateLawnMowers(aLawnMower))
+	for (LawnMower* aLawnMower : mLawnMowers)
 	{
+		if (aLawnMower->mDead)
+			continue;
 		aLawnMower->EnableSuperMower(theEnableSuperMower);
 	}
 }
@@ -7744,7 +7794,7 @@ void Board::DoTypingCheck(KeyCode theKey)
 	if (mApp->mMustacheCheck->Check(theKey) || mApp->mMoustacheCheck->Check(theKey))
 	{
 		SetMustacheMode(!mMustacheMode);
-		ReportAchievement::GiveAchievement(mApp, MustacheMode, false); // @Patoke: add achievement
+		ReportAchievement::GiveAchievement(mApp, MustacheMode, true);
 		return;
 	}
 	if (mApp->mSuperMowerCheck->Check(theKey) || mApp->mSuperMowerCheck2->Check(theKey))
@@ -7864,7 +7914,7 @@ void Board::KeyChar(char theChar)
 	if (!mApp->mDebugKeysEnabled)
 		return;
 
-	TodTraceAndLog("Board cheat key '%c'", theChar);
+	TodTraceAndLogLn("Board cheat key '%c'", theChar);
 
 	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN)
 	{
@@ -7905,9 +7955,10 @@ void Board::KeyChar(char theChar)
 		
 		if (theChar == 'f')
 		{
-			Plant* aPlant = nullptr;
-			while (IteratePlants(aPlant))
+			for (Plant* aPlant : mPlants)
 			{
+				if (aPlant->mDead)
+					continue;
 				if (GetZenToolAt(aPlant->mPlantCol, aPlant->mRow) == nullptr && aPlant->mPottedPlantIndex >= 0)
 				{
 					PottedPlant* aPottedPlant = mApp->mZenGarden->PottedPlantFromIndex(aPlant->mPottedPlantIndex);
@@ -7951,9 +8002,10 @@ void Board::KeyChar(char theChar)
 
 		if (theChar == 'r')
 		{
-			Plant* aPlant = nullptr;
-			while (IteratePlants(aPlant))
+			for (Plant* aPlant : mPlants)
 			{
+				if (aPlant->mDead)
+					continue;
 				if (aPlant->mPottedPlantIndex >= 0)
 				{
 					TOD_ASSERT(aPlant->mPottedPlantIndex < mApp->mPlayerInfo->mNumPottedPlants);
@@ -8363,9 +8415,10 @@ void Board::KeyChar(char theChar)
 
 			if (mApp->IsScaryPotterLevel())
 			{
-				GridItem* aGridItem = nullptr;
-				while (IterateGridItems(aGridItem))
+				for (GridItem* aGridItem : mGridItems)
 				{
+					if (aGridItem->mDead)
+						continue;
 					if (aGridItem->mGridItemType == GridItemType::GRIDITEM_SCARY_POT)
 					{
 						mChallenge->ScaryPotterOpenPot(aGridItem);
@@ -8588,12 +8641,10 @@ void Board::KeyChar(char theChar)
 	if (theChar == '-')
 	{
 		mSunMoney -= 100;
-		if (mSunMoney < 0)
-		{
-			mSunMoney = 0;
-		}
+		mSunMoney = std::max(mSunMoney, 0);
 		return;
 	}
+
 	if (theChar == '%')
 	{
 		mApp->SwitchScreenMode(mApp->mIsWindowed, !mApp->Is3DAccelerated(), false);
@@ -8623,10 +8674,7 @@ void Board::KeyChar(char theChar)
 void Board::AddSunMoney(int theAmount)
 {
 	mSunMoney += theAmount;
-	if (mSunMoney > 9990)
-	{
-		mSunMoney = 9990;
-	}
+	mSunMoney = std::min(mSunMoney, 9990);
 	if (mSunMoney >= 8000)
 		// if ( !*(mApp->mPlayerInfo + 48) ) todo @Patoke: figure this out
 		ReportAchievement::GiveAchievement(mApp, SunnyDays, true);
@@ -8635,9 +8683,10 @@ void Board::AddSunMoney(int theAmount)
 int Board::CountSunBeingCollected()
 {
 	int aCount = 0;
-	Coin* aCoin = nullptr;
-	while (IterateCoins(aCoin))
+	for (Coin* aCoin : mCoins)
 	{
+		if (aCoin->mDead)
+			continue;
 		if (aCoin->mIsBeingCollected && aCoin->IsSun())
 		{
 			aCount += aCoin->GetSunValue();
@@ -8649,9 +8698,10 @@ int Board::CountSunBeingCollected()
 int Board::CountCoinsBeingCollected()
 {
 	int aCount = 0;
-	Coin* aCoin = nullptr;
-	while (IterateCoins(aCoin))
+	for (Coin* aCoin : mCoins)
 	{
+		if (aCoin->mDead)
+			continue;
 		if (aCoin->mIsBeingCollected && aCoin->IsMoney())
 		{
 			aCount += aCoin->GetCoinValue(aCoin->mType);
@@ -8681,8 +8731,7 @@ bool Board::CanTakeSunMoney(int theAmount)
 void Board::ProcessDeleteQueue()
 {
 	{
-		Plant* aPlant = nullptr;
-		while (mPlants.IterateNext(aPlant))
+		for (Plant* aPlant : mPlants)
 		{
 			if (aPlant->mDead)
 			{
@@ -8691,8 +8740,7 @@ void Board::ProcessDeleteQueue()
 		}
 	}
 	{
-		Zombie* aZombie = nullptr;
-		while (mZombies.IterateNext(aZombie))
+		for (Zombie* aZombie : mZombies)
 		{
 			if (aZombie->mDead)
 			{
@@ -8701,8 +8749,7 @@ void Board::ProcessDeleteQueue()
 		}
 	}
 	{
-		Projectile* aProjectile = nullptr;
-		while (mProjectiles.IterateNext(aProjectile))
+		for (Projectile* aProjectile : mProjectiles)
 		{
 			if (aProjectile->mDead)
 			{
@@ -8711,8 +8758,7 @@ void Board::ProcessDeleteQueue()
 		}
 	}
 	{
-		Coin* aCoin = nullptr;
-		while (mCoins.IterateNext(aCoin))
+		for (Coin* aCoin : mCoins)
 		{
 			if (aCoin->mDead)
 			{
@@ -8721,8 +8767,7 @@ void Board::ProcessDeleteQueue()
 		}
 	}
 	{
-		LawnMower* aLawnMower = nullptr;
-		while (mLawnMowers.IterateNext(aLawnMower))
+		for (LawnMower* aLawnMower : mLawnMowers)
 		{
 			if (aLawnMower->mDead)
 			{
@@ -8731,8 +8776,7 @@ void Board::ProcessDeleteQueue()
 		}
 	}
 	{
-		GridItem* aGridItem = nullptr;
-		while (mGridItems.IterateNext(aGridItem))
+		for (GridItem* aGridItem : mGridItems)
 		{
 			if (aGridItem->mDead)
 			{
@@ -8995,7 +9039,7 @@ int Board::PixelToGridX(int theX, int theY)
 	if (theX < LAWN_XMIN)
 		return -1;
 
-	return ClampInt((theX - LAWN_XMIN) / 80, 0, MAX_GRID_SIZE_X - 1);
+	return std::clamp((theX - LAWN_XMIN) / 80, 0, MAX_GRID_SIZE_X - 1);
 }
 
 int Board::PixelToGridXKeepOnBoard(int theX, int theY)
@@ -9026,15 +9070,15 @@ int Board::PixelToGridY(int theX, int theY)
 		{
 			theY -= (4 - aGridX) * 20;
 		}
-		return ClampInt((theY - LAWN_YMIN) / 85, 0, MAX_GRID_SIZE_Y - 2);
+		return std::clamp((theY - LAWN_YMIN) / 85, 0, MAX_GRID_SIZE_Y - 2);
 	}
 	else if (StageHasPool())
 	{
-		return ClampInt((theY - LAWN_YMIN) / 85, 0, MAX_GRID_SIZE_Y - 1);
+		return std::clamp((theY - LAWN_YMIN) / 85, 0, MAX_GRID_SIZE_Y - 1);
 	}
 	else
 	{
-		return ClampInt((theY - LAWN_YMIN) / 100, 0, MAX_GRID_SIZE_Y - 2);
+		return std::clamp((theY - LAWN_YMIN) / 100, 0, MAX_GRID_SIZE_Y - 2);
 	}
 }
 
@@ -9139,193 +9183,25 @@ Zombie* Board::ZombieTryToGet(ZombieID theZombieID)
 
 int GetRectOverlap(const Rect& rect1, const Rect& rect2)
 {
-	int xmax, rmin, rmax;
-
-	if (rect1.mX < rect2.mX)
-	{
-		rmin = rect1.mX + rect1.mWidth;
-		rmax = rect2.mX + rect2.mWidth;
-		xmax = rect2.mX;
-	}
-	else
-	{
-		rmin = rect2.mX + rect2.mWidth;
-		rmax = rect1.mX + rect1.mWidth;
-		xmax = rect1.mX;
-	}
-
-	if (rmin > xmax && rmin > rmax)
-	{
-		rmin = rmax;
-	}
-
-	return rmin - xmax;
+	return std::min(rect1.mX + rect1.mWidth, rect2.mX + rect2.mWidth) -
+		std::max(rect1.mX, rect2.mX);
 }
 
 bool GetCircleRectOverlap(int theCircleX, int theCircleY, int theRadius, const Rect& theRect)
 {
-	int dx = 0;  // 圆心与矩形较近一条纵边的横向距离
-	int dy = 0;  // 圆心与矩形较近一条横边的纵向距离
-	bool xOut = false;  // 圆心横坐标是否不在矩形范围内
-	bool yOut = false;  // 圆心纵坐标是否不在矩形范围内
-
-	if (theCircleX < theRect.mX)
-	{
-		xOut = true;
-		dx = theRect.mX - theCircleX;
-	}
-	else if (theCircleX > theRect.mX + theRect.mWidth)
-	{
-		xOut = true;
-		dx = theCircleX - theRect.mX - theRect.mWidth;
-	}
-	if (theCircleY < theRect.mY)
-	{
-		yOut = true;
-		dy = theRect.mY - theCircleY;
-	}
-	else if (theCircleY > theRect.mY + theRect.mHeight)
-	{
-		yOut = true;
-		dy = theCircleY - theRect.mY - theRect.mHeight;
-	}
-
-	if (!xOut && !yOut)  // 如果圆心在矩形内
-	{
-		return true;
-	}
-	else if (xOut && yOut)
-	{
-		return dx * dx + dy * dy <= theRadius * theRadius;
-	}
-	else if (xOut)
-	{
-		return dx <= theRadius;
-	}
-	else
-	{
-		return dy <= theRadius;
-	}
-}
-
-// GOTY @Patoke: 0x41F6B0
-bool Board::IterateZombies(Zombie*& theZombie)
-{
-	while (mZombies.IterateNext(theZombie))
-	{
-		if (!theZombie->mDead)
-		{
-			return true;
-		}
-	}
-
-	theZombie = (Zombie*)-1;
-	return false;
-}
-
-bool Board::IteratePlants(Plant*& thePlant)
-{
-	while (mPlants.IterateNext(thePlant))
-	{
-		if (!thePlant->mDead)
-		{
-			return true;
-		}
-	}
-
-	thePlant = (Plant*)-1;
-	return false;
-}
-
-bool Board::IterateProjectiles(Projectile*& theProjectile)
-{
-	while (mProjectiles.IterateNext(theProjectile))
-	{
-		if (!theProjectile->mDead)
-		{
-			return true;
-		}
-	}
-
-	theProjectile = (Projectile*)-1;
-	return false;
-}
-
-bool Board::IterateCoins(Coin*& theCoin) 
-{
-	while (mCoins.IterateNext(theCoin))
-	{
-		if (!theCoin->mDead)
-		{
-			return true;
-		}
-	}
-
-	theCoin = (Coin*)-1;
-	return false;
-}
-
-bool Board::IterateLawnMowers(LawnMower*& theLawnMower)
-{
-	while (mLawnMowers.IterateNext(theLawnMower))
-	{
-		if (!theLawnMower->mDead)
-		{
-			return true;
-		}
-	}
-
-	theLawnMower = (LawnMower*)-1;
-	return false;
-}
-
-bool Board::IterateGridItems(GridItem*& theGridItem)
-{
-	while (mGridItems.IterateNext(theGridItem))
-	{
-		if (!theGridItem->mDead)
-		{
-			return true;
-		}
-	}
-
-	theGridItem = (GridItem*)-1;
-	return false;
-}
-
-bool Board::IterateParticles(TodParticleSystem*& theParticle)
-{
-	while (mApp->mEffectSystem->mParticleHolder->mParticleSystems.IterateNext(theParticle))
-	{
-		if (!theParticle->mDead)
-		{
-			return true;
-		}
-	}
-
-	theParticle = (TodParticleSystem*)-1;
-	return false;
-}
-
-bool Board::IterateReanimations(Reanimation*& theReanimation)
-{
-	while (mApp->mEffectSystem->mReanimationHolder->mReanimations.IterateNext(theReanimation))
-	{
-		if (!theReanimation->mDead)
-		{
-			return true;
-		}
-	}
-
-	theReanimation = (Reanimation*)-1;
-	return false;
+	int aNearX = std::clamp(theCircleX, theRect.mX, theRect.mX + theRect.mWidth);
+	int aNearY = std::clamp(theCircleY, theRect.mY, theRect.mY + theRect.mHeight);
+	int dx = theCircleX - aNearX;
+	int dy = theCircleY - aNearY;
+	return dx * dx + dy * dy <= theRadius * theRadius;
 }
 
 void Board::KillAllPlantsInRadius(int theX, int theY, int theRadius)
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (GetCircleRectOverlap(theX, theY, theRadius, aPlant->GetPlantRect()))
 		{
 			mPlantsEaten++;
@@ -9372,9 +9248,10 @@ int Board::CountCoinByType(CoinType theCoinType)
 {
 	int aCount = 0;
 
-	Coin* aCoin = nullptr;
-	while (IterateCoins(aCoin))
+	for (Coin* aCoin : mCoins)
 	{
+		if (aCoin->mDead)
+			continue;
 		if (aCoin->mType == theCoinType)
 		{
 			aCount++;
@@ -9388,9 +9265,10 @@ int Board::GetGraveStoneCount()
 {
 	int aCount = 0;
 
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridItemType == GridItemType::GRIDITEM_GRAVESTONE)
 		{
 			aCount++;
@@ -9525,9 +9403,10 @@ bool Board::CanDropLoot()
 
 bool Board::BungeeIsTargetingCell(int theGridX, int theGridY)
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (!aZombie->IsDeadOrDying() && aZombie->mZombieType == ZombieType::ZOMBIE_BUNGEE && aZombie->mRow == theGridY && aZombie->mTargetCol == theGridX)
 		{
 			return true;
@@ -9538,9 +9417,10 @@ bool Board::BungeeIsTargetingCell(int theGridX, int theGridY)
 
 Zombie* Board::GetBossZombie()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mZombieType == ZombieType::ZOMBIE_BOSS)
 		{
 			return aZombie;
@@ -9551,9 +9431,10 @@ Zombie* Board::GetBossZombie()
 
 Plant* Board::FindUmbrellaPlant(int theGridX, int theGridY)
 {
-	Plant* aPlant = nullptr;
-	while (IteratePlants(aPlant))
+	for (Plant* aPlant : mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == SeedType::SEED_UMBRELLA && !aPlant->NotOnGround() && GridInRange(theGridX, theGridY, aPlant->mPlantCol, aPlant->mRow, 1, 1))
 		{
 			return aPlant;
@@ -9613,9 +9494,10 @@ void Board::UpdateFwoosh()
 
 void Board::UpdateGridItems()
 {
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (mEnableGraveStones && aGridItem->mGridItemType == GridItemType::GRIDITEM_GRAVESTONE && aGridItem->mGridItemCounter < 100)
 		{
 			aGridItem->mGridItemCounter++;
@@ -9655,10 +9537,11 @@ bool Board::PlantingRequirementsMet(SeedType theSeedType)
 // GOTY @Patoke: 0x420670
 int Board::KillAllZombiesInRadius(int theRow, int theX, int theY, int theRadius, int theRowRange, bool theBurn, int theDamageRangeFlags)
 {
-	Zombie* aZombie = nullptr;
 	int aKilledZombies = 0; // @Patoke: implemented this
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->EffectedByDamage(theDamageRangeFlags))
 		{
 			Rect aZombieRect = aZombie->GetZombieRect();
@@ -9686,9 +9569,10 @@ int Board::KillAllZombiesInRadius(int theRow, int theX, int theY, int theRadius,
 
 	int aGridX = PixelToGridXKeepOnBoard(theX, theY);
 	int aGridY = PixelToGridYKeepOnBoard(theX, theY);
-	GridItem* aGridItem = nullptr;
-	while (IterateGridItems(aGridItem))
+	for (GridItem* aGridItem : mGridItems)
 	{
+		if (aGridItem->mDead)
+			continue;
 		if (aGridItem->mGridItemType == GridItemType::GRIDITEM_LADDER)
 		{
 			if (GridInRange(aGridItem->mGridX, aGridItem->mGridY, aGridX, aGridY, theRowRange, theRowRange))
@@ -9719,9 +9603,10 @@ int Board::GetNumWavesPerSurvivalStage()
 
 void Board::RemoveParticleByType(ParticleEffect theEffectType)
 {
-	TodParticleSystem* aParticle = nullptr;
-	while (IterateParticles(aParticle))
+	for (TodParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
 	{
+		if (aParticle->mDead)
+			continue;
 		if (aParticle->mEffectType == theEffectType)
 		{
 			aParticle->ParticleSystemDie();
@@ -9795,9 +9680,10 @@ void Board::ShakeBoard(int theShakeAmountX, int theShakeAmountY)
 
 LawnMower* Board::FindLawnMowerInRow(int theRow)
 {
-	LawnMower* aLawnMower = nullptr;
-	while (IterateLawnMowers(aLawnMower))
+	for (LawnMower* aLawnMower : mLawnMowers)
 	{
+		if (aLawnMower->mDead)
+			continue;
 		if (aLawnMower->mRow == theRow)
 		{
 			return aLawnMower;
@@ -9808,9 +9694,10 @@ LawnMower* Board::FindLawnMowerInRow(int theRow)
 
 Zombie* Board::GetWinningZombie()
 {
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mFromWave == Zombie::ZOMBIE_WAVE_WINNER)
 		{
 			return aZombie;
@@ -9823,9 +9710,10 @@ int Board::CountZombieByType(ZombieType theZombieType)
 {
 	int aCount = 0;
 
-	Zombie* aZombie = nullptr;
-	while (IterateZombies(aZombie))
+	for (Zombie* aZombie : mZombies)
 	{
+		if (aZombie->mDead)
+			continue;
 		if (aZombie->mZombieType == theZombieType)
 		{
 			aCount++;

@@ -21,6 +21,7 @@
 
 #include "Coin.h"
 #include "Board.h"
+#include <algorithm>
 #include "Cutscene.h"
 #include "ZenGarden.h"
 #include "Challenge.h"
@@ -334,22 +335,12 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
         mVelY = -3.0f - RandRangeFloat(0.0f, 2.0f);
         mVelX = -0.5f + RandRangeFloat(0.0f, 1.0f);
         mGroundY = mPosY + 45 + Rand(20);
-        if (mGroundY > 521)
-        {
-            mGroundY = 521;
-        }
-        if (mGroundY < 80)
-        {
-            mGroundY = 80;
-        }
+        mGroundY = std::clamp(mGroundY, 80, 521);
         if (mType == CoinType::COIN_AWARD_SILVER_SUNFLOWER || mType == CoinType::COIN_AWARD_GOLD_SUNFLOWER)
         {
             mPosY -= 100.0f;
             mGroundY = mPosY + 45.0f;
-            if (mGroundY > 400)
-            {
-                mGroundY = 400;
-            }
+            mGroundY = std::min(mGroundY, 400);
         }
         if (mType == CoinType::COIN_FINAL_SEED_PACKET || 
             mType == CoinType::COIN_USABLE_SEED_PACKET || 
@@ -736,7 +727,7 @@ void Coin::UpdateCollected()
             ScoreCoin();
         }
 
-        mScale = ClampFloat(mCollectionDistance * 0.05f, 0.5f, 1.0f);
+        mScale = std::clamp(mCollectionDistance * 0.05f, 0.5f, 1.0f);
         mScale *= GetSunScale();
     }
 }
@@ -787,7 +778,7 @@ Color Coin::GetColor()
 {
     if ((IsSun() || IsMoney()) && mIsBeingCollected)
     {
-        float aAlpha = ClampFloat(mCollectionDistance * 0.035f, 0.35f, 1.0f) * 255.0f;
+        float aAlpha = std::clamp(mCollectionDistance * 0.035f, 0.35f, 1.0f) * 255.0f;
         return Color(255, 255, 255, aAlpha);
     }
 

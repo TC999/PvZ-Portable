@@ -40,6 +40,7 @@
 #include "misc/MTRand.h"
 #include "../../Sexy.TodLib/TodStringFile.h"
 #include "widget/WidgetManager.h"
+#include <algorithm>
 
 // GOTY @Patoke: 0x48E020
 SeedChooserScreen::SeedChooserScreen()
@@ -593,9 +594,10 @@ bool SeedChooserScreen::FlyersAreComming()
 
 bool SeedChooserScreen::FlyProtectionCurrentlyPlanted()
 {
-	Plant* aPlant = nullptr;
-	while (mBoard->IteratePlants(aPlant))
+	for (Plant* aPlant : mBoard->mPlants)
 	{
+		if (aPlant->mDead)
+			continue;
 		if (aPlant->mSeedType == SEED_CATTAIL || aPlant->mSeedType == SEED_CACTUS)
 		{
 			return true;
@@ -938,7 +940,7 @@ void SeedChooserScreen::ShowToolTip()
 					GetSeedPositionInChooser(aSeedType, aSeedX, aSeedY);
 				}
 
-				mToolTip->mX = ClampInt((SEED_PACKET_WIDTH - mToolTip->mWidth) / 2 + aSeedX, 0, BOARD_WIDTH - mToolTip->mWidth);
+				mToolTip->mX = std::clamp((SEED_PACKET_WIDTH - mToolTip->mWidth) / 2 + aSeedX, 0, BOARD_WIDTH - mToolTip->mWidth);
 				mToolTip->mY = aSeedY + 70;
 				mToolTip->mVisible = true;
 				mToolTipSeed = aSeedType;

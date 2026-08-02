@@ -19,6 +19,8 @@
  * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <climits>
+
 #include "Plant.h"
 #include "Board.h"
 #include "../ConstEnums.h"
@@ -30,6 +32,8 @@
 #include "Projectile.h"
 #include "../LawnApp.h"
 #include "../Resources.h"
+#include "System/PlayerInfo.h"
+#include "System/Zombatar.h"
 #include "System/Music.h"
 #include "Widget/AlmanacDialog.h"
 #include "../Sexy.TodLib/TodFoley.h"
@@ -38,8 +42,38 @@
 #include "../Sexy.TodLib/Reanimator.h"
 #include "../Sexy.TodLib/Attachment.h"
 #include "../Sexy.TodLib/TodParticle.h"
+#include <algorithm>
 
-#include <climits>
+constexpr const int ZOMBIE_START_RANDOM_OFFSET = 40;
+constexpr const int BUNGEE_ZOMBIE_HEIGHT = 3000;
+constexpr const int RENDER_GROUP_SHIELD = 1;
+constexpr const int RENDER_GROUP_ARMS = 2;
+constexpr const int RENDER_GROUP_OVER_SHIELD = 3;
+constexpr const int RENDER_GROUP_BOSS_BACK_LEG = 4;
+constexpr const int RENDER_GROUP_BOSS_FRONT_LEG = 5;
+constexpr const int RENDER_GROUP_BOSS_BACK_ARM = 6;
+constexpr const int RENDER_GROUP_BOSS_FIREBALL_ADDITIVE = 7;
+constexpr const int RENDER_GROUP_BOSS_FIREBALL_TOP = 8;
+constexpr const int ZOMBIE_LIMP_SPEED_FACTOR = 2;
+constexpr const int POGO_BOUNCE_TIME = 80;
+constexpr const int DOLPHIN_JUMP_TIME = 120;
+constexpr const int JACK_IN_THE_BOX_ZOMBIE_RADIUS = 115;
+constexpr const int JACK_IN_THE_BOX_PLANT_RADIUS = 90;
+constexpr const int BOBSLED_CRASH_TIME = 150;
+constexpr const int ZOMBIE_BACKUP_DANCER_RISE_HEIGHT = -200;
+constexpr const int BOSS_FLASH_HEALTH_FRACTION = 10;
+constexpr const int TICKS_BETWEEN_EATS = 4;
+constexpr const int DAMAGE_PER_EAT = TICKS_BETWEEN_EATS;
+constexpr const float THOWN_ZOMBIE_GRAVITY = 0.05f;
+constexpr const float CHILLED_SPEED_FACTOR = 0.4f;
+constexpr const float CLIP_HEIGHT_LIMIT = -100.0f;
+constexpr const float CLIP_HEIGHT_OFF = -200.0f;
+constexpr Color ZOMBIE_MINDCONTROLLED_COLOR = Color(128, 64, 192, 255);
+
+static std::string ZombatarTrackName(const char* thePrefix, int theIndex)
+{
+    return Sexy::StrFormat("%s%02d", thePrefix, theIndex);
+}
 
 constinit const ZombieDefinition gZombieDefs[NUM_ZOMBIE_TYPES] = {
     { .mZombieType = ZOMBIE_NORMAL, .mReanimationType = REANIM_ZOMBIE, .mZombieValue = 1, .mStartingLevel = 1, .mFirstAllowedWave = 1, .mPickWeight = 4000, .mZombieName = "ZOMBIE" },
@@ -109,6 +143,18 @@ void Zombie::ZombieInitialize(int theRow, ZombieType theType, bool theVariant, Z
 {
     TOD_ASSERT(theType >= 0 && theType <= ZombieType::NUM_ZOMBIE_TYPES);
 
+    int aZombatarRecordIndex = -1;
+    if (theType == ZombieType::ZOMBIE_FLAG && mBoard)
+    {
+        PlayerInfo* aPlayerInfo = mApp->mPlayerInfo;
+        if (aPlayerInfo && !aPlayerInfo->mZombatarData.empty())
+        {
+            int aCount = static_cast<int>(aPlayerInfo->mZombatarData.size() / ZOMBATAR_RECORD_SIZE);
+            if (aCount > 0)
+                aZombatarRecordIndex = Rand(aCount);
+        }
+    }
+
     mFromWave = theFromWave;
     mRow = theRow;
     mPosX = 780 + Rand(ZOMBIE_START_RANDOM_OFFSET);
@@ -177,6 +223,7 @@ void Zombie::ZombieInitialize(int theRow, ZombieType theType, bool theVariant, Z
     mFireballRow = -1;
     mIsFireBall = false;
     mMoweredReanimID = ReanimationID::REANIMATIONID_NULL;
+    mZombatarHeadReanimID = ReanimationID::REANIMATIONID_NULL;
     mLastPortalX = -1;
     for (int i = 0; i < MAX_ZOMBIE_FOLLOWERS; i++)
     {
@@ -542,6 +589,7 @@ void Zombie::ZombieInitialize(int theRow, ZombieType theType, bool theVariant, Z
         ReanimatorTrackInstance* aTrackInstance = aBodyReanim->GetTrackInstanceByName("Zombie_flaghand");
         AttachReanim(aTrackInstance->mAttachmentID, aFlagReanim, 0.0f, 0.0f);
         aBodyReanim->mFrameBasePose = 0;
+        SetupZombatarFlagReanim(aZombatarRecordIndex);
 
         mPosX = WIDE_BOARD_WIDTH;
         break;
@@ -1016,9 +1064,10 @@ int Zombie::CountBungeesTargetingSunFlowers()
 {
     int aCount = 0;
 
-    Zombie* aZombie = nullptr;
-    while (mBoard->IterateZombies(aZombie))
+    for (Zombie* aZombie : mBoard->mZombies)
     {
+        if (aZombie->mDead)
+            continue;
         if (!aZombie->IsDeadOrDying() && aZombie->mZombieType == ZombieType::ZOMBIE_BUNGEE && aZombie->mTargetCol != -1)
         {
             Plant* aPlant = mBoard->GetTopPlantAt(aZombie->mTargetCol, aZombie->mRow, PlantPriority::TOPPLANT_BUNGEE_ORDER);
@@ -1204,9 +1253,10 @@ void Zombie::BungeeLiftTarget()
         return;
 
 #ifdef DO_FIX_BUGS
-    Zombie* aZombie = nullptr;
-    while (mBoard->IterateZombies(aZombie))
+    for (Zombie* aZombie : mBoard->mZombies)
     {
+        if (aZombie->mDead)
+            continue;
         if (aZombie->mZombieType == ZombieType::ZOMBIE_BUNGEE && aZombie != this && aZombie->mTargetPlantID == mTargetPlantID)
         {
             aZombie->mTargetPlantID = PlantID::PLANTID_NULL;  // 修复类似于 IZ 蹦极刷阳光的 Bug
@@ -1396,7 +1446,7 @@ void Zombie::UpdateZombiePogo()
         aHeight = 170.0f;
     }
     mAltitude = TodAnimateCurveFloat(POGO_BOUNCE_TIME, 0, mPhaseCounter, 9.0f, aHeight + 9.0f, TodCurves::CURVE_BOUNCE_SLOW_MIDDLE);
-    mFrame = ClampInt(3 - mAltitude / 3, 0, 3);
+    mFrame = std::clamp(static_cast<int>(3 - mAltitude / 3), 0, 3);
 
     if (mPhaseCounter == 7)
     {
@@ -1505,9 +1555,10 @@ Plant* Zombie::FindCatapultTarget()
 {
     Plant* aTarget = nullptr;
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow == mRow && mX >= aPlant->mX + 100 && !aPlant->NotOnGround() && !aPlant->IsSpiky())
         {
             if (aTarget == nullptr || aPlant->mPlantCol < aTarget->mPlantCol)
@@ -1745,9 +1796,10 @@ void Zombie::UpdateZombiePolevaulter()
 
 bool Zombie::IsTanglekelpTarget()
 {
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mSeedType == SeedType::SEED_TANGLEKELP && aPlant->mTargetZombieID == mBoard->ZombieGetID(this))
         {
             return true;
@@ -2005,12 +2057,12 @@ void Zombie::UpdateZombieJackInTheBox()
             int aPosY = mY + mHeight / 2;
             if (mMindControlled)
             {
-                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JackInTheBoxZombieRadius, 1, true, 127);
+                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JACK_IN_THE_BOX_ZOMBIE_RADIUS, 1, true, 127);
             }
             else
             {
-                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JackInTheBoxZombieRadius, 1, true, 255);
-                mBoard->KillAllPlantsInRadius(aPosX, aPosY, JackInTheBoxPlantRadius);
+                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JACK_IN_THE_BOX_ZOMBIE_RADIUS, 1, true, 255);
+                mBoard->KillAllPlantsInRadius(aPosX, aPosY, JACK_IN_THE_BOX_PLANT_RADIUS);
             }
 
             mApp->AddTodParticle(aPosX, aPosY, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ParticleEffect::PARTICLE_JACKEXPLODE);
@@ -2308,9 +2360,10 @@ void Zombie::UpdateZombiePeaHead()
 
 void Zombie::BurnRow(int theRow)  // 此函数专用于在定义了 DO_FIX_BUGS 时修复火爆辣椒僵尸的 Bug
 {
-    Zombie* aZombie = nullptr;
-    while (mBoard->IterateZombies(aZombie))
+    for (Zombie* aZombie : mBoard->mZombies)
     {
+        if (aZombie->mDead)
+            continue;
         if ((aZombie->mZombieType == ZombieType::ZOMBIE_BOSS || aZombie->mRow == theRow) && aZombie->EffectedByDamage(127))
         {
             aZombie->RemoveColdEffects();
@@ -2318,9 +2371,10 @@ void Zombie::BurnRow(int theRow)  // 此函数专用于在定义了 DO_FIX_BUGS 
         }
     }
 
-    GridItem* aGridItem = nullptr;
-    while (mBoard->IterateGridItems(aGridItem))
+    for (GridItem* aGridItem : mBoard->mGridItems)
     {
+        if (aGridItem->mDead)
+            continue;
         if (aGridItem->mGridY == theRow && aGridItem->mGridItemType == GridItemType::GRIDITEM_LADDER)
         {
             aGridItem->GridItemDie();
@@ -2353,9 +2407,10 @@ void Zombie::UpdateZombieJalapenoHead()
         }
         else
         {
-            Plant* aPlant = nullptr;
-            while (mBoard->IteratePlants(aPlant))
+            for (Plant* aPlant : mBoard->mPlants)
             {
+                if (aPlant->mDead)
+                    continue;
                 //Rect aPlantRect = aPlant->GetPlantRect();
                 if (aPlant->mRow == mRow && !aPlant->NotOnGround())
                 {
@@ -2365,9 +2420,10 @@ void Zombie::UpdateZombieJalapenoHead()
             }
         }
 #else
-        Plant* aPlant = nullptr;
-        while (mBoard->IteratePlants(aPlant))
+        for (Plant* aPlant : mBoard->mPlants)
         {
+            if (aPlant->mDead)
+                continue;
             //Rect aPlantRect = aPlant->GetPlantRect();
             if (aPlant->mRow == mRow && !aPlant->NotOnGround())
             {
@@ -2510,9 +2566,10 @@ void Zombie::UpdateZombieSquashHead()
             {
                 Rect aAttackRect(aDestX - 73, mPosY + 4, 65, 90);  // 具体数值未实测，待定
 
-                Zombie* aZombie = nullptr;
-                while (mBoard->IterateZombies(aZombie))
+                for (Zombie* aZombie : mBoard->mZombies)
                 {
+                    if (aZombie->mDead)
+                        continue;
                     if ((aZombie->mRow == mRow || aZombie->mZombieType == ZombieType::ZOMBIE_BOSS) && aZombie->EffectedByDamage(13U))
                     {
                         Rect aZombieRect = aZombie->GetZombieRect();
@@ -3031,9 +3088,10 @@ bool Zombie::ZombiquariumFindClosestBrain()
 
     GridItem* aBrainClosest = nullptr;
     float aDistanceClosest = 0.0f;
-    GridItem* aGridItem = nullptr;
-    while (mBoard->IterateGridItems(aGridItem))
+    for (GridItem* aGridItem : mBoard->mGridItems)
     {
+        if (aGridItem->mDead)
+            continue;
         if (aGridItem->mGridItemType == GridItemType::GRIDITEM_BRAIN && aGridItem->mGridItemCounter >= 15)
         {
             float aDistance = Distance2D(aGridItem->mPosX + 15.0f, aGridItem->mPosY + 15.0f, mPosX + 50.0f, mPosY + 40.0f);
@@ -3053,10 +3111,7 @@ bool Zombie::ZombiquariumFindClosestBrain()
             mApp->PlayFoley(FoleyType::FOLEY_SLURP);
 
             mBodyHealth += 200;
-            if (mBodyHealth > mBodyMaxHealth)
-            {
-                mBodyHealth = mBodyMaxHealth;
-            }
+            mBodyHealth = std::min(mBodyHealth, mBodyMaxHealth);
 
             PlayZombieReanim("anim_aquarium_bite", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 10, 24.0f);
             mZombiePhase = ZombiePhase::PHASE_ZOMBIQUARIUM_BITE;
@@ -3333,6 +3388,89 @@ void Zombie::DropFlag()
     TodParticleSystem* aParticle = mApp->AddTodParticle(aFlagPosX + 6.0f, aFlagPosY - 45.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_ZOMBIE_FLAG);
     OverrideParticleColor(aParticle);
     OverrideParticleScale(aParticle);
+}
+
+void Zombie::ApplyZombatarHead(const unsigned char* theRecord)
+{
+    Reanimation* aBodyReanim = mApp->ReanimationTryToGet(mBodyReanimID);
+    if (!aBodyReanim)
+        return;
+
+    ReanimatorTrackInstance* aTrackInstance = aBodyReanim->GetTrackInstanceByName("anim_head1");
+    aTrackInstance->mImageOverride = IMAGE_BLANK;
+    aBodyReanim->AssignRenderGroupToPrefix("anim_head2", RENDER_GROUP_HIDDEN);
+    aBodyReanim->AssignRenderGroupToPrefix("anim_hair", RENDER_GROUP_HIDDEN);
+    aBodyReanim->mFrameBasePose = 0;
+
+    Reanimation* aHeadReanim = mApp->ReanimationTryToGet(mZombatarHeadReanimID);
+    if (!aHeadReanim)
+    {
+        aHeadReanim = mApp->AddReanimation(0.0f, 0.0f, 0, ReanimationType::REANIM_ZOMBATAR_HEAD);
+        aHeadReanim->PlayReanim("anim_head_idle", ReanimLoopType::REANIM_LOOP, 0, 15.0f);
+        mZombatarHeadReanimID = mApp->ReanimationGetID(aHeadReanim);
+        AttachEffect* aAttachEffect = AttachReanim(aTrackInstance->mAttachmentID, aHeadReanim, 0.0f, 0.0f);
+        TodScaleRotateTransformMatrix(aAttachEffect->mOffset, -20.0f, -1.0f, 0.2f, 1.0f, 1.0f);
+    }
+
+    aHeadReanim->AssignRenderGroupToTrack("anim_hair", RENDER_GROUP_HIDDEN);
+    aHeadReanim->AssignRenderGroupToPrefix("hats_", RENDER_GROUP_HIDDEN);
+    aHeadReanim->AssignRenderGroupToPrefix("hair_", RENDER_GROUP_HIDDEN);
+    aHeadReanim->AssignRenderGroupToPrefix("facialHair_", RENDER_GROUP_HIDDEN);
+    aHeadReanim->AssignRenderGroupToPrefix("accessories_", RENDER_GROUP_HIDDEN);
+    aHeadReanim->AssignRenderGroupToPrefix("eyeWear_", RENDER_GROUP_HIDDEN);
+    aHeadReanim->AssignRenderGroupToPrefix("tidBits_", RENDER_GROUP_HIDDEN);
+
+    struct RuntimePart
+    {
+        int mPartSlot;
+        int mColorSlot;
+        int mMaxCount;
+        const char* mPrefix;
+        bool mRemapAccessory;
+        bool mCompactTrackRange;
+    };
+
+    static constexpr RuntimePart aRuntimeParts[] =
+    {
+        { ZOMBATAR_SLOT_HATS, ZOMBATAR_SLOT_HATS_COLOR, 14, "hats_", false, false },
+        { ZOMBATAR_SLOT_HAIR, ZOMBATAR_SLOT_HAIR_COLOR, 16, "hair_", false, false },
+        { ZOMBATAR_SLOT_TIDBITS, ZOMBATAR_SLOT_TIDBITS_COLOR, 14, "tidBits_", false, false },
+        { ZOMBATAR_SLOT_EYEWEAR, ZOMBATAR_SLOT_EYEWEAR_COLOR, 16, "eyeWear_", false, false },
+        { ZOMBATAR_SLOT_ACCESSORY, ZOMBATAR_SLOT_ACCESSORY_COLOR, 15, "accessories_", true, false },
+        { ZOMBATAR_SLOT_FACIAL_HAIR, ZOMBATAR_SLOT_FACIAL_HAIR_COLOR, 25, "facialHair_", false, true }
+    };
+
+    for (const RuntimePart& aPart : aRuntimeParts)
+    {
+        int aPartIndex = ZombatarReadSignedRecordSlot(theRecord, aPart.mPartSlot);
+        if (aPartIndex < 0 || aPartIndex >= aPart.mMaxCount)
+            continue;
+        int aTrackIndex = aPartIndex;
+        if (aPart.mCompactTrackRange && aTrackIndex > 16)
+            aTrackIndex -= aTrackIndex / 17;
+        if (aPart.mRemapAccessory)
+            aTrackIndex = ZombatarRemapAccessoryForRuntime(aTrackIndex);
+        std::string aPrefix = ZombatarTrackName(aPart.mPrefix, aTrackIndex);
+
+        if (!aHeadReanim->TrackExists(aPrefix.c_str()))
+            continue;
+        ReanimatorTrackInstance* aPartTrack = aHeadReanim->GetTrackInstanceByName(aPrefix.c_str());
+        aHeadReanim->AssignRenderGroupToPrefix(aPrefix.c_str(), RENDER_GROUP_NORMAL);
+        aPartTrack->mTrackColor = ZombatarGetColor(ZombatarReadSignedRecordSlot(theRecord, aPart.mColorSlot));
+    }
+}
+
+void Zombie::SetupZombatarFlagReanim(int theRecordIndex)
+{
+    if (theRecordIndex < 0)
+        return;
+
+    PlayerInfo* aPlayerInfo = mApp->mPlayerInfo;
+    if (!aPlayerInfo || aPlayerInfo->mZombatarData.empty())
+        return;
+
+    const unsigned char* aRecord = aPlayerInfo->mZombatarData.data() + static_cast<size_t>(theRecordIndex) * ZOMBATAR_RECORD_SIZE;
+    ApplyZombatarHead(aRecord);
 }
 
 void Zombie::DropPole()
@@ -3906,10 +4044,7 @@ void Zombie::UpdateZamboni()
     {
         anIceX = std::max(anIceX, 25);
     }
-    if (anIceX < mBoard->mIceMinX[mRow])
-    {
-        mBoard->mIceMinX[mRow] = anIceX;
-    }
+    mBoard->mIceMinX[mRow] = std::min(mBoard->mIceMinX[mRow], anIceX);
     if (anIceX < 800)
     {
         mBoard->mIceTimer[mRow] = 3000;
@@ -4092,9 +4227,10 @@ Plant* Zombie::IsStandingOnSpikeweed()
 
     Rect aZombieRect = GetZombieRect();
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow == mRow && aPlant->IsSpiky() && !aPlant->NotOnGround() && (!mOnHighGround || aPlant->IsOnHighGround()))
         {
             Rect aPlantAttackRect = aPlant->GetPlantAttackRect(PlantWeapon::WEAPON_PRIMARY);
@@ -4997,13 +5133,13 @@ void Zombie::DrawZombiePart(Graphics* g, Image* theImage, int theFrame, int theR
     float aDrawHeight = aCelHeight;
     if (theDrawPos.mClipHeight > CLIP_HEIGHT_LIMIT)
     {
-        aDrawHeight = ClampFloat(aCelHeight - theDrawPos.mClipHeight, 0.0f, aCelHeight);
+        aDrawHeight = std::clamp(aCelHeight - theDrawPos.mClipHeight, 0.0f, static_cast<float>(aCelHeight));
     }
 
     int anAlpha = 255;
     if (mZombieFade >= 0)
     {
-        anAlpha = ClampInt(255 * mZombieFade / 10, 0, 255);
+        anAlpha = std::clamp(255 * mZombieFade / 10, 0, 255);
         g->SetColorizeImages(true);
         g->SetColor(Color(255, 255, 255, anAlpha));
     }
@@ -5546,7 +5682,7 @@ void Zombie::DrawReanim(Graphics* g, const ZombieDrawPosition& theDrawPos, int t
     int aFadeAlpha = 255;
     if (mZombieFade >= 0)
     {
-        aFadeAlpha = ClampInt(255 * mZombieFade / 10, 0, 255);
+        aFadeAlpha = std::clamp(255 * mZombieFade / 10, 0, 255);
     }
 
     Color aColorOverride(255, 255, 255, aFadeAlpha);
@@ -6299,9 +6435,10 @@ Plant* Zombie::FindPlantTarget(ZombieAttackType theAttackType)
 {
     Rect aAttackRect = GetZombieAttackRect();
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow == mRow)
         {
             Rect aPlantRect = aPlant->GetPlantRect();
@@ -6322,9 +6459,10 @@ Zombie* Zombie::FindZombieTarget()
 
     Rect aAttackRect = GetZombieAttackRect();
 
-    Zombie* aZombie = nullptr;
-    while (mBoard->IterateZombies(aZombie))
+    for (Zombie* aZombie : mBoard->mZombies)
     {
+        if (aZombie->mDead)
+            continue;
         if (mMindControlled != aZombie->mMindControlled && 
             !aZombie->IsFlying() && 
             aZombie->mZombiePhase != ZombiePhase::PHASE_DIGGER_TUNNELING && 
@@ -6337,7 +6475,7 @@ Zombie* Zombie::FindZombieTarget()
         {
             Rect aZombieRect = aZombie->GetZombieRect();
             int aOverlap = GetRectOverlap(aAttackRect, aZombieRect);
-            if (aOverlap >= 20 || (aOverlap > 0 && aZombie->mIsEating))
+            if (aOverlap >= 20 || (aOverlap >= 0 && aZombie->mIsEating))
             {
                 return aZombie;
             }
@@ -6349,9 +6487,10 @@ Zombie* Zombie::FindZombieTarget()
 
 void Zombie::SquishAllInSquare(int theX, int theY, ZombieAttackType theAttackType)
 {
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow == theY && aPlant->mPlantCol == theX)
         {
             if (theAttackType == ZombieAttackType::ATTACKTYPE_DRIVE_OVER && aPlant->IsSpiky())
@@ -6429,9 +6568,10 @@ void Zombie::CheckSquish(ZombieAttackType theAttackType)
 {
     Rect aAttackRect = GetZombieAttackRect();
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow == mRow)
         {
             Rect aPlantRect = aPlant->GetPlantRect();
@@ -7296,6 +7436,7 @@ void Zombie::DieNoLoot()
     mApp->RemoveReanimation(mBodyReanimID);
     mApp->RemoveReanimation(mMoweredReanimID);
     mApp->RemoveReanimation(mSpecialHeadReanimID);
+    mApp->RemoveReanimation(mZombatarHeadReanimID);
 
     mDead = true;
     TrySpawnLevelAward();
@@ -7350,17 +7491,18 @@ void Zombie::StopZombieSound()
 {
     if (mZombieType == ZombieType::ZOMBIE_DANCER || mZombieType == ZombieType::ZOMBIE_BACKUP_DANCER)
     {
-        bool aStopSound = false;
+        bool aStopSound = true;
 
         if (mBoard)
         {
-            Zombie* aZombie = nullptr;
-            while (mBoard->IterateZombies(aZombie))
+            for (Zombie* aZombie : mBoard->mZombies)
             {
+                if (aZombie->mDead)
+                    continue;
                 if (aZombie->mHasHead && !aZombie->IsDeadOrDying() && aZombie->IsOnBoard() && 
                     (aZombie->mZombieType == ZombieType::ZOMBIE_DANCER || aZombie->mZombieType == ZombieType::ZOMBIE_BACKUP_DANCER))
                 {
-                    aStopSound = true;
+                    aStopSound = false;
                     break;
                 }
             }
@@ -7473,10 +7615,7 @@ int Zombie::TakeShieldDamage(int theDamage, unsigned int theDamageFlags)
     if (!TestBit(theDamageFlags, static_cast<int>(DamageFlags::DAMAGE_DOESNT_CAUSE_FLASH)))
     {
         mShieldJustGotShotCounter = 25;
-        if (mJustGotShotCounter < 0)
-        {
-            mJustGotShotCounter = 0;
-        }
+        mJustGotShotCounter = std::max(mJustGotShotCounter, 0);
     }
 
     if (!TestBit(theDamageFlags, static_cast<int>(DamageFlags::DAMAGE_DOESNT_CAUSE_FLASH)) && !TestBit(theDamageFlags, static_cast<int>(DamageFlags::DAMAGE_HITS_SHIELD_AND_BODY)))
@@ -8299,9 +8438,10 @@ bool Zombie::IsTangleKelpTarget()
     if (mZombieHeight == ZombieHeight::HEIGHT_DRAGGED_UNDER)
         return true;
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mSeedType == SeedType::SEED_TANGLEKELP && aPlant->mTargetZombieID == mBoard->ZombieGetID(this))
         {
             return true;
@@ -8315,9 +8455,10 @@ bool Zombie::IsSquashTarget(Plant* theExcept)
 {
     ZombieID anId = mBoard->ZombieGetID(this);
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant != theExcept && aPlant->mSeedType == SeedType::SEED_SQUASH && aPlant->mTargetZombieID == anId)
         {
             return true;
@@ -8484,10 +8625,7 @@ void Zombie::MowDown()
     {
         RemoveIceTrap();
     }
-    if (mButteredCounter > 0)
-    {
-        mButteredCounter = 0;
-    }
+    mButteredCounter = std::min(mButteredCounter, 0);
 
     DropShield(0U);
     DropHelm(0U);
@@ -8553,10 +8691,7 @@ void Zombie::ApplyBurn()
     {
         RemoveIceTrap();
     }
-    if (mButteredCounter > 0)
-    {
-        mButteredCounter = 0;
-    }
+    mButteredCounter = std::min(mButteredCounter, 0);
 
     AttachmentDetachCrossFadeParticleType(mAttachmentID, ParticleEffect::PARTICLE_ZAMBONI_SMOKE, nullptr);
     BungeeDropPlant();
@@ -8803,10 +8938,7 @@ void Zombie::PlayDeathAnim(unsigned int theDamageFlags)
         AddAttachedParticle(75, 106, ParticleEffect::PARTICLE_ICE_TRAP_RELEASE);
         mIceTrapCounter = 0;
     }
-    if (mButteredCounter > 0)
-    {
-        mButteredCounter = 0;
-    }
+    mButteredCounter = std::min(mButteredCounter, 0);
     if (mYuckyFace)
     {
         ShowYuckyFace(false);
@@ -9648,9 +9780,10 @@ void Zombie::BossRVAttack()
 
 void Zombie::BossRVLanding()
 {
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow >= mTargetRow && aPlant->mRow <= mTargetRow + 1 && aPlant->mPlantCol >= mTargetCol && aPlant->mPlantCol <= mTargetCol + 2)
         {
             aPlant->Squish();
@@ -9777,9 +9910,10 @@ void Zombie::BossStompAttack()
 
 bool Zombie::BossCanStompRow(int theRow)
 {
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (!aPlant->NotOnGround() && aPlant->mRow >= theRow && aPlant->mRow <= theRow + 1 && aPlant->mPlantCol >= 5)
         {
             return true;
@@ -9790,9 +9924,10 @@ bool Zombie::BossCanStompRow(int theRow)
 
 void Zombie::BossStompContact()
 {
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mRow >= mTargetRow && aPlant->mRow <= mTargetRow + 1 && aPlant->mPlantCol >= 5)
         {
             aPlant->Squish();
@@ -10038,9 +10173,10 @@ void Zombie::UpdateBossFireball()
 
     SquishAllInSquare(mBoard->PixelToGridX(aPosX + 75, aPosY), mFireballRow, ZombieAttackType::ATTACKTYPE_DRIVE_OVER);
 
-    LawnMower* aLawnMower = nullptr;
-    while (mBoard->IterateLawnMowers(aLawnMower))
+    for (LawnMower* aLawnMower : mBoard->mLawnMowers)
     {
+        if (aLawnMower->mDead)
+            continue;
         if (aLawnMower->mMowerState != LawnMowerState::MOWER_SQUISHED && aLawnMower->mRow == mFireballRow && 
             aLawnMower->mPosX > aPosX && aLawnMower->mPosX < aPosX + 50.0f)
         {
@@ -10368,9 +10504,10 @@ void Zombie::BossDie()
 
     mApp->mMusic->FadeOut(200);
 
-    Zombie* aZombie = nullptr;
-    while (mBoard->IterateZombies(aZombie))
+    for (Zombie* aZombie : mBoard->mZombies)
     {
+        if (aZombie->mDead)
+            continue;
         if (aZombie != this && !aZombie->IsDeadOrDying())
         {
             aZombie->DieWithLoot();

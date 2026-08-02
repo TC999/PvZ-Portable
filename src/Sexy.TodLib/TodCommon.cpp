@@ -21,6 +21,7 @@
 
 #include "SexyAppBase.h"
 #include "TodList.h"
+#include <algorithm>
 #include "TodDebug.h"
 #include "TodCommon.h"
 #include "../LawnApp.h"
@@ -29,10 +30,10 @@
 #include "TodStringFile.h"
 #include "../GameConstants.h"
 #include "graphics/Font.h"
-#include "misc/Debug.h"
 #include "graphics/GLImage.h"
 #include "graphics/Graphics.h"
 #include "graphics/ImageFont.h"
+#include "graphics/MemoryImage.h"
 #include "misc/PerfTimer.h"
 #include "misc/SexyMatrix.h"
 #include "graphics/GLInterface.h"
@@ -112,21 +113,6 @@ void Tod_SWTri_AddAllDrawTriFuncs()
 	SWTri_AddDrawTriFunc(true, true, true, true, 0x0555, true, TodDrawTriangle_0555_TEX1_TALPHA1_MOD1_GLOB1_BLEND1);
 }
 
-std::string TodGetCurrentLevelName()
-{
-	return "Unknown level";
-}
-
-bool TodHasUsedCheatKeys()
-{
-	return false;
-}
-
-bool TodAppCloseRequest()
-{
-	return false;
-}
-
 intptr_t TodPickFromWeightedArray(const TodWeightedArray* theArray, int theCount)
 {
 	return TodPickArrayItemFromWeightedArray(theArray, theCount)->mItem;
@@ -199,7 +185,7 @@ float TodCalcSmoothWeight(float aWeight, float aLastPicked, float aSecondLastPic
 	float aAdvancedLength2 = aSecondLastPicked + 1.0f - aExpectedLength2;	// 相较于 theSecondLastPicked 的期望值，提前的轮数
 	float aFactor1 = 1.0f + aAdvancedLength1 / aExpectedLength1 * 2.0f;		// = aWeight * aLastPicked * 2 + aWeight * 2 - 1
 	float aFactor2 = 1.0f + aAdvancedLength2 / aExpectedLength2 * 2.0f;		// = aSecondLastPicked * aWeight + aWeight - 1
-	float aFactorFinal = ClampFloat(aFactor1 * 0.75f + aFactor2 * 0.25f, 0.01f, 100.0f);
+	float aFactorFinal = std::clamp(aFactor1 * 0.75f + aFactor2 * 0.25f, 0.01f, 100.0f);
 	return aWeight * aFactorFinal;
 }
 
@@ -569,7 +555,7 @@ void TodDrawStringMatrix(Graphics* g, const _Font* theFont, const SexyMatrix3& t
 			aRenderCommand->mUseAlphaCorrection = aLayer->mUseAlphaCorrection;
 			aRenderCommand->mNext = nullptr;
 
-			int anOrderIdx = std::min(std::max(anOrder + 128, 0), 255);
+			int anOrderIdx = std::clamp(anOrder + 128, 0, 255);
 			if (gRenderTail[anOrderIdx])
 			{
 				gRenderTail[anOrderIdx]->mNext = aRenderCommand;
@@ -586,10 +572,7 @@ void TodDrawStringMatrix(Graphics* g, const _Font* theFont, const SexyMatrix3& t
 			//{
 			//	aMaxXPos = aCurXPos;
 			//}
-			if (aMaxXPos < aCurXPos + aSpacing + aCharWidth)
-			{
-				aMaxXPos = aCurXPos + aSpacing + aCharWidth;
-			}
+			aMaxXPos = std::max(aMaxXPos, aCurXPos + aSpacing + aCharWidth);
 		}
 
 		aCurXPos = aMaxXPos;
@@ -935,7 +918,7 @@ void FixPixelsOnAlphaEdgeForBlending(Image* theImage)
 	int aDuration = std::max(aTimer.GetDuration(), 0.0);
 	if (aDuration > 20)
 	{
-		TodTraceAndLog("LOADING:Long sanding '%s' %d ms on %s", theImage->mFilePath.c_str(), aDuration, gGetCurrentLevelName().c_str());
+		TodTraceAndLogLn("LOADING:Long sanding '%s' %d ms on %s", theImage->mFilePath.c_str(), aDuration, LawnGetCurrentLevelName().c_str());
 	}
 }
 
@@ -1016,8 +999,8 @@ Color GetFlashingColor(uint32_t theCounter, int theFlashTime)
 	int aTimeInf = theFlashTime / 2;
 	//int aTimeDel = abs(aTimeInf - aTimeAge) / aTimeInf;
 	// @Patoke: order wasn't like in binaries
-	int aGrayness = ClampInt(200 * abs(aTimeInf - aTimeAge) / aTimeInf + 55, 0, 255);
-	//int aGrayness = ClampInt(55 + 200 * abs(aTimeInf - aTimeAge)/ aTimeInf, 0, 255);
+	int aGrayness = std::clamp(200 * abs(aTimeInf - aTimeAge) / aTimeInf + 55, 0, 255);
+	//int aGrayness = std::clamp(55 + 200 * abs(aTimeInf - aTimeAge)/ aTimeInf, 0, 255);
 	return Color(aGrayness, aGrayness, aGrayness, 255);
 }
 
@@ -1028,13 +1011,13 @@ Color ColorAdd(const Color& theColor1, const Color& theColor2)
 	int b = theColor1.mBlue + theColor2.mBlue;
 	int a = theColor1.mAlpha + theColor2.mAlpha;
 
-	return Color(ClampInt(r, 0, 255), ClampInt(g, 0, 255), ClampInt(b, 0, 255), ClampInt(a, 0, 255));  // 线性减淡
+	return Color(std::clamp(r, 0, 255), std::clamp(g, 0, 255), std::clamp(b, 0, 255), std::clamp(a, 0, 255));  // 线性减淡
 }
 
 // GOTY @Patoke: 0x51D3C0
 int ColorComponentMultiply(int theColor1, int theColor2)
 {
-	return ClampInt(theColor1 * theColor2 / 255, 0, 255);  // 正片叠底
+	return std::clamp(theColor1 * theColor2 / 255, 0, 255);  // 正片叠底
 }
 
 Color ColorsMultiply(const Color& theColor1, const Color& theColor2)
@@ -1050,7 +1033,7 @@ Color ColorsMultiply(const Color& theColor1, const Color& theColor2)
 // GOTY @Patoke: inlined 0x51D4C0
 bool TodLoadResources(const std::string& theGroup)
 {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->TodLoadResources(theGroup);
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->TodLoadResources(theGroup);
 }
 
 // GOTY @Patoke: 0x51D4C0
@@ -1084,7 +1067,7 @@ bool TodResourceManager::TodLoadResources(const std::string& theGroup)
 	int aDuration = std::max(aTimer.GetDuration(), 0.0);
 	if (aDuration > 20)
 	{
-		TodTraceAndLog("LOADED: '%s' %d ms on %s", theGroup.c_str(), aDuration, gGetCurrentLevelName().c_str());
+		TodTraceAndLogLn("LOADED: '%s' %d ms on %s", theGroup.c_str(), aDuration, LawnGetCurrentLevelName().c_str());
 	}
 
 	return true;
@@ -1092,7 +1075,7 @@ bool TodResourceManager::TodLoadResources(const std::string& theGroup)
 
 void TodAddImageToMap(SharedImageRef* theImage, const std::string& thePath)
 { 
-	((TodResourceManager*)gSexyAppBase->mResourceManager)->AddImageToMap(theImage, thePath);
+	static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->AddImageToMap(theImage, thePath);
 }
 
 void TodResourceManager::AddImageToMap(SharedImageRef* theImage, const std::string& thePath)
@@ -1107,7 +1090,7 @@ void TodResourceManager::AddImageToMap(SharedImageRef* theImage, const std::stri
 
 bool TodLoadNextResource()
 {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->TodLoadNextResource();
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->TodLoadNextResource();
 }
 
 bool TodResourceManager::TodLoadNextResource()
@@ -1119,7 +1102,10 @@ bool TodResourceManager::TodLoadNextResource()
 	{
 		BaseRes* aRes = *mCurResGroupListItr;
 		if (aRes->mFromProgram)
+		{
+			mCurResGroupListItr++;
 			continue;
+		}
 
 		switch (aRes->mType)
 		{
@@ -1184,12 +1170,12 @@ bool TodResourceManager::TodLoadNextResource()
 
 bool TodFindImagePath(Image* theImage, std::string* thePath)
 {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->FindImagePath(theImage, thePath);
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->FindImagePath(theImage, thePath);
 }
 
 // @Patoke implemented
 bool TodFindFontPath(_Font* theFont, std::string* thePath) {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->FindFontPath(theFont, thePath);
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->FindFontPath(theFont, thePath);
 }
 
 bool TodResourceManager::FindFontPath(_Font* theFont, std::string* thePath)

@@ -13,7 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VCPKG_BINARY_SOURCES: clear
+  # vcpkg binary cache; restored/saved per-OS via actions/cache below
+  VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
 
 jobs:
   build-archlinux:
@@ -120,6 +121,22 @@ jobs:
 
     - uses: ilammy/msvc-dev-cmd@v1
 
+    - name: Get toolchain ID for cache key
+      shell: pwsh
+      run: |
+        $tc = $env:VCToolsVersion
+        if (-not $tc) { $tc = "unknown" }
+        $cmake = (cmake --version | Select-Object -First 1) -replace '[^0-9.]',''
+        if (-not $cmake) { $cmake = "unknown" }
+        echo "VCPKG_TC=msvc-$tc-cmake$cmake" >> $env:GITHUB_ENV
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: vcpkg-cache
+        key: vcpkg-windows-${{ env.VCPKG_TC }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: vcpkg-windows-${{ env.VCPKG_TC }}-
+
     - name: Install Ninja
       run: choco install ninja -y
 
@@ -215,6 +232,10 @@ jobs:
         echo "Bundling dependencies..."
         dylibbundler -of -b -x dist/pvz-portable -d dist/libs -p @executable_path/libs/
 
+        # Homebrew's SDL2 formula is sdl2-compat, which loads SDL3 at runtime.
+        # dylibbundler cannot discover libraries loaded with dlopen(), so bundle it explicitly.
+        install -m 755 "$(brew --prefix sdl3)/lib/libSDL3.dylib" dist/libs/libSDL3.dylib
+
         codesign --force --deep -s - dist/pvz-portable
 
     - name: Upload Artifact
@@ -226,6 +247,8 @@ jobs:
   build-android:
     name: Build for Android (arm64-v8a)
     runs-on: ubuntu-latest
+    env:
+      ANDROID_API: "24"
     steps:
     - uses: actions/checkout@v6
       with:
@@ -238,7 +261,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
 
     - name: Install Android NDK
       run: |
@@ -267,6 +290,19 @@ jobs:
         tar xf "SDL2-${SDL2_TAG}.tar.gz"
         mv "SDL2-${SDL2_TAG}" sdl2-src
 
+    - name: Get toolchain ID for cache key
+      run: |
+        NDK_VER=$(grep -oP 'Pkg\.Revision = \K[\d.]+' "$ANDROID_NDK/source.properties" || echo unknown)
+        CMAKE_VER=$(cmake --version | head -1 | sed -nE 's/[^0-9]*([0-9.]+).*/\1/p')
+        echo "VCPKG_TC=ndk-$NDK_VER-cmake${CMAKE_VER:-unknown}" >> "$GITHUB_ENV"
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: vcpkg-cache
+        key: vcpkg-android-${{ env.VCPKG_TC }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: vcpkg-android-${{ env.VCPKG_TC }}-
+
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
       with:
@@ -279,7 +315,7 @@ jobs:
         cmake -B build-sdl2 \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=arm64-v8a \
-          -DANDROID_PLATFORM=android-28 \
+          -DANDROID_PLATFORM=android-$ANDROID_API \
           -DSDL_SHARED=ON \
           -DSDL_STATIC=OFF \
           -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/sdl2-android \
@@ -291,7 +327,6 @@ jobs:
     - name: Build Native Library with CMake
       run: |
         ABI=arm64-v8a
-        ANDROID_API=28
         BUILD_DIR=build-android-$ABI
         SDL2_PREFIX=$GITHUB_WORKSPACE/sdl2-android
 
@@ -330,12 +365,35 @@ jobs:
         echo "Collected .so files:"
         ls -lh $JNILIBS/
 
+    - name: Decode release keystore
+      env:
+        PVZP_KEYSTORE_BASE64: ${{ secrets.PVZP_KEYSTORE_BASE64 }}
+        PVZP_KEYSTORE_PASSWORD: ${{ secrets.PVZP_KEYSTORE_PASSWORD }}
+        PVZP_KEY_ALIAS: ${{ secrets.PVZP_KEY_ALIAS }}
+        PVZP_KEY_PASSWORD: ${{ secrets.PVZP_KEY_PASSWORD }}
+      run: |
+        # Secrets are empty on fork PRs; the build then falls back to debug signing.
+        if [ -n "$PVZP_KEYSTORE_BASE64" ] && [ -n "$PVZP_KEYSTORE_PASSWORD" ] && [ -n "$PVZP_KEY_ALIAS" ] && [ -n "$PVZP_KEY_PASSWORD" ]; then
+          echo "$PVZP_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pvzp-release.keystore"
+          echo "PVZP_KEYSTORE_FILE=$RUNNER_TEMP/pvzp-release.keystore" >> "$GITHUB_ENV"
+        fi
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        # sdl2-src ships its own wrapper jar, which is not in Gradle's known checksum database
+        validate-wrappers: false
+
     - name: Build APK with Gradle
+      env:
+        PVZP_KEYSTORE_PASSWORD: ${{ secrets.PVZP_KEYSTORE_PASSWORD }}
+        PVZP_KEY_ALIAS: ${{ secrets.PVZP_KEY_ALIAS }}
+        PVZP_KEY_PASSWORD: ${{ secrets.PVZP_KEY_PASSWORD }}
       run: |
         cd android
         echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-        # Use gradle wrapper; package pre-built native libraries into a release APK (debug-signed)
+        # Use gradle wrapper; package pre-built native libraries into a release APK
         gradle wrapper
         ./gradlew assembleRelease -PusePrebuiltLibs=true --no-daemon
 
@@ -359,6 +417,19 @@ jobs:
     - uses: actions/checkout@v6
       with:
         fetch-depth: 0
+
+    - name: Get toolchain ID for cache key
+      run: |
+        CLANG_VER=$(clang --version | head -1 | sed -nE 's/.*version ([0-9.]+).*/\1/p')
+        CMAKE_VER=$(cmake --version | head -1 | sed -nE 's/[^0-9]*([0-9.]+).*/\1/p')
+        echo "VCPKG_TC=clang-${CLANG_VER:-unknown}-cmake${CMAKE_VER:-unknown}" >> "$GITHUB_ENV"
+
+    - name: Restore vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: vcpkg-cache
+        key: vcpkg-ios-${{ env.VCPKG_TC }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        restore-keys: vcpkg-ios-${{ env.VCPKG_TC }}-
 
     - name: Setup vcpkg
       uses: lukka/run-vcpkg@v11
@@ -407,7 +478,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Emscripten
-      uses: mymindstorm/setup-emsdk@v14
+      uses: emscripten-core/setup-emsdk@v16
 
     - name: Install Build Tools
       run: |

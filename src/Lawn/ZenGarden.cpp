@@ -41,6 +41,8 @@
 #include "graphics/Graphics.h"
 #include "../Sexy.TodLib/TodStringFile.h"
 
+constexpr const float STINKY_SLEEP_POS_Y = 461.0f;
+
 constinit const static SpecialGridPlacement gGreenhouseGridPlacement[] =
 {
     { .mPixelX = 73, .mPixelY = 73, .mGridX = 0, .mGridY = 0 },
@@ -104,8 +106,8 @@ ZenGarden::ZenGarden()
     mApp = (LawnApp*)gSexyAppBase;
     mBoard = nullptr;
     mGardenType = GardenType::GARDEN_MAIN;
-    mNowTime = time(0);
-    mNowTM = *localtime(&mNowTime);
+    mNowTime = time(nullptr); // constructed on the loading thread: GetNowTime() reads main-thread state; refreshed before any use
+    mNowTM = mApp->GetLocalTime(mNowTime);
 }
 
 ZenGarden::~ZenGarden()
@@ -284,8 +286,8 @@ PottedPlant* ZenGarden::PottedPlantFromIndex(intptr_t thePottedPlantIndex)
 void ZenGarden::ZenGardenInitLevel()
 {
     mBoard = mApp->mBoard;
-    mNowTime = time(0);
-    mNowTM = *localtime(&mNowTime);
+    mNowTime = mApp->GetNowTime();
+    mNowTM = mApp->GetLocalTime(mNowTime);
 
     for (int i = 0; i < mApp->mPlayerInfo->mNumPottedPlants; i++)
     {
@@ -498,9 +500,10 @@ void ZenGarden::MouseDownWithMoneySign(Plant* thePlant)
         {
             memmove(aPottedPlant, aPottedPlant + 1, aNumPlantsAfterThis * sizeof(PottedPlant));
 
-            Plant* aUpdatePlant = nullptr;
-            while (mBoard->IteratePlants(aUpdatePlant))
+            for (Plant* aUpdatePlant : mBoard->mPlants)
             {
+                if (aUpdatePlant->mDead)
+                    continue;
                 if (aUpdatePlant->mPottedPlantIndex > thePlant->mPottedPlantIndex)
                 {
                     aUpdatePlant->mPottedPlantIndex--;
@@ -762,7 +765,7 @@ bool ZenGarden::WasPlantNeedFulfilledToday(PottedPlant* thePottedPlant)
     }
 
     time_t aLastNeedFulfilledTime = (time_t)thePottedPlant->mLastNeedFulfilledTime;
-    tm aLastNeedFulfilledTM = *localtime(&aLastNeedFulfilledTime);
+    tm aLastNeedFulfilledTM = mApp->GetLocalTime(aLastNeedFulfilledTime);
     return mNowTM.tm_year <= aLastNeedFulfilledTM.tm_year && mNowTM.tm_yday <= aLastNeedFulfilledTM.tm_yday;
 }
 
@@ -775,7 +778,7 @@ bool ZenGarden::PlantShouldRefreshNeed(PottedPlant* thePottedPlant)
     }
     
     time_t aLastWateredTime = (time_t)thePottedPlant->mLastWateredTime;
-    tm aLastWateredTM = *localtime(&aLastWateredTime);
+    tm aLastWateredTM = mApp->GetLocalTime(aLastWateredTime);
     return mNowTM.tm_year > aLastWateredTM.tm_year || mNowTM.tm_yday > aLastWateredTM.tm_yday;
 }
 
@@ -807,6 +810,9 @@ void ZenGarden::UpdatePlantNeeds()
     {
         return;
     }
+
+    mNowTime = mApp->GetNowTime();  // the cached clock is stale on the game selector
+    mNowTM = mApp->GetLocalTime(mNowTime);
 
     for (int i = 0; i < mApp->mPlayerInfo->mNumPottedPlants; i++)
     {
@@ -891,9 +897,10 @@ void ZenGarden::MouseDownWithFeedingTool(int x, int y, CursorType theCursorType)
 {
     Plant* aPlantToFeed = nullptr;
     {
-        Plant* aPlant = nullptr;
-        while (mBoard->IteratePlants(aPlant))
+        for (Plant* aPlant : mBoard->mPlants)
         {
+            if (aPlant->mDead)
+                continue;
             if (aPlant->mHighlighted && aPlant->mPottedPlantIndex != -1)
             {
                 aPlantToFeed = aPlant;
@@ -1005,9 +1012,10 @@ void ZenGarden::DoFeedingTool(int x, int y, GridItemState theToolType)
 {
     if (theToolType == GridItemState::GRIDITEM_STATE_ZEN_TOOL_GOLD_WATERING_CAN)
     {
-        Plant* aPlant = nullptr;
-        while (mBoard->IteratePlants(aPlant))
+        for (Plant* aPlant : mBoard->mPlants)
         {
+            if (aPlant->mDead)
+                continue;
             if (mBoard->IsPlantInGoldWateringCanRange(x, y, aPlant))
             {
                 PottedPlant* aPottedPlant = PottedPlantFromIndex(aPlant->mPottedPlantIndex);
@@ -1313,9 +1321,10 @@ void ZenGarden::StinkyPickGoal(GridItem* theStinky)
     Coin* aBestCoin = nullptr;
     float aCurWeight = 0.0f;
     {
-        Coin* aCoin = nullptr;
-        while (mBoard->IterateCoins(aCoin))
+        for (Coin* aCoin : mBoard->mCoins)
         {
+            if (aCoin->mDead)
+                continue;
             if (!aCoin->mIsBeingCollected && aCoin->mPosY == aCoin->mGroundY)
             {
                 float aWeight = Distance2D(aCoin->mPosX, aCoin->mPosY + 30.0f, theStinky->mPosX, theStinky->mPosY);
@@ -1584,9 +1593,10 @@ void ZenGarden::StinkyUpdate(GridItem* theStinky)
         theStinky->mGridItemCounter--;
     }
 
-    Coin* aCoin = nullptr;
-    while (mBoard->IterateCoins(aCoin))
+    for (Coin* aCoin : mBoard->mCoins)
     {
+        if (aCoin->mDead)
+            continue;
         if (!aCoin->mIsBeingCollected && Distance2D(aCoin->mPosX, aCoin->mPosY + 30.0f, theStinky->mPosX, theStinky->mPosY) < 20.0f)
         {
             aCoin->PlayCollectSound();
@@ -1725,9 +1735,9 @@ void ZenGarden::ZenGardenUpdate()
         return;
     }
 
-    // Cache time(0) and localtime() once per frame to avoid repeated syscalls
-    mNowTime = time(0);
-    mNowTM = *localtime(&mNowTime);
+    // Cache the current time and its broken-down form once per frame to avoid repeated calls
+    mNowTime = mApp->GetNowTime();
+    mNowTM = mApp->GetLocalTime(mNowTime);
 
     mApp->UpdateCrazyDave();
     if (mBoard->mCursorObject->mCursorType != CursorType::CURSOR_TYPE_NORMAL)
@@ -1750,9 +1760,10 @@ void ZenGarden::ZenGardenUpdate()
 
     UpdatePlantNeeds();
     {
-        Plant* aPlant = nullptr;
-        while (mBoard->IteratePlants(aPlant))
+        for (Plant* aPlant : mBoard->mPlants)
         {
+            if (aPlant->mDead)
+                continue;
             if (aPlant->mPottedPlantIndex != -1)
             {
                 PottedPlantUpdate(aPlant);
@@ -1760,9 +1771,10 @@ void ZenGarden::ZenGardenUpdate()
         }
     }
     {
-        GridItem* aGridItem = nullptr;
-        while (mBoard->IterateGridItems(aGridItem))
+        for (GridItem* aGridItem : mBoard->mGridItems)
         {
+            if (aGridItem->mDead)
+                continue;
             if (aGridItem->mGridItemType == GridItemType::GRIDITEM_ZEN_TOOL)
             {
                 ZenToolUpdate(aGridItem);
@@ -1785,9 +1797,10 @@ void ZenGarden::ZenGardenUpdate()
 
 GridItem* ZenGarden::GetStinky()
 {
-    GridItem* aGridItem = nullptr;
-    while (mBoard->IterateGridItems(aGridItem))
+    for (GridItem* aGridItem : mBoard->mGridItems)
     {
+        if (aGridItem->mDead)
+            continue;
         if (aGridItem->mGridItemType == GridItemType::GRIDITEM_STINKY)
         {
             return aGridItem;
@@ -2374,8 +2387,8 @@ void ZenGarden::OpenStore()
     }
     else
     {
-        mNowTime = time(0);
-        mNowTM = *localtime(&mNowTime);
+        mNowTime = mApp->GetNowTime();
+        mNowTM = mApp->GetLocalTime(mNowTime);
 
         mApp->mMusic->MakeSureMusicIsPlaying(MusicTune::MUSIC_TUNE_ZEN_GARDEN);
         if (mBoard->mTutorialState == TutorialState::TUTORIAL_ZEN_GARDEN_VISIT_STORE)
@@ -2419,9 +2432,10 @@ SeedType ZenGarden::PickRandomSeedType()
 void ZenGarden::LeaveGarden()
 {
     {
-        GridItem* aGridItem = nullptr;
-        while (mBoard->IterateGridItems(aGridItem))
+        for (GridItem* aGridItem : mBoard->mGridItems)
         {
+            if (aGridItem->mDead)
+                continue;
             if (aGridItem->mGridItemType == GridItemType::GRIDITEM_ZEN_TOOL)
             {
                 DoFeedingTool(aGridItem->mPosX, aGridItem->mPosY, aGridItem->mGridItemState);
@@ -2436,9 +2450,10 @@ void ZenGarden::LeaveGarden()
         }
     }
     {
-        Coin* aCoin = nullptr;
-        while (mBoard->IterateCoins(aCoin))
+        for (Coin* aCoin : mBoard->mCoins)
         {
+            if (aCoin->mDead)
+                continue;
             if (aCoin->mIsBeingCollected)
             {
                 aCoin->ScoreCoin();

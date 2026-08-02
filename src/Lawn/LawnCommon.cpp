@@ -94,15 +94,45 @@ void LawnEditWidget::KeyDown(KeyCode theKey)
         mDialog->KeyDown(KeyCode::KEYCODE_ESCAPE);
 }
 
-void LawnEditWidget::KeyChar(char theChar)
+// Uppercase ASCII letters in place; locale-independent, safe on UTF-8 bytes.
+static bool AutoCapChar(char& theChar)
 {
-    if (mAutoCapFirstLetter && isalpha(theChar))
+    if (theChar >= 'a' && theChar <= 'z')
     {
-        theChar = toupper(theChar);
-        mAutoCapFirstLetter = false;
+        theChar = theChar - 'a' + 'A';
+        return true;
     }
 
+    return theChar >= 'A' && theChar <= 'Z';
+}
+
+void LawnEditWidget::KeyChar(char theChar)
+{
+    if (mAutoCapFirstLetter && AutoCapChar(theChar))
+        mAutoCapFirstLetter = false;
+
     EditWidget::KeyChar(theChar);
+}
+
+void LawnEditWidget::KeyText(std::string_view theText)
+{
+    if (!mAutoCapFirstLetter)
+    {
+        EditWidget::KeyText(theText);
+        return;
+    }
+
+    std::string aText(theText);
+    for (char& aCh : aText)
+    {
+        if (AutoCapChar(aCh))
+        {
+            mAutoCapFirstLetter = false;
+            break;
+        }
+    }
+
+    EditWidget::KeyText(aText);
 }
 
 LawnEditWidget* CreateEditWidget(int theId, EditListener* theListener, Dialog* theDialog)
@@ -142,10 +172,9 @@ std::string GetLegacySavedGameName(GameMode theGameMode, int theProfileId)
     return GetAppDataPath(StrFormat("userdata/game%d_%d.dat", theProfileId, static_cast<int>(theGameMode)));
 }
 
-int GetCurrentDaysSince2000()
+int GetCurrentDaysSince2000(time_t theTime)
 {
-    time_t aNow = time(0);
-    tm aNowTM = *localtime(&aNow);
+    tm aNowTM = gLawnApp->GetLocalTime(theTime);
 
     int dy = aNowTM.tm_year - 100;
     return dy * 365 + (dy - 1) / 400 - (dy - 1) / 100 + (dy - 1) / 4 + aNowTM.tm_yday + 1;

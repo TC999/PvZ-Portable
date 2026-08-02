@@ -34,6 +34,7 @@
 #include "../../Sexy.TodLib/Reanimator.h"
 #include "../../GameConstants.h"
 #include "../System/Music.h"
+#include <algorithm>
 
 // GOTY @Patoke: 0x498220
 TitleScreen::TitleScreen(LawnApp* theApp)
@@ -98,7 +99,7 @@ void TitleScreen::Draw(Graphics* g)
 
 		if (!mDrawnYet)
 		{
-			TodTraceAndLog("First Draw Time: %d ms\n", SDL_GetTicks() - mApp->mTimeLoaded);
+			TodTraceAndLogLn("First Draw Time: %d ms", SDL_GetTicks() - mApp->mTimeLoaded);
 			TodHesitationTrace("TitleScreen First Draw");
 			mDrawnYet = true;
 		}
@@ -209,8 +210,7 @@ void TitleScreen::Draw(Graphics* g)
 		TodBltMatrix(g, IMAGE_REANIM_SODROLLCAP, aTransform, g->mClipRect, Color::White, g->mDrawMode, aSrcRect);
 	}
 
-	Reanimation* aReanim = nullptr;
-	while (mApp->mEffectSystem->mReanimationHolder->mReanimations.IterateNext(aReanim))
+	for (Reanimation* aReanim : mApp->mEffectSystem->mReanimationHolder->mReanimations)
 	{
 		aReanim->Draw(g);
 	}
@@ -320,7 +320,7 @@ void TitleScreen::Update()
 		}
 
 		float aLoadTime = aEstimatedTotalLoadTime * (1 - aCurrentProgress);
-		aLoadTime = ClampFloat(aLoadTime, 100, 3000);
+		aLoadTime = std::clamp(aLoadTime, 100.0f, 3000.0f);
 		mBarVel = mTotalBarWidth / aLoadTime;
 		mBarStartProgress = std::min(aCurrentProgress, 0.9f);
 	}
@@ -391,7 +391,7 @@ void TitleScreen::Update()
 		mPrevLoadingPercent = aLoadingPercent;
 	}
 
-	if (!mLoadingThreadComplete && mApp->mLoadingThreadCompleted)
+	if (!mLoadingThreadComplete && (mApp->IsInDemoMode() ? mApp->mLoaded : mApp->mLoadingThreadCompleted))
 	{
 		mLoadingThreadComplete = true;
 		mStartButton->SetDisabled(false);

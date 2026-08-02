@@ -24,6 +24,7 @@
 #include "../Coin.h"
 #include "../Board.h"
 #include "../Plant.h"
+#include "../LawnCommon.h"
 #include "LawnDialog.h"
 #include "GameButton.h"
 #include "StoreScreen.h"
@@ -42,6 +43,17 @@
 #include "graphics/ImageFont.h"
 #include "widget/WidgetManager.h"
 #include "AchievementsScreen.h"
+#include <algorithm>
+
+constexpr const int STORESCREEN_ITEMOFFSET_1_X = 422;
+constexpr const int STORESCREEN_ITEMOFFSET_1_Y = 206;
+constexpr const int STORESCREEN_ITEMOFFSET_2_X = 372;
+constexpr const int STORESCREEN_ITEMOFFSET_2_Y = 310;
+constexpr const int STORESCREEN_ITEMSIZE = 74;
+constexpr const int STORESCREEN_COINBANK_X = 650;
+constexpr const int STORESCREEN_COINBANK_Y = 559;
+constexpr const int STORESCREEN_PAGESTRING_X = 470;
+constexpr const int STORESCREEN_PAGESTRING_Y = 500;
 
 static StoreItem gStoreItemSpots[NUM_STORE_PAGES][MAX_PAGE_SPOTS] =
 {
@@ -142,6 +154,7 @@ StoreScreen::StoreScreen(LawnApp* theApp) : Dialog(nullptr, nullptr, DIALOG_STOR
         mNextButton->SetDisabled(true);
     }
     mDrawnOnce = false;
+    mAddedAtUpdateCount = mApp->mUpdateCount;
     mGoToTreeNow = false;
     mPurchasedFullVersion = false;
     mTrialLockedWhenStoreOpened = mApp->IsTrialStageLocked();
@@ -216,7 +229,7 @@ bool StoreScreen::IsItemSoldOut(StoreItem theStoreItem)
     else if (theStoreItem == STORE_ITEM_BONUS_LAWN_MOWER)
         return aPlayer->mPurchases[STORE_ITEM_BONUS_LAWN_MOWER] >= 2;
     else if (IsPottedPlant(theStoreItem))
-        return mApp->mZenGarden->IsZenGardenFull(true) || aPlayer->mPurchases[theStoreItem] == GetCurrentDaysSince2000();
+        return mApp->mZenGarden->IsZenGardenFull(true) || aPlayer->mPurchases[theStoreItem] == static_cast<uint32_t>(GetCurrentDaysSince2000(mApp->GetNowTime()));
     else return aPlayer->mPurchases[theStoreItem];
 
     unreachable();
@@ -524,8 +537,7 @@ void StoreScreen::Draw(Graphics* g)
 
 void StoreScreen::DrawOverlay(Graphics* g)
 {
-    Coin* aCoin = nullptr;
-    while (mCoins.IterateNext(aCoin))
+    for (Coin* aCoin : mCoins)
     {
         if (!aCoin->mDead)
         {
@@ -583,7 +595,7 @@ void StoreScreen::UpdateMouse()
                 case STORE_ITEM_WHEEL_BARROW:           aMessageIndex = 2024;                           break;
                 case STORE_ITEM_STINKY_THE_SNAIL:       aMessageIndex = 2025;                           break;
                 case STORE_ITEM_PACKET_UPGRADE:
-                    aMessageIndex = ClampInt(mApp->mPlayerInfo->mPurchases[STORE_ITEM_PACKET_UPGRADE] + 2011, 2011, 2014);
+                    aMessageIndex = std::clamp(static_cast<int>(mApp->mPlayerInfo->mPurchases[STORE_ITEM_PACKET_UPGRADE]) + 2011, 2011, 2014);
                     break;
                 case STORE_ITEM_POOL_CLEANER:           aMessageIndex = 2026;                           break;
                 case STORE_ITEM_ROOF_CLEANER:           aMessageIndex = 2027;                           break;
@@ -641,8 +653,7 @@ void StoreScreen::Update()
     mApp->UpdateCrazyDave();
 
     // 更新 DataArray<Coin> 中的所有 Coin
-    Coin* aCoin = nullptr;
-    while (mCoins.IterateNext(aCoin))
+    for (Coin* aCoin : mCoins)
     {
         if (!aCoin->mDead)
         {
@@ -655,7 +666,9 @@ void StoreScreen::Update()
 
     if (mApp->mCrazyDaveState == CRAZY_DAVE_OFF)
     {
-        if (mDrawnOnce)
+        // demo sessions preload by update tick instead of the frame-scheduled mDrawnOnce
+        bool aShouldPreload = mApp->IsInDemoMode() ? (mApp->mUpdateCount - mAddedAtUpdateCount >= 2U) : mDrawnOnce;
+        if (aShouldPreload)
         {
             StorePreload();
         }
@@ -988,7 +1001,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
             }
             else if (theStoreItem == STORE_ITEM_STINKY_THE_SNAIL)
             {
-                uint32_t aTime = static_cast<uint32_t>(time(0));
+                uint32_t aTime = static_cast<uint32_t>(mApp->GetNowTime());
                 if (aTime == 0) aTime = 1;
                 mApp->mPlayerInfo->mPurchases[theStoreItem] = aTime;
             }
@@ -1011,7 +1024,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
             else if (theStoreItem == STORE_ITEM_TREE_OF_WISDOM)
             {
                 mApp->mPlayerInfo->mPurchases[theStoreItem] = 1;
-                mApp->mPlayerInfo->mChallengeRecords[GAMEMODE_TREE_OF_WISDOM] = 1;
+                mApp->mPlayerInfo->mChallengeRecords[GAMEMODE_TREE_OF_WISDOM - GAMEMODE_SURVIVAL_NORMAL_STAGE_1] = 1;
 
                 LawnDialog* aDialog = (LawnDialog*)mApp->DoDialog(
                     DIALOG_STORE_PURCHASE, 
@@ -1039,7 +1052,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
                 mApp->mZenGarden->AddPottedPlant(&mPottedPlantSpecs);
                 mPottedPlantSpecs.InitializePottedPlant(SEED_MARIGOLD);
                 mPottedPlantSpecs.mDrawVariation = (DrawVariation)RandRangeInt(VARIATION_MARIGOLD_WHITE, VARIATION_MARIGOLD_LIGHT_GREEN);
-                mApp->mPlayerInfo->mPurchases[theStoreItem] = GetCurrentDaysSince2000();
+                mApp->mPlayerInfo->mPurchases[theStoreItem] = GetCurrentDaysSince2000(mApp->GetNowTime());
             }
             else
             {

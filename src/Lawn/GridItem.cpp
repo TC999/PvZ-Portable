@@ -33,6 +33,7 @@
 #include "../Sexy.TodLib/Reanimator.h"
 #include "../Sexy.TodLib/TodParticle.h"
 #include "widget/WidgetManager.h"
+#include <algorithm>
 
 using namespace Sexy;
 
@@ -143,7 +144,7 @@ void GridItem::DrawIZombieBrain(Graphics* g)
     {
         g->SetDrawMode(Graphics::DRAWMODE_ADDITIVE);
         g->SetColorizeImages(true);
-        g->SetColor(Color(255, 255, 255, ClampInt(mTransparentCounter * 3, 0, 255)));
+        g->SetColor(Color(255, 255, 255, std::clamp(mTransparentCounter * 3, 0, 255)));
         g->DrawImageF(IMAGE_BRAIN, mPosX, mPosY);
         g->SetDrawMode(Graphics::DRAWMODE_NORMAL);
         g->SetColorizeImages(false);
@@ -545,9 +546,10 @@ void GridItem::UpdateScaryPot()
         return;
     }
 
-    Plant* aPlant = nullptr;
-    while (mBoard->IteratePlants(aPlant))
+    for (Plant* aPlant : mBoard->mPlants)
     {
+        if (aPlant->mDead)
+            continue;
         if (aPlant->mSeedType == SeedType::SEED_PLANTERN && !aPlant->NotOnGround())
         {
             int aDiffX = abs(aPlant->mPlantCol - mGridX);
@@ -622,9 +624,10 @@ Zombie* GridItem::RakeFindZombie()
 {
     Rect aRakeRect(mPosX, mPosY, 63, 80);
 
-    Zombie* aZombie = nullptr;
-    while (mBoard->IterateZombies(aZombie))
+    for (Zombie* aZombie : mBoard->mZombies)
     {
+        if (aZombie->mDead)
+            continue;
         if (!aZombie->IsDeadOrDying() && !aZombie->IsBobsledTeamWithSled() && aZombie->mRow - mGridY == 0 && aZombie->EffectedByDamage(1U))
         {
             Rect aZombieRect = aZombie->GetZombieRect();

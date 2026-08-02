@@ -27,6 +27,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <fstream>
+#include <cstdio>
 
 using namespace Sexy;
 
@@ -75,7 +76,7 @@ void SexyApp::WriteToRegistry()
 	SexyAppBase::WriteToRegistry();
 }
 
-void SexyApp::HandleCmdLineParam(const std::string& theParamName, const std::string& theParamValue)
+void SexyApp::HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue)
 {
 	if (theParamName == "-version")
 	{
@@ -85,15 +86,15 @@ void SexyApp::HandleCmdLineParam(const std::string& theParamName, const std::str
 			"Product: " + mProdName + "\n" +
 			"Version: " + mProductVersion + "\n" +
 			"Build Num: " + StrFormat("%d", mBuildNum) + "\n" +
-			"Build Date: " + mBuildDate + "\n" +
+			"Commit Date: " + mCommitDate + "\n" +
 			CLI_LICENSE_SUMMARY;
 
-		Sexy::PrintF("%s\n", aVersionString.c_str());
+		std::printf("%s\n", aVersionString.c_str());
 		DoExit(0);
 	}
 	else if (theParamName == "-license" || theParamName == "-copyright")
 	{
-		Sexy::PrintF("%s", CLI_LICENSE_NOTICE);
+		std::printf("%s", CLI_LICENSE_NOTICE);
 		DoExit(0);
 	}
 	else
@@ -104,7 +105,7 @@ std::string SexyApp::GetGameSEHInfo()
 {
 	std::string anInfoString = SexyAppBase::GetGameSEHInfo() + 
 		"Build Num: " + StrFormat("%d", mBuildNum) + "\r\n" +
-		"Build Date: " + mBuildDate + "\r\n";
+		"Commit Date: " + mCommitDate + "\r\n";
 
 	return anInfoString;
 }
@@ -133,7 +134,7 @@ void SexyApp::Init()
 {
 	Sexy::PrintF("Product: %s\n", mProdName.c_str());
 	Sexy::PrintF("BuildNum: %d\n", mBuildNum);
-	Sexy::PrintF("BuildDate: %s\n", mBuildDate.c_str());
+	Sexy::PrintF("CommitDate: %s\n", mCommitDate.c_str());
 
 	SexyAppBase::Init();
 }

@@ -21,6 +21,9 @@
 
 #include "Trail.h"
 #include "Definition.h"
+#include <algorithm>
+#include "graphics/Graphics.h"
+#include "graphics/TriVertex.h"
 
 int gTrailDefCount;
 TrailDefinition* gTrailDefArray;
@@ -30,19 +33,6 @@ TrailParams* gTrailParamArray;
 TrailParams gLawnTrailArray[TrailType::NUM_TRAILS] = {
 	{ TrailType::TRAIL_ICE, "particles/IceTrail.trail" }
 };
-
-TrailDefinition::TrailDefinition()
-{
-	memset(this, 0, sizeof(TrailDefinition));
-	mMinPointDistance = 1.0f;
-	mMaxPoints = 2;
-	mTrailFlags = 0U;
-	mImage = nullptr;
-}
-
-TrailDefinition::~TrailDefinition()
-{
-}
 
 TrailPoint::TrailPoint()
 {
@@ -71,7 +61,7 @@ void TrailLoadDefinitions(TrailParams* theTrailParamArray, int theTrailParamArra
 	gTrailParamArraySize = theTrailParamArraySize;
 	gTrailParamArray = theTrailParamArray;
 	gTrailDefCount = theTrailParamArraySize;
-	gTrailDefArray = new TrailDefinition[theTrailParamArraySize];
+	gTrailDefArray = new TrailDefinition[theTrailParamArraySize]();
 
 	for (int i = 0; i < gTrailParamArraySize; i++)
 	{
@@ -107,15 +97,11 @@ Trail::Trail()
 	mDefinition = nullptr;
 	mTrailDuration = 0;
 	mColorOverride = Color::White;
-	for (int i = 0; i < 4; i++)
-	{
-		mTrailInterp[i] = RandRangeFloat(0.0f, 1.0f);
-	}
 }
 
 void Trail::AddPoint(float x, float y)
 {
-	int aMaxPoints = ClampInt(mDefinition->mMaxPoints, 2, 20);
+	int aMaxPoints = std::clamp(mDefinition->mMaxPoints, 2, 20);
 
 	if (mNumTrailPoints > 0)
 	{
@@ -232,8 +218,8 @@ void Trail::Draw(Graphics* g)
 		float aAlphaOverLengthNext = FloatTrackEvaluate(mDefinition->mAlphaOverLength, aUNext, mTrailInterp[TrailTracks::TRACK_ALPHA_OVER_LENGTH]);
 		float aAlphaOverTimeCur = FloatTrackEvaluate(mDefinition->mAlphaOverTime, aTimeValue, mTrailInterp[TrailTracks::TRACK_ALPHA_OVER_TIME]);
 		float aAlphaOverTimeNext = FloatTrackEvaluate(mDefinition->mAlphaOverTime, aTimeValue, mTrailInterp[TrailTracks::TRACK_ALPHA_OVER_TIME]);
-		int anAlphaCur = ClampInt(FloatRoundToInt(aAlphaOverLengthCur * aAlphaOverTimeCur * mColorOverride.mAlpha), 0, 255);
-		int anAlphaNext = ClampInt(FloatRoundToInt(aAlphaOverLengthNext * aAlphaOverTimeNext * mColorOverride.mAlpha), 0, 255);
+		int anAlphaCur = std::clamp(FloatRoundToInt(aAlphaOverLengthCur * aAlphaOverTimeCur * mColorOverride.mAlpha), 0, 255);
+		int anAlphaNext = std::clamp(FloatRoundToInt(aAlphaOverLengthNext * aAlphaOverTimeNext * mColorOverride.mAlpha), 0, 255);
 		Sexy::Color aColorCur = mColorOverride;
 		Sexy::Color aColorNext = mColorOverride;
 		aColorCur.mAlpha = anAlphaCur;
@@ -312,6 +298,10 @@ Trail* TrailHolder::AllocTrailFromDef(int theRenderOrder, TrailDefinition* theDe
 	aTrail->mTrailHolder = this;
 	aTrail->mDefinition = theDefinition;
 
+	for (int i = 0; i < 4; i++)
+	{
+		aTrail->mTrailInterp[i] = RandRangeFloat(0.0f, 1.0f);
+	}
 	float aDurationInterp = RandRangeFloat(0.0f, 1.0f);
 	aTrail->mTrailDuration = static_cast<int>(FloatTrackEvaluate(aTrail->mDefinition->mTrailDuration, 0.0f, aDurationInterp));
 	return aTrail;

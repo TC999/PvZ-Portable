@@ -23,14 +23,18 @@
 #include "TodCommon.h"
 #include "Definition.h"
 #include "Reanimator.h"
-#include "../LawnApp.h"
 #include "Attachment.h"
+#include "SexyAppBase.h"
+#include "../LawnApp.h"
 #include "ReanimAtlas.h"
 #include "EffectSystem.h"
 #include "../GameConstants.h"
 #include "graphics/Font.h"
 #include "misc/PerfTimer.h"
 #include "graphics/MemoryImage.h"
+#include <algorithm>
+
+constexpr const int NO_BASE_POSE = -2;
 
 unsigned int gReanimatorDefCount;
 ReanimatorDefinition* gReanimatorDefArray;
@@ -181,6 +185,7 @@ constinit const ReanimationParams gLawnReanimationArray[ReanimationType::NUM_REA
 	{ .mReanimationType = ReanimationType::REANIM_CREDITS_WEARETHEUNDEAD, .mReanimFileName = "reanim/Credits_WeAreTheUndead.reanim", .mReanimParamFlags = 1 },
 	{ .mReanimationType = ReanimationType::REANIM_CREDITS_DISCOLIGHTS, .mReanimFileName = "reanim/Credits_DiscoLights.reanim", .mReanimParamFlags = 1 },
 	{ .mReanimationType = ReanimationType::REANIM_FLAG, .mReanimFileName = "reanim/Zombie_FlagPole.reanim", .mReanimParamFlags = 0 },
+	{ .mReanimationType = ReanimationType::REANIM_ZOMBATAR_HEAD, .mReanimFileName = "reanim/zombatar_zombie_head.reanim", .mReanimParamFlags = 0 },
 };
 
 ReanimatorTransform::ReanimatorTransform() :
@@ -368,7 +373,7 @@ void ReanimationCreateAtlas(ReanimatorDefinition* theDefinition, ReanimationType
 	TodHesitationTrace("atlas '%s'", aParam.mReanimFileName);
 	int aDuration = std::max(aTimer.GetDuration(), 0.0);
 	if (aDuration > 20 && theReanimationType != ReanimationType::REANIM_NONE)  //（仅内测版）创建时间过长的报告
-		TodTraceAndLog("LOADING:Long atlas '%s' %d ms on %s", aParam.mReanimFileName, aDuration, gGetCurrentLevelName().c_str());
+		TodTraceAndLogLn("LOADING:Long atlas '%s' %d ms on %s", aParam.mReanimFileName, aDuration, LawnGetCurrentLevelName().c_str());
 }
 
 void ReanimationPreload(ReanimationType theReanimationType)
@@ -652,7 +657,7 @@ bool Reanimation::DrawTrack(Graphics* g, int theTrackIndex, int theRenderGroup, 
 	{
 		aColor = ColorsMultiply(aColor, g->GetColor());  // 将颜色再与 Graphics 的颜色进行正片叠底混合
 	}
-	int aImageAlpha = ClampInt(FloatRoundToInt(aTransform.mAlpha * aColor.mAlpha), 0, 255);
+	int aImageAlpha = std::clamp(FloatRoundToInt(aTransform.mAlpha * aColor.mAlpha), 0, 255);
 	if (aImageAlpha <= 0)  // 当图像完全透明时，返回
 	{
 		return false;
@@ -938,7 +943,7 @@ void Reanimation::DrawRenderGroup(Graphics* g, int theRenderGroup)
 }
 
 void Reanimation::Draw(Graphics* g)
-{ 
+{
 	DrawRenderGroup(g, RENDER_GROUP_NORMAL);
 }
 
@@ -1084,6 +1089,8 @@ void Reanimation::ReanimationDie()
 	if (!mDead)
 	{
 		mDead = true;
+		if (mDefinition == nullptr)
+			return;
 		for (int aTrackIndex = 0; aTrackIndex < mDefinition->mTracks.count; aTrackIndex++)
 		{
 			TOD_ASSERT(mTrackInstances);
@@ -1166,15 +1173,15 @@ void ReanimatorEnsureDefinitionLoaded(ReanimationType theReanimType, bool theIsP
 	TodTrace("'%s'\n", aReanimParams->mReanimFileName);
 	if (theIsPreloading)
 	{
-		if (gSexyAppBase->mShutdown || gAppCloseRequest())  // 预加载时若程序退出，则取消加载
+		if (gSexyAppBase->mShutdown || LawnGetCloseRequest())  // 预加载时若程序退出，则取消加载
 			return;
 	}
 	else  // < 以下部分仅内测版执行 >
 	{
-		if (gAppHasUsedCheatKeys())
-			TodTraceAndLog("Cheater failed to preload '%s' on %s", aReanimParams->mReanimFileName, gGetCurrentLevelName().c_str());
+		if (LawnHasUsedCheatKeys())
+			TodTraceAndLogLn("Cheater failed to preload '%s' on %s", aReanimParams->mReanimFileName, LawnGetCurrentLevelName().c_str());
 		else
-			TodTraceAndLog("Non-cheater failed to preload '%s' on %s", aReanimParams->mReanimFileName, gGetCurrentLevelName().c_str());
+			TodTraceAndLogLn("Non-cheater failed to preload '%s' on %s", aReanimParams->mReanimFileName, LawnGetCurrentLevelName().c_str());
 	}  // < 以上部分仅内测版执行 >
 
 	PerfTimer aTimer;
@@ -1188,7 +1195,7 @@ void ReanimatorEnsureDefinitionLoaded(ReanimationType theReanimType, bool theIsP
 	}
 	int aDuration = aTimer.GetDuration();
 	if (aDuration > 100)  //（仅内测版）创建时间过长的报告
-		TodTraceAndLog("LOADING:Long reanim '%s' %d ms on %s", aReanimParams->mReanimFileName, aDuration, gGetCurrentLevelName().c_str());
+		TodTraceAndLogLn("LOADING:Long reanim '%s' %d ms on %s", aReanimParams->mReanimFileName, aDuration, LawnGetCurrentLevelName().c_str());
 }
 
 void ReanimatorLoadDefinitions(const ReanimationParams* theReanimationParamArray, int theReanimationParamArraySize)
@@ -1470,7 +1477,7 @@ void Reanimation::UpdateAttacherTrack(int theTrackIndex)
 	}
 
 	Color aColor = ColorsMultiply(mColorOverride, aTrackInstance->mTrackColor);
-	aColor.mAlpha = ClampInt(FloatRoundToInt(aTransform.mAlpha * aColor.mAlpha), 0, 255);
+	aColor.mAlpha = std::clamp(FloatRoundToInt(aTransform.mAlpha * aColor.mAlpha), 0, 255);
 	AttachmentPropogateColor(aTrackInstance->mAttachmentID, aColor, mEnableExtraAdditiveDraw, mExtraAdditiveColor, mEnableExtraOverlayDraw, mExtraOverlayColor);
 }
 
