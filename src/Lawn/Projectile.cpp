@@ -32,6 +32,7 @@
 #include "../Sexy.TodLib/Reanimator.h"
 #include "../Sexy.TodLib/Attachment.h"
 #include "Widget/AchievementsScreen.h"
+#include <algorithm>
 
 constinit const ProjectileDefinition gProjectileDefinition[] = {
 	{ .mProjectileType = ProjectileType::PROJECTILE_PEA, .mImageRow = 0, .mDamage = 20 },
@@ -83,7 +84,7 @@ void Projectile::ProjectileInitialize(int theX, int theY, int theRenderOrder, in
 	mCobTargetRow = 0;
 	mTargetZombieID = ZombieID::ZOMBIEID_NULL;
 	mOnHighGround = mBoard->mGridSquareType[aGridX][theRow] == GridSquareType::GRIDSQUARE_HIGH_GROUND;
-	if (mBoard->StageHasRoof())
+	if (mBoard->StageHasRoof() && theX < 480)
 	{
 		mShadowY -= 12.0f;
 	}
@@ -232,7 +233,7 @@ Zombie* Projectile::FindCollisionTarget()
 	{
 		if ((aZombie->mZombieType == ZombieType::ZOMBIE_BOSS || aZombie->mRow == mRow) && aZombie->EffectedByDamage(static_cast<unsigned int>(mDamageRangeFlags)))
 		{
-			if (aZombie->mZombiePhase == ZombiePhase::PHASE_SNORKEL_WALKING_IN_POOL && mPosZ >= 45.0f)
+			if (aZombie->mZombiePhase == ZombiePhase::PHASE_SNORKEL_WALKING_IN_POOL && mPosZ <= 45.0f)
 			{
 				continue;
 			}
@@ -243,7 +244,7 @@ Zombie* Projectile::FindCollisionTarget()
 			}
 
 			Rect aZombieRect = aZombie->GetZombieRect();
-			if (GetRectOverlap(aProjectileRect, aZombieRect) > 0)
+			if (GetRectOverlap(aProjectileRect, aZombieRect) >= 0)
 			{
 				if (aBestZombie == nullptr || aZombie->mX < aMinX)
 				{
@@ -286,7 +287,7 @@ void Projectile::CheckForCollision()
 		return;
 	}
 
-	if (mProjectileType == ProjectileType::PROJECTILE_STAR && (mPosY > 600.0f || mPosY < 0.0f))
+	if (mProjectileType == ProjectileType::PROJECTILE_STAR && (mPosY > 600.0f || mPosY < 40.0f))
 	{
 		Die();
 		return;
@@ -921,7 +922,7 @@ void Projectile::DoImpact(Zombie* theZombie)
 				aPosX -= 60.0f;
 			}
 
-			aPosY = ClampFloat(aPosY, 20.0f, 100.0f);
+			aPosY = std::clamp(aPosY, 20.0f, 100.0f);
 			theZombie->AddAttachedParticle(aPosX, aPosY, aEffect);
 		}
 		else
@@ -1138,7 +1139,7 @@ void Projectile::DrawShadow(Graphics* g)
 
 	if (mMotionType == ProjectileMotion::MOTION_LOBBED)
 	{
-		float aHeight = ClampFloat(-mPosZ, 0.0f, 200.0f);
+		float aHeight = std::clamp(-mPosZ, 0.0f, 200.0f);
 		aScale *= 200.0f / (aHeight + 200.0f);
 	}
 

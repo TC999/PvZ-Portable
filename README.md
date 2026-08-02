@@ -62,7 +62,7 @@ This project supports the following platforms (including but not limited to):
 | iOS / iPadOS    | App Documents directory (Files app) | Works (sideload only; unsigned IPA)                                                    |
 | Web (WASM)      | Browser IndexedDB (saves); resources uploaded at runtime    | Works (requires a HTTP server) |
 | Nintendo Switch | sdmc:/switch/PvZPortable | Works on real hardware. Kenji-NX crashes on boot.                           |
-| Nintendo 3DS    | sdmc:/3ds/PvZPortable    | Might not have enough memory for Old 3DS and barely work on New 3DS (discontionued) |
+| Nintendo 3DS    | sdmc:/3ds/PvZPortable    | Might not have enough memory for Old 3DS and barely work on New 3DS (discontinued) |
 
 To play the game, you need the game data from PvZ GOTY. Place `main.pak` and the `properties/` folder next to the `pvz-portable` executable (the game will search for resources relative to the executable's directory). You can also use extracted data instead of `main.pak` if you prefer.
 
@@ -103,7 +103,7 @@ Long-press the app icon on your launcher to access the **Manage Data** shortcut,
 
 #### Notes
 
-- Requires Android 9.0+. The prebuilt APK is arm64-v8a only, but **you can build for other architectures** if needed.
+- Requires Android 7.0+. The prebuilt APK is arm64-v8a only, but **you can build for other architectures** if needed.
 - All data is stored in `Android/data/io.github.wszqkzqk.pvzportable/files/`. No extra storage permissions are needed — the app uses the **Storage Access Framework (SAF)** for all imports and exports.
 - Save data is interchangeable with desktop versions. See the [save data section](#save-data-compatibility-user-data-and-mid-level-saves) chapter for details.
 - The Android port is part of this project's **cross-platform porting research**. It preserves the original game's 4:3 aspect ratio and mouse-based input model — **no touch-screen-specific UI optimizations have been made**. SDL2 automatically maps touch events to mouse input, so the game is playable but not designed for mobile ergonomics.

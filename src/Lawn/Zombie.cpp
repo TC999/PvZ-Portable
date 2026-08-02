@@ -42,6 +42,33 @@
 #include "../Sexy.TodLib/Reanimator.h"
 #include "../Sexy.TodLib/Attachment.h"
 #include "../Sexy.TodLib/TodParticle.h"
+#include <algorithm>
+
+constexpr const int ZOMBIE_START_RANDOM_OFFSET = 40;
+constexpr const int BUNGEE_ZOMBIE_HEIGHT = 3000;
+constexpr const int RENDER_GROUP_SHIELD = 1;
+constexpr const int RENDER_GROUP_ARMS = 2;
+constexpr const int RENDER_GROUP_OVER_SHIELD = 3;
+constexpr const int RENDER_GROUP_BOSS_BACK_LEG = 4;
+constexpr const int RENDER_GROUP_BOSS_FRONT_LEG = 5;
+constexpr const int RENDER_GROUP_BOSS_BACK_ARM = 6;
+constexpr const int RENDER_GROUP_BOSS_FIREBALL_ADDITIVE = 7;
+constexpr const int RENDER_GROUP_BOSS_FIREBALL_TOP = 8;
+constexpr const int ZOMBIE_LIMP_SPEED_FACTOR = 2;
+constexpr const int POGO_BOUNCE_TIME = 80;
+constexpr const int DOLPHIN_JUMP_TIME = 120;
+constexpr const int JACK_IN_THE_BOX_ZOMBIE_RADIUS = 115;
+constexpr const int JACK_IN_THE_BOX_PLANT_RADIUS = 90;
+constexpr const int BOBSLED_CRASH_TIME = 150;
+constexpr const int ZOMBIE_BACKUP_DANCER_RISE_HEIGHT = -200;
+constexpr const int BOSS_FLASH_HEALTH_FRACTION = 10;
+constexpr const int TICKS_BETWEEN_EATS = 4;
+constexpr const int DAMAGE_PER_EAT = TICKS_BETWEEN_EATS;
+constexpr const float THOWN_ZOMBIE_GRAVITY = 0.05f;
+constexpr const float CHILLED_SPEED_FACTOR = 0.4f;
+constexpr const float CLIP_HEIGHT_LIMIT = -100.0f;
+constexpr const float CLIP_HEIGHT_OFF = -200.0f;
+constexpr Color ZOMBIE_MINDCONTROLLED_COLOR = Color(128, 64, 192, 255);
 
 static std::string ZombatarTrackName(const char* thePrefix, int theIndex)
 {
@@ -1417,7 +1444,7 @@ void Zombie::UpdateZombiePogo()
         aHeight = 170.0f;
     }
     mAltitude = TodAnimateCurveFloat(POGO_BOUNCE_TIME, 0, mPhaseCounter, 9.0f, aHeight + 9.0f, TodCurves::CURVE_BOUNCE_SLOW_MIDDLE);
-    mFrame = ClampInt(3 - mAltitude / 3, 0, 3);
+    mFrame = std::clamp(static_cast<int>(3 - mAltitude / 3), 0, 3);
 
     if (mPhaseCounter == 7)
     {
@@ -2026,12 +2053,12 @@ void Zombie::UpdateZombieJackInTheBox()
             int aPosY = mY + mHeight / 2;
             if (mMindControlled)
             {
-                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JackInTheBoxZombieRadius, 1, true, 127);
+                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JACK_IN_THE_BOX_ZOMBIE_RADIUS, 1, true, 127);
             }
             else
             {
-                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JackInTheBoxZombieRadius, 1, true, 255);
-                mBoard->KillAllPlantsInRadius(aPosX, aPosY, JackInTheBoxPlantRadius);
+                mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, JACK_IN_THE_BOX_ZOMBIE_RADIUS, 1, true, 255);
+                mBoard->KillAllPlantsInRadius(aPosX, aPosY, JACK_IN_THE_BOX_PLANT_RADIUS);
             }
 
             mApp->AddTodParticle(aPosX, aPosY, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ParticleEffect::PARTICLE_JACKEXPLODE);
@@ -5095,13 +5122,13 @@ void Zombie::DrawZombiePart(Graphics* g, Image* theImage, int theFrame, int theR
     float aDrawHeight = aCelHeight;
     if (theDrawPos.mClipHeight > CLIP_HEIGHT_LIMIT)
     {
-        aDrawHeight = ClampFloat(aCelHeight - theDrawPos.mClipHeight, 0.0f, aCelHeight);
+        aDrawHeight = std::clamp(aCelHeight - theDrawPos.mClipHeight, 0.0f, static_cast<float>(aCelHeight));
     }
 
     int anAlpha = 255;
     if (mZombieFade >= 0)
     {
-        anAlpha = ClampInt(255 * mZombieFade / 10, 0, 255);
+        anAlpha = std::clamp(255 * mZombieFade / 10, 0, 255);
         g->SetColorizeImages(true);
         g->SetColor(Color(255, 255, 255, anAlpha));
     }
@@ -5644,7 +5671,7 @@ void Zombie::DrawReanim(Graphics* g, const ZombieDrawPosition& theDrawPos, int t
     int aFadeAlpha = 255;
     if (mZombieFade >= 0)
     {
-        aFadeAlpha = ClampInt(255 * mZombieFade / 10, 0, 255);
+        aFadeAlpha = std::clamp(255 * mZombieFade / 10, 0, 255);
     }
 
     Color aColorOverride(255, 255, 255, aFadeAlpha);
@@ -6435,7 +6462,7 @@ Zombie* Zombie::FindZombieTarget()
         {
             Rect aZombieRect = aZombie->GetZombieRect();
             int aOverlap = GetRectOverlap(aAttackRect, aZombieRect);
-            if (aOverlap >= 20 || (aOverlap > 0 && aZombie->mIsEating))
+            if (aOverlap >= 20 || (aOverlap >= 0 && aZombie->mIsEating))
             {
                 return aZombie;
             }
@@ -7449,7 +7476,7 @@ void Zombie::StopZombieSound()
 {
     if (mZombieType == ZombieType::ZOMBIE_DANCER || mZombieType == ZombieType::ZOMBIE_BACKUP_DANCER)
     {
-        bool aStopSound = false;
+        bool aStopSound = true;
 
         if (mBoard)
         {
@@ -7459,7 +7486,7 @@ void Zombie::StopZombieSound()
                 if (aZombie->mHasHead && !aZombie->IsDeadOrDying() && aZombie->IsOnBoard() && 
                     (aZombie->mZombieType == ZombieType::ZOMBIE_DANCER || aZombie->mZombieType == ZombieType::ZOMBIE_BACKUP_DANCER))
                 {
-                    aStopSound = true;
+                    aStopSound = false;
                     break;
                 }
             }

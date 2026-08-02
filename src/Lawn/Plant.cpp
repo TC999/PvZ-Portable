@@ -42,6 +42,7 @@
 #include "../Sexy.TodLib/EffectSystem.h"
 #include "../Sexy.TodLib/TodStringFile.h"
 #include "Widget/AchievementsScreen.h"
+#include <algorithm>
 
 constinit const PlantDefinition gPlantDefs[SeedType::NUM_SEED_TYPES] = {
     { .mSeedType = SeedType::SEED_PEASHOOTER,        .mPlantImage = nullptr, .mReanimationType = ReanimationType::REANIM_PEASHOOTER,    .mPacketIndex = 0,  .mSeedCost = 100, .mRefreshTime = 750,    .mSubClass = PlantSubClass::SUBCLASS_SHOOTER, .mLaunchRate = 150,  .mPlantName = "PEASHOOTER" },
@@ -879,7 +880,7 @@ bool Plant::FindStarFruitTarget()
             else
             {
                 if (aZombie->mZombieType == ZombieType::ZOMBIE_DIGGER)
-                    aZombieRect.mX += 10;
+                    aZombieRect.mWidth += 10;
 
                 float aProjectileTime = Distance2D(aCenterStarX, aCenterStarY, aZombieRect.mX + aZombieRect.mWidth / 2, aZombieRect.mY + aZombieRect.mHeight / 2) / 3.33f;
                 int aZombieHitX = aZombie->ZombieTargetLeadX(aProjectileTime) - aZombieRect.mWidth / 2;
@@ -1287,7 +1288,7 @@ void Plant::UpdateSpikeweed()
         }
         else if (mSeedType == SeedType::SEED_SPIKEROCK)
         {
-            if (mStateCountdown == 69 || mStateCountdown == 33)
+            if (mStateCountdown == 70 || mStateCountdown == 32)
             {
                 DoRowAreaDamage(20, 33U);
             }
@@ -2696,7 +2697,7 @@ void Plant::UpdateReanimColor()
     }
     else if (mEatenFlashCountdown > 0)
     {
-        int aGrayness = ClampInt(mEatenFlashCountdown * 3, 0, mImitaterType == SeedType::SEED_IMITATER ? 128 : 255);
+        int aGrayness = std::clamp(mEatenFlashCountdown * 3, 0, mImitaterType == SeedType::SEED_IMITATER ? 128 : 255);
         aBodyReanim->mExtraAdditiveColor = Color(aGrayness, aGrayness, aGrayness);
         aBodyReanim->mEnableExtraAdditiveDraw = true;
     }
@@ -4082,7 +4083,7 @@ void Plant::Draw(Graphics* g)
             {
                 g->SetDrawMode(Graphics::DRAWMODE_ADDITIVE);
                 g->SetColorizeImages(true);
-                g->SetColor(Color(255, 255, 255, ClampInt(mEatenFlashCountdown * 3, 0, 255)));
+                g->SetColor(Color(255, 255, 255, std::clamp(mEatenFlashCountdown * 3, 0, 255)));
                 TodDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
                 g->SetDrawMode(Graphics::DRAWMODE_NORMAL);
                 g->SetColorizeImages(false);
