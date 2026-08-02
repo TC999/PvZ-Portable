@@ -30,10 +30,10 @@
 #include "TodStringFile.h"
 #include "../GameConstants.h"
 #include "graphics/Font.h"
-#include "misc/Debug.h"
 #include "graphics/GLImage.h"
 #include "graphics/Graphics.h"
 #include "graphics/ImageFont.h"
+#include "graphics/MemoryImage.h"
 #include "misc/PerfTimer.h"
 #include "misc/SexyMatrix.h"
 #include "graphics/GLInterface.h"
@@ -111,21 +111,6 @@ void Tod_SWTri_AddAllDrawTriFuncs()
 	SWTri_AddDrawTriFunc(true, true, true, false, 0x0555, true, TodDrawTriangle_0555_TEX1_TALPHA1_MOD1_GLOB0_BLEND1);
 	SWTri_AddDrawTriFunc(true, true, true, true, 0x0555, false, TodDrawTriangle_0555_TEX1_TALPHA1_MOD1_GLOB1_BLEND0);
 	SWTri_AddDrawTriFunc(true, true, true, true, 0x0555, true, TodDrawTriangle_0555_TEX1_TALPHA1_MOD1_GLOB1_BLEND1);
-}
-
-std::string TodGetCurrentLevelName()
-{
-	return "Unknown level";
-}
-
-bool TodHasUsedCheatKeys()
-{
-	return false;
-}
-
-bool TodAppCloseRequest()
-{
-	return false;
 }
 
 intptr_t TodPickFromWeightedArray(const TodWeightedArray* theArray, int theCount)
@@ -933,7 +918,7 @@ void FixPixelsOnAlphaEdgeForBlending(Image* theImage)
 	int aDuration = std::max(aTimer.GetDuration(), 0.0);
 	if (aDuration > 20)
 	{
-		TodTraceAndLogLn("LOADING:Long sanding '%s' %d ms on %s", theImage->mFilePath.c_str(), aDuration, gGetCurrentLevelName().c_str());
+		TodTraceAndLogLn("LOADING:Long sanding '%s' %d ms on %s", theImage->mFilePath.c_str(), aDuration, LawnGetCurrentLevelName().c_str());
 	}
 }
 
@@ -1048,7 +1033,7 @@ Color ColorsMultiply(const Color& theColor1, const Color& theColor2)
 // GOTY @Patoke: inlined 0x51D4C0
 bool TodLoadResources(const std::string& theGroup)
 {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->TodLoadResources(theGroup);
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->TodLoadResources(theGroup);
 }
 
 // GOTY @Patoke: 0x51D4C0
@@ -1082,7 +1067,7 @@ bool TodResourceManager::TodLoadResources(const std::string& theGroup)
 	int aDuration = std::max(aTimer.GetDuration(), 0.0);
 	if (aDuration > 20)
 	{
-		TodTraceAndLogLn("LOADED: '%s' %d ms on %s", theGroup.c_str(), aDuration, gGetCurrentLevelName().c_str());
+		TodTraceAndLogLn("LOADED: '%s' %d ms on %s", theGroup.c_str(), aDuration, LawnGetCurrentLevelName().c_str());
 	}
 
 	return true;
@@ -1090,7 +1075,7 @@ bool TodResourceManager::TodLoadResources(const std::string& theGroup)
 
 void TodAddImageToMap(SharedImageRef* theImage, const std::string& thePath)
 { 
-	((TodResourceManager*)gSexyAppBase->mResourceManager)->AddImageToMap(theImage, thePath);
+	static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->AddImageToMap(theImage, thePath);
 }
 
 void TodResourceManager::AddImageToMap(SharedImageRef* theImage, const std::string& thePath)
@@ -1105,7 +1090,7 @@ void TodResourceManager::AddImageToMap(SharedImageRef* theImage, const std::stri
 
 bool TodLoadNextResource()
 {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->TodLoadNextResource();
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->TodLoadNextResource();
 }
 
 bool TodResourceManager::TodLoadNextResource()
@@ -1117,7 +1102,10 @@ bool TodResourceManager::TodLoadNextResource()
 	{
 		BaseRes* aRes = *mCurResGroupListItr;
 		if (aRes->mFromProgram)
+		{
+			mCurResGroupListItr++;
 			continue;
+		}
 
 		switch (aRes->mType)
 		{
@@ -1182,12 +1170,12 @@ bool TodResourceManager::TodLoadNextResource()
 
 bool TodFindImagePath(Image* theImage, std::string* thePath)
 {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->FindImagePath(theImage, thePath);
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->FindImagePath(theImage, thePath);
 }
 
 // @Patoke implemented
 bool TodFindFontPath(_Font* theFont, std::string* thePath) {
-	return ((TodResourceManager*)gSexyAppBase->mResourceManager)->FindFontPath(theFont, thePath);
+	return static_cast<TodResourceManager*>(gSexyAppBase->mResourceManager)->FindFontPath(theFont, thePath);
 }
 
 bool TodResourceManager::FindFontPath(_Font* theFont, std::string* thePath)

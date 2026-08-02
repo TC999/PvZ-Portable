@@ -47,10 +47,6 @@ extern "C" {
 #include <emscripten.h>
 #endif
 
-bool (*gAppCloseRequest)();
-bool (*gAppHasUsedCheatKeys)();
-std::string (*gGetCurrentLevelName)();
-
 #ifdef _WIN32
 static std::vector<std::string> gUtf8ArgsStorage;
 static std::vector<char*> gUtf8Argv;
@@ -109,9 +105,6 @@ int main(int argc, char** argv)
 #endif
 
 	TodStringListSetColors(gLawnStringFormats, gLawnStringFormatCount);
-	gGetCurrentLevelName = LawnGetCurrentLevelName;
-	gAppCloseRequest = LawnGetCloseRequest;
-	gAppHasUsedCheatKeys = LawnHasUsedCheatKeys;
 	gExtractResourcesByName = Sexy::ExtractResourcesByName;
 	gLawnApp = new LawnApp();
 	gLawnApp->SetArgs(argc, argv);
