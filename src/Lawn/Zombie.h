@@ -70,7 +70,7 @@ public:
 
 class Plant;
 class Reanimation;
-class TodParticleSystem;
+class PvzpParticleSystem;
 class Zombie : public GameObject
 {
 public:
@@ -215,8 +215,8 @@ public:
     Plant*                          IsStandingOnSpikeweed();
     void                            CheckForZombieStep();
     void                            CountExpectedMowers() { ; }
-    /*inline*/ void                 OverrideParticleColor(TodParticleSystem* aParticle);
-    /*inline*/ void                 OverrideParticleScale(TodParticleSystem* aParticle);
+    /*inline*/ void                 OverrideParticleColor(PvzpParticleSystem* aParticle);
+    /*inline*/ void                 OverrideParticleScale(PvzpParticleSystem* aParticle);
     void                            PoolSplash(bool theInToPoolSound);
     void                            UpdateZombieFlyer();
     void                            UpdateZombiePogo();
@@ -224,7 +224,7 @@ public:
     void                            LandFlyer(unsigned int theDamageFlags);
     void                            UpdateZombieDigger();
     bool                            IsWalkingBackwards();
-    TodParticleSystem*              AddAttachedParticle(int thePosX, int thePosY, ParticleEffect theEffect);
+    PvzpParticleSystem*              AddAttachedParticle(int thePosX, int thePosY, ParticleEffect theEffect);
     void                            PogoBreak(unsigned int theDamageFlags);
     void                            UpdateZombieFalling();
     void                            UpdateZombieDancer();

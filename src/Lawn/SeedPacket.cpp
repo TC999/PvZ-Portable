@@ -28,7 +28,7 @@
 #include "../Resources.h"
 #include "MessageWidget.h"
 #include "graphics/Font.h"
-#include "../Sexy.TodLib/FilterEffect.h"
+#include "../PvzpLib/FilterEffect.h"
 #include "misc/SexyMatrix.h"
 
 constexpr const int SLOT_MACHINE_TIME = 400;
@@ -67,7 +67,7 @@ void SeedPacket::PickNextSlotMachineSeed()
 	};
 
 	int aSeedsCount = 0;
-	TodWeightedArray aSeedWeightArray[SeedType::NUM_SEED_TYPES];
+	PvzpWeightedArray aSeedWeightArray[SeedType::NUM_SEED_TYPES];
 	for (size_t i = 0; i < LENGTH(SLOT_SEED_TYPES); i++)
 	{
 		SeedType aSeedType = SLOT_SEED_TYPES[i];
@@ -75,7 +75,7 @@ void SeedPacket::PickNextSlotMachineSeed()
 		int aWeight = 100;
 		if (aSeedType == SeedType::SEED_PEASHOOTER)
 		{
-			aWeight = TodAnimateCurve(0, 5, aPeasCount, 200, 100, TodCurves::CURVE_LINEAR);
+			aWeight = PvzpAnimateCurve(0, 5, aPeasCount, 200, 100, PvzpCurves::CURVE_LINEAR);
 		}
 		else if (aSeedType == SeedType::SEED_SLOT_MACHINE_DIAMOND)
 		{
@@ -95,7 +95,7 @@ void SeedPacket::PickNextSlotMachineSeed()
 		aSeedsCount++;
 	}
 
-	mSlotMachiningNextSeed = static_cast<SeedType>(TodPickFromWeightedArray(aSeedWeightArray, aSeedsCount));
+	mSlotMachiningNextSeed = static_cast<SeedType>(PvzpPickFromWeightedArray(aSeedWeightArray, aSeedsCount));
 }
 
 void SeedPacket::SlotMachineStart()
@@ -113,7 +113,7 @@ void SeedPacket::FlashIfReady()
 	if (!mBoard->HasConveyorBeltSeedBank())
 	{
 		int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_UI_BOTTOM, 0, 2);
-		mApp->AddTodParticle(mX + mBoard->mSeedBank->mX, mY + mBoard->mSeedBank->mY, aRenderPosition, ParticleEffect::PARTICLE_SEED_PACKET_FLASH);
+		mApp->AddPvzpParticle(mX + mBoard->mSeedBank->mX, mY + mBoard->mSeedBank->mY, aRenderPosition, ParticleEffect::PARTICLE_SEED_PACKET_FLASH);
 	}
 	
 	if (mBoard->mTutorialState == TutorialState::TUTORIAL_LEVEL_1_REFRESH_PEASHOOTER)
@@ -132,7 +132,7 @@ void SeedPacket::FlashIfReady()
 
 void SeedPacket::Activate()
 {
-	TOD_ASSERT(mPacketType != SeedType::SEED_NONE);
+	PVZP_ASSERT(mPacketType != SeedType::SEED_NONE);
 	mActive = true;
 }
 
@@ -183,7 +183,7 @@ void SeedPacket::Update()
 	if (mSlotMachineCountDown > 0)
 	{
 		mSlotMachineCountDown--;
-		float aFlipsPerSecont = TodAnimateCurveFloat(SLOT_MACHINE_TIME, 0, mSlotMachineCountDown, 6.0f, 2.0f, TodCurves::CURVE_LINEAR);
+		float aFlipsPerSecont = PvzpAnimateCurveFloat(SLOT_MACHINE_TIME, 0, mSlotMachineCountDown, 6.0f, 2.0f, PvzpCurves::CURVE_LINEAR);
 		mSlotMachiningPosition += aFlipsPerSecont * 0.01f;
 
 		if (mSlotMachiningPosition >= 1.0f)
@@ -223,55 +223,55 @@ void SeedPacketDrawSeed(Graphics* g, float x, float y, SeedType theSeedType, See
 
 	if (aSeedType == SeedType::SEED_POTATOMINE && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 0, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 0, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_CHOMPER && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 1, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 1, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_HYPNOSHROOM && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 2, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 2, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_TALLNUT && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 3, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 3, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_BLOVER && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 4, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 4, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_PUMPKINSHELL && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 5, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 5, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_TWINSUNFLOWER && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 6, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 6, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_COBCANNON && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 7, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 7, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_CABBAGEPULT && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 8, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 8, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_KERNELPULT && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 9, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 9, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_MELONPULT && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 10, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 10, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_WINTERMELON && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 11, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 11, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_SPIKEROCK && g->mScaleX <= 1.0f)
 	{
-		TodDrawImageCelScaledF(g, aImage, x, y, 12, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, aImage, x, y, 12, 0, g->mScaleX, g->mScaleY);
 	}
 	else
 	{
@@ -313,11 +313,11 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 
 	if (g->mScaleX > 1)
 	{
-		TodDrawImageCelScaledF(g, Sexy::IMAGE_SEEDPACKET_LARGER, x, y, 0, 0, g->mScaleX * 0.5f, g->mScaleY * 0.5f);
+		PvzpDrawImageCelScaledF(g, Sexy::IMAGE_SEEDPACKET_LARGER, x, y, 0, 0, g->mScaleX * 0.5f, g->mScaleY * 0.5f);
 	}
 	else
 	{
-		TodDrawImageCelScaledF(g, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, g->mScaleX, g->mScaleY);
+		PvzpDrawImageCelScaledF(g, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, g->mScaleX, g->mScaleY);
 	}
 
 	float aScale = 0.5f;
@@ -553,7 +553,7 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		aPlantG.SetColor(Color(64, 64, 64, 255));
 		aPlantG.SetColorizeImages(true);
 		aPlantG.ClipRect(x, y, SEED_PACKET_WIDTH, aDarknessHeight);
-		TodDrawImageCelScaledF(&aPlantG, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, aPlantG.mScaleX, aPlantG.mScaleY);
+		PvzpDrawImageCelScaledF(&aPlantG, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, aPlantG.mScaleX, aPlantG.mScaleY);
 		if (aDrawSeedInMiddle)
 		{
 			SeedPacketDrawSeed(&aPlantG, x, y, theSeedType, theImitaterType, aOffsetX, aOffsetY, aScale);
@@ -584,17 +584,17 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		int aTextOffsetY = aTextFont->GetAscent() + 54;
 		if (g->mScaleX == 1.0f && g->mScaleY == 1.0f)
 		{
-			TodDrawString(g, aCostStr, x + aTextOffsetX, y + aTextOffsetY, aTextFont, Color::Black, DS_ALIGN_LEFT);
+			PvzpDrawString(g, aCostStr, x + aTextOffsetX, y + aTextOffsetY, aTextFont, Color::Black, DS_ALIGN_LEFT);
 		}
 		else
 		{
 			SexyMatrix3 aMatrix;
-			TodScaleTransformMatrix(aMatrix, aTextOffsetX * g->mScaleX + x, aTextOffsetY * g->mScaleY + y, g->mScaleX, g->mScaleY);
+			PvzpScaleTransformMatrix(aMatrix, aTextOffsetX * g->mScaleX + x, aTextOffsetY * g->mScaleY + y, g->mScaleX, g->mScaleY);
 			if (g->mScaleX > 1.8f)
 			{
 				g->SetLinearBlend(false);
 			}
-			TodDrawStringMatrix(g, aTextFont, aMatrix, aCostStr, Color::Black);
+			PvzpDrawStringMatrix(g, aTextFont, aMatrix, aCostStr, Color::Black);
 			g->SetLinearBlend(true);
 		}
 	}
@@ -801,7 +801,7 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_LILYPAD]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_LILYPAD);
 				break;
 			default:
-				TOD_ASSERT(false);
+				PVZP_ASSERT(false);
 				break;
 			}
 
@@ -872,7 +872,7 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 
 void SeedPacket::WasPlanted()
 {
-	TOD_ASSERT(mPacketType != SeedType::SEED_NONE);
+	PVZP_ASSERT(mPacketType != SeedType::SEED_NONE);
 
 	if (mBoard->HasConveyorBeltSeedBank())
 	{
@@ -983,7 +983,7 @@ void SeedBank::Draw(Graphics* g)
 			aMoneyColor = Color(255, 0, 0);
 		}
 
-		TodDrawString(g, aMoneyLabel, 34, 78, FONT_CONTINUUMBOLD14, aMoneyColor, DrawStringJustification::DS_ALIGN_CENTER);
+		PvzpDrawString(g, aMoneyLabel, 34, 78, FONT_CONTINUUMBOLD14, aMoneyColor, DrawStringJustification::DS_ALIGN_CENTER);
 	}
 
 	if (mApp->mGameScene != GameScenes::SCENE_PLAYING)
@@ -1018,8 +1018,8 @@ bool SeedBank::ContainsPoint(int theX, int theY)
 
 void SeedBank::AddSeed(SeedType theSeedType, bool thePlaceOnLeft)
 {
-	TOD_ASSERT(mBoard->HasConveyorBeltSeedBank());
-	TOD_ASSERT(theSeedType != SeedType::SEED_NONE);
+	PVZP_ASSERT(mBoard->HasConveyorBeltSeedBank());
+	PVZP_ASSERT(theSeedType != SeedType::SEED_NONE);
 
 	int aNumSeeds = GetNumSeedsOnConveyorBelt();
 	if (aNumSeeds == mNumPackets)
@@ -1050,8 +1050,8 @@ void SeedBank::AddSeed(SeedType theSeedType, bool thePlaceOnLeft)
 
 void SeedBank::RemoveSeed(int theIndex)
 {
-	TOD_ASSERT(mBoard->HasConveyorBeltSeedBank());
-	TOD_ASSERT(theIndex >= 0 && theIndex < GetNumSeedsOnConveyorBelt());
+	PVZP_ASSERT(mBoard->HasConveyorBeltSeedBank());
+	PVZP_ASSERT(theIndex >= 0 && theIndex < GetNumSeedsOnConveyorBelt());
 
 	for (int i = theIndex; i < mNumPackets; i++)
 	{

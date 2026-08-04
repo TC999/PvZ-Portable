@@ -35,11 +35,11 @@
 #include "../System/Music.h"
 #include "SeedChooserScreen.h"
 #include "../../GameConstants.h"
-#include "../../Sexy.TodLib/TodFoley.h"
-#include "../../Sexy.TodLib/TodCommon.h"
-#include "../../Sexy.TodLib/Reanimator.h"
+#include "../../PvzpLib/PvzpFoley.h"
+#include "../../PvzpLib/PvzpCommon.h"
+#include "../../PvzpLib/Reanimator.h"
 #include "misc/Debug.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "graphics/ImageFont.h"
 #include "widget/WidgetManager.h"
 #include "AchievementsScreen.h"
@@ -100,7 +100,7 @@ StoreScreen::StoreScreen(LawnApp* theApp) : Dialog(nullptr, nullptr, DIALOG_STOR
     mCoins.DataArrayInitialize(1024U, "coins");
     mLoadedResourceNames.push_back("DelayLoad_Store");
 	for (std::string& resource : mLoadedResourceNames)
-		TodLoadResources(resource.c_str());
+		PvzpLoadResources(resource.c_str());
     Resize(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
     mPottedPlantSpecs.InitializePottedPlant(SEED_MARIGOLD);
     mPottedPlantSpecs.mDrawVariation = (DrawVariation)RandRangeInt(VARIATION_MARIGOLD_WHITE, VARIATION_MARIGOLD_LIGHT_GREEN);
@@ -182,7 +182,7 @@ StoreItem StoreScreen::GetStoreItemType(int theSpotIndex)
         return gStoreItemSpots[mPage][theSpotIndex];
     }
 
-    TOD_ASSERT(false);
+    PVZP_ASSERT(false);
     return STORE_ITEM_INVALID;
 }
 
@@ -329,10 +329,10 @@ void StoreScreen::DrawItemIcon(Graphics* g, int theItemPosition, StoreItem theIt
             g->SetColorizeImages(false);
         }
 
-        std::string aSlotText = TodReplaceNumberString("[STORE_UPGRADE_SLOTS]", "{SLOTS}", mApp->mPlayerInfo->mPurchases[STORE_ITEM_PACKET_UPGRADE] + 7);
+        std::string aSlotText = PvzpReplaceNumberString("[STORE_UPGRADE_SLOTS]", "{SLOTS}", mApp->mPlayerInfo->mPurchases[STORE_ITEM_PACKET_UPGRADE] + 7);
         Rect aRect(aPosX, aPosY + 6, 55, 70);
         // STORE_USE_*_IMAGE_LABEL not checked: no localized image, always draw text.
-        TodDrawStringWrapped(g, aSlotText, aRect, Sexy::FONT_HOUSEOFTERROR16, Color::White, DS_ALIGN_CENTER_VERTICAL_MIDDLE);
+        PvzpDrawStringWrapped(g, aSlotText, aRect, Sexy::FONT_HOUSEOFTERROR16, Color::White, DS_ALIGN_CENTER_VERTICAL_MIDDLE);
     }
     else if (theItemType == STORE_ITEM_POOL_CLEANER)
     {
@@ -385,7 +385,7 @@ void StoreScreen::DrawItemIcon(Graphics* g, int theItemPosition, StoreItem theIt
     else if (theItemType == STORE_ITEM_FERTILIZER)
     {
         g->DrawImage(Sexy::IMAGE_FERTILIZER, aPosX - 11, aPosY - 2);
-        TodDrawString(g, "x5", aPosX + 56, aPosY + 62, Sexy::FONT_HOUSEOFTERROR16, Color::White, DS_ALIGN_RIGHT);
+        PvzpDrawString(g, "x5", aPosX + 56, aPosY + 62, Sexy::FONT_HOUSEOFTERROR16, Color::White, DS_ALIGN_RIGHT);
     }
     else if (theItemType == STORE_ITEM_PHONOGRAPH)
     {
@@ -394,7 +394,7 @@ void StoreScreen::DrawItemIcon(Graphics* g, int theItemPosition, StoreItem theIt
     else if (theItemType == STORE_ITEM_BUG_SPRAY)
     {
         g->DrawImage(Sexy::IMAGE_BUG_SPRAY, aPosX - 12, aPosY + 3);
-        TodDrawString(g, "x5", aPosX + 56, aPosY + 62, Sexy::FONT_HOUSEOFTERROR16, Color::White, DS_ALIGN_RIGHT);
+        PvzpDrawString(g, "x5", aPosX + 56, aPosY + 62, Sexy::FONT_HOUSEOFTERROR16, Color::White, DS_ALIGN_RIGHT);
     }
     else if (theItemType == STORE_ITEM_GARDENING_GLOVE)
     {
@@ -430,7 +430,7 @@ void StoreScreen::DrawItem(Graphics* g, int theItemPosition, StoreItem theItemTy
     {
         g->DrawImage(Sexy::IMAGE_STORE_PRICETAG, aPosX - 3, aPosY + 70);
         std::string aCostString = LawnApp::GetMoneyString(GetItemCost(theItemType));
-        TodDrawString(g, aCostString, aPosX + 23, aPosY + 85, Sexy::FONT_BRIANNETOD12, Color::Black, DS_ALIGN_CENTER);
+        PvzpDrawString(g, aCostString, aPosX + 23, aPosY + 85, Sexy::FONT_BRIANNETOD12, Color::Black, DS_ALIGN_CENTER);
     }
     if (IsComingSoon(theItemType))
     {
@@ -440,13 +440,13 @@ void StoreScreen::DrawItem(Graphics* g, int theItemPosition, StoreItem theItemTy
             aRect.mX -= 4;
         }
         // STORE_USE_*_IMAGE_LABEL not checked: no localized image, always draw text.
-        TodDrawStringWrapped(g, "[COMING_SOON]", aRect, Sexy::FONT_HOUSEOFTERROR16, Color(255, 0, 0), DS_ALIGN_CENTER_VERTICAL_MIDDLE);
+        PvzpDrawStringWrapped(g, "[COMING_SOON]", aRect, Sexy::FONT_HOUSEOFTERROR16, Color(255, 0, 0), DS_ALIGN_CENTER_VERTICAL_MIDDLE);
     }
     else if (IsItemSoldOut(theItemType))
     {
         Rect aRect(aPosX, aPosY, 50, 70);
         // STORE_USE_*_IMAGE_LABEL not checked: no localized image, always draw text.
-        TodDrawStringWrapped(g, "[SOLD_OUT]", aRect, Sexy::FONT_HOUSEOFTERROR16, Color(255, 0, 0), DS_ALIGN_CENTER_VERTICAL_MIDDLE);
+        PvzpDrawStringWrapped(g, "[SOLD_OUT]", aRect, Sexy::FONT_HOUSEOFTERROR16, Color(255, 0, 0), DS_ALIGN_CENTER_VERTICAL_MIDDLE);
     }
     else if (mMouseOverItem == theItemType)
     {
@@ -466,7 +466,7 @@ void StoreScreen::Draw(Graphics* g)
     g->SetLinearBlend(true);
     mDrawnOnce = true;
 
-    int aStoreSignPosY = TodAnimateCurve(50, 110, mStoreTime, -150, 0, CURVE_EASE_IN_OUT);
+    int aStoreSignPosY = PvzpAnimateCurve(50, 110, mStoreTime, -150, 0, CURVE_EASE_IN_OUT);
     if (mApp->IsNight())
     {
         g->DrawImage(Sexy::IMAGE_STORE_BACKGROUNDNIGHT, 0, 0);
@@ -530,8 +530,8 @@ void StoreScreen::Draw(Graphics* g)
             }
         }
 
-        std::string aPageString = TodReplaceNumberString(TodReplaceNumberString("[STORE_PAGE]", "{PAGE}", mPage + 1), "{NUM_PAGES}", aNumPages);
-        TodDrawString(g, aPageString, STORESCREEN_PAGESTRING_X, STORESCREEN_PAGESTRING_Y, Sexy::FONT_BRIANNETOD12, Color(80, 80, 80), DS_ALIGN_CENTER);
+        std::string aPageString = PvzpReplaceNumberString(PvzpReplaceNumberString("[STORE_PAGE]", "{PAGE}", mPage + 1), "{NUM_PAGES}", aNumPages);
+        PvzpDrawString(g, aPageString, STORESCREEN_PAGESTRING_X, STORESCREEN_PAGESTRING_Y, Sexy::FONT_BRIANNETOD12, Color(80, 80, 80), DS_ALIGN_CENTER);
     }
 }
 
@@ -606,7 +606,7 @@ void StoreScreen::UpdateMouse()
                 case STORE_ITEM_TREE_FOOD:              aMessageIndex = 2031;                           break;
                 case STORE_ITEM_FIRSTAID:               aMessageIndex = 2033;                           break;
                 case STORE_ITEM_PVZ:                    aMessageIndex = 2034;                           break;
-                default:                                TOD_ASSERT(false);                              break;
+                default:                                PVZP_ASSERT(false);                              break;
                 }
                 if (mApp->mCrazyDaveMessageIndex != aMessageIndex)
                     SetBubbleText(aMessageIndex, 100, false);
@@ -759,7 +759,7 @@ void StoreScreen::Update()
                 mAmbientSpeechCountDown--;
                 if (mAmbientSpeechCountDown <= 0)
                 {
-                    TodWeightedArray aPickArray[4];
+                    PvzpWeightedArray aPickArray[4];
                     for (int i = 0; i < 4; i++)
                     {
                         int aMessage = 2015 + i;
@@ -778,7 +778,7 @@ void StoreScreen::Update()
                         }
                     }
 
-                    int aDaveMessage = TodPickFromWeightedArray(aPickArray, 4);
+                    int aDaveMessage = PvzpPickFromWeightedArray(aPickArray, 4);
                     mPreviousAmbientSpeechIndex = aDaveMessage;
                     SetBubbleText(aDaveMessage, 800, false);
                     mAmbientSpeechCountDown = RandRangeInt(500, 1000);
@@ -927,7 +927,7 @@ int StoreScreen::GetItemCost(StoreItem theStoreItem)
     case STORE_ITEM_TREE_OF_WISDOM:                     return 1000;
     case STORE_ITEM_TREE_FOOD:                          return 250;
     case STORE_ITEM_FIRSTAID:                           return 200;
-    default: TOD_ASSERT(false);                              return 0;
+    default: PVZP_ASSERT(false);                              return 0;
     }
 }
 
@@ -1056,7 +1056,7 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
             }
             else
             {
-                TOD_ASSERT(theStoreItem >= STORE_ITEM_PLANT_GATLINGPEA && theStoreItem < (StoreItem)MAX_PURCHASES);
+                PVZP_ASSERT(theStoreItem >= STORE_ITEM_PLANT_GATLINGPEA && theStoreItem < (StoreItem)MAX_PURCHASES);
                 mApp->mPlayerInfo->mPurchases[theStoreItem] = 1;
             }
 
@@ -1198,6 +1198,6 @@ void StoreScreen::SetupForIntro(int theDialogIndex)
 {
     mStartDialog = theDialogIndex;
     mHatchOpen = false;
-    mBackButton->mLabel = TodStringTranslate("[STORE_NEXT_LEVEL_BUTTON]");
+    mBackButton->mLabel = PvzpStringTranslate("[STORE_NEXT_LEVEL_BUTTON]");
     EnableButtons(false);
 }

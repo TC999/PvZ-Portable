@@ -25,9 +25,9 @@
 #include "../Resources.h"
 #include "MessageWidget.h"
 #include "graphics/Font.h"
-#include "../Sexy.TodLib/TodCommon.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/TodStringFile.h"
+#include "../PvzpLib/PvzpCommon.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/PvzpStringFile.h"
 #include <algorithm>
 
 //(0x4081F1)
@@ -104,7 +104,7 @@ static void TruncateLabel(std::string& theLabel)
 // GOTY @Patoke: inlined 0x459715
 void MessageWidget::SetLabel(std::string_view theNewLabel, MessageStyle theMessageStyle)
 {
-	std::string aLabel = TodStringTranslate(theNewLabel);
+	std::string aLabel = PvzpStringTranslate(theNewLabel);
 	TruncateLabel(aLabel);
 
 	if (mReanimType != ReanimationType::REANIM_NONE && mDuration > 0)
@@ -166,7 +166,7 @@ void MessageWidget::SetLabel(std::string_view theNewLabel, MessageStyle theMessa
 			break;
 
 		default:
-			TOD_ASSERT(false);
+			PVZP_ASSERT(false);
 			break;
 		}
 		
@@ -191,7 +191,7 @@ void MessageWidget::LayoutReanimText()
 	{
 		if (aPos == aLabelLen || mLabel[aPos] == '\n')
 		{
-			TOD_ASSERT(aCurLine < MAX_REANIM_LINES);
+			PVZP_ASSERT(aCurLine < MAX_REANIM_LINES);
 
 			int aLen = aPos - aCurPos;
 			int aOff = aCurPos;
@@ -227,7 +227,7 @@ void MessageWidget::LayoutReanimText()
 		if (aChar == U'\n')
 		{
 			aCurLine++;
-			TOD_ASSERT(aCurLine < MAX_REANIM_LINES);
+			PVZP_ASSERT(aCurLine < MAX_REANIM_LINES);
 			aCurPosX = -aLineWidth[aCurLine] * 0.5f;
 			aCurPosY += aFont->GetLineSpacing();
 		}
@@ -275,7 +275,7 @@ void MessageWidget::Update()
 			}
 			else
 			{
-				aTextReanim->mAnimRate = TodAnimateCurveFloat(0, 50, (mDisplayTime - mDuration) * aTextSpeed - aCharIdx, 0.0f, 40.0f, TodCurves::CURVE_LINEAR);
+				aTextReanim->mAnimRate = PvzpAnimateCurveFloat(0, 50, (mDisplayTime - mDuration) * aTextSpeed - aCharIdx, 0.0f, 40.0f, PvzpCurves::CURVE_LINEAR);
 			}
 		}
 		else
@@ -284,7 +284,7 @@ void MessageWidget::Update()
 			{
 				aTextReanim->PlayReanim("anim_leave", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 0, 0.0f);
 			}
-			aTextReanim->mAnimRate = TodAnimateCurveFloat(0, 50, (mSlideOffTime - mDuration) * aTextSpeed - aCharIdx, 0.0f, 40.0f, TodCurves::CURVE_LINEAR);
+			aTextReanim->mAnimRate = PvzpAnimateCurveFloat(0, 50, (mSlideOffTime - mDuration) * aTextSpeed - aCharIdx, 0.0f, 40.0f, PvzpCurves::CURVE_LINEAR);
 		}
 
 		aTextReanim->Update();  //更新动画
@@ -325,7 +325,7 @@ void MessageWidget::DrawReanimatedText(Graphics* g, _Font* theFont, const Color&
 		const int aByteStart = mTextReanimByteOffset[aCharIdx];
 		const int aByteEnd = (aCharIdx + 1 < mTextReanimCount) ? mTextReanimByteOffset[aCharIdx + 1] : strlen(mLabel);
 		std::string aLetter(&mLabel[aByteStart], aByteEnd - aByteStart);
-		TodDrawStringMatrix(g, theFont, aMatrix, aLetter, aFinalColor);
+		PvzpDrawStringMatrix(g, theFont, aMatrix, aLetter, aFinalColor);
 	}
 }
 
@@ -359,7 +359,7 @@ _Font* MessageWidget::GetFont()
 		break;
 	}
 
-	TOD_ASSERT(false);
+	PVZP_ASSERT(false);
 	unreachable();
 }
 
@@ -453,7 +453,7 @@ void MessageWidget::Draw(Graphics* g)
 		break;
 
 	default:
-		TOD_ASSERT(false);
+		PVZP_ASSERT(false);
 		break;
 	}
 
@@ -469,7 +469,7 @@ void MessageWidget::Draw(Graphics* g)
 	{
 		if (aMinAlpha != 255)
 		{
-			aColor.mAlpha = TodAnimateCurve(75, 0, mApp->mBoard->mMainCounter % 75, aMinAlpha, 255, TodCurves::CURVE_BOUNCE_SLOW_MIDDLE);
+			aColor.mAlpha = PvzpAnimateCurve(75, 0, mApp->mBoard->mMainCounter % 75, aMinAlpha, 255, PvzpCurves::CURVE_BOUNCE_SLOW_MIDDLE);
 			aOutlineColor.mAlpha = aColor.mAlpha;
 		}
 		if (aFadeOut)
@@ -486,16 +486,16 @@ void MessageWidget::Draw(Graphics* g)
 			g->FillRect(aRect);
 
 			aRect.mY += aTextOffsetY;
-			TodDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER_VERTICAL_MIDDLE);
+			PvzpDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER_VERTICAL_MIDDLE);
 		}
 		else
 		{
 			Rect aRect(aPosX - mApp->mBoard->mX - BOARD_WIDTH / 2, aPosY - aFont->mAscent, BOARD_WIDTH, BOARD_HEIGHT);
 			if (aOutlineFont)
 			{
-				TodDrawStringWrapped(g, mLabel, aRect, aOutlineFont, aOutlineColor, DrawStringJustification::DS_ALIGN_CENTER);
+				PvzpDrawStringWrapped(g, mLabel, aRect, aOutlineFont, aOutlineColor, DrawStringJustification::DS_ALIGN_CENTER);
 			}
-			TodDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER);
+			PvzpDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER);
 		}
 
 		if (mMessageStyle == MessageStyle::MESSAGE_STYLE_HOUSE_NAME)
@@ -505,12 +505,12 @@ void MessageWidget::Draw(Graphics* g)
 			{
 				int aFlags = mApp->mBoard->GetNumWavesPerSurvivalStage() * mApp->mBoard->mChallenge->mSurvivalStage / mApp->mBoard->GetNumWavesPerFlag();
 				std::string aFlagStr = mApp->Pluralize(aFlags, "[ONE_FLAG]", "[COUNT_FLAGS]");
-				aSubStr = TodReplaceString("[FLAGS_COMPLETED]", "{FLAGS}", aFlagStr);
+				aSubStr = PvzpReplaceString("[FLAGS_COMPLETED]", "{FLAGS}", aFlagStr);
 			}
 
 			if (aSubStr.size() > 0)
 			{
-				TodDrawString(
+				PvzpDrawString(
 					g, 
 					aSubStr, 
 					BOARD_WIDTH / 2 - mApp->mBoard->mX, 

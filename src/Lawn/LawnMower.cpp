@@ -24,8 +24,8 @@
 #include "LawnMower.h"
 #include "../LawnApp.h"
 #include "System/ReanimationLawn.h"
-#include "../Sexy.TodLib/TodFoley.h"
-#include "../Sexy.TodLib/Reanimator.h"
+#include "../PvzpLib/PvzpFoley.h"
+#include "../PvzpLib/Reanimator.h"
 
 void LawnMower::LawnMowerInitialize(int theRow)
 {
@@ -97,7 +97,7 @@ void LawnMower::UpdatePool()
     {
         Reanimation* aSplashReanim = mApp->AddReanimation(mPosX + 0.0f, mPosY + 25.0f, mRenderOrder + 1, ReanimationType::REANIM_SPLASH);
         aSplashReanim->OverrideScale(1.2f, 0.8f);
-        mApp->AddTodParticle(mPosX + 0.0f + 50.0f, mPosY + 0.0f + 42.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PLANTING_POOL);
+        mApp->AddPvzpParticle(mPosX + 0.0f + 50.0f, mPosY + 0.0f + 42.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PLANTING_POOL);
         mApp->PlayFoley(FoleyType::FOLEY_ZOMBIESPLASH);
         mMowerHeight = MowerHeight::MOWER_HEIGHT_DOWN_TO_POOL;
     }
@@ -119,7 +119,7 @@ void LawnMower::UpdatePool()
             mMowerHeight = MowerHeight::MOWER_HEIGHT_UP_TO_LAND;
             Reanimation* aSplashReanim = mApp->AddReanimation(mPosX + 0.0f, mPosY + 25.0f, mRenderOrder + 1, ReanimationType::REANIM_SPLASH);
             aSplashReanim->OverrideScale(1.2f, 0.8f);
-            mApp->AddTodParticle(mPosX + 0.0f + 50.0f, mPosY + 0.0f + 42.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PLANTING_POOL);
+            mApp->AddPvzpParticle(mPosX + 0.0f + 50.0f, mPosY + 0.0f + 42.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PLANTING_POOL);
             mApp->PlayFoley(FoleyType::FOLEY_PLANT_WATER);
             aMowerReanim->PlayReanim("anim_land", ReanimLoopType::REANIM_LOOP, 0, 0.0f);
         }
@@ -190,7 +190,7 @@ void LawnMower::Update()
     if (mMowerState == LawnMowerState::MOWER_ROLLING_IN)
     {
         mRollingInCounter++;
-        mPosX = TodAnimateCurveFloat(0, 100, mRollingInCounter, -160.0f, -21.0f, TodCurves::CURVE_EASE_IN_OUT);
+        mPosX = PvzpAnimateCurveFloat(0, 100, mRollingInCounter, -160.0f, -21.0f, PvzpCurves::CURVE_EASE_IN_OUT);
         if (mRollingInCounter == 100)
         {
             mMowerState = LawnMowerState::MOWER_READY;
@@ -246,7 +246,7 @@ void LawnMower::Update()
     if (mChompCounter > 0)
     {
         mChompCounter--;
-        aSpeed = TodAnimateCurveFloat(50, 0, mChompCounter, aSpeed, 1.0f, TodCurves::CURVE_BOUNCE_SLOW_MIDDLE);
+        aSpeed = PvzpAnimateCurveFloat(50, 0, mChompCounter, aSpeed, 1.0f, PvzpCurves::CURVE_BOUNCE_SLOW_MIDDLE);
     }
     mPosX += aSpeed;
     mPosY = mBoard->GetPosYBasedOnRow(mPosX + 40.0f, mRow) + 23.0f;
@@ -259,7 +259,7 @@ void LawnMower::Update()
     {
         Reanimation* aSplashReanim = mApp->AddReanimation(mPosX, mPosY + 25.0f, mRenderOrder + 1, ReanimationType::REANIM_SPLASH);
         aSplashReanim->OverrideScale(1.2f, 0.8f);
-        mApp->AddTodParticle(mPosX + 50.0f, mPosY + 67.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PLANTING_POOL);
+        mApp->AddPvzpParticle(mPosX + 50.0f, mPosY + 67.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PLANTING_POOL);
         mApp->PlaySample(SOUND_ZOMBIE_ENTERING_WATER);
         mApp->mSoundSystem->StopFoley(FoleyType::FOLEY_LAWNMOWER);
         Die();
@@ -310,11 +310,11 @@ void LawnMower::Draw(Graphics* g)
 
         if (aShadowType == 0)
         {
-            TodDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW, aShadowX, aShadowY, 0, aScaleX, aScaleY);
+            PvzpDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW, aShadowX, aShadowY, 0, aScaleX, aScaleY);
         }
         else
         {
-            TodDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW2, aShadowX, aShadowY, 0, aScaleX, aScaleY);
+            PvzpDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW2, aShadowX, aShadowY, 0, aScaleX, aScaleY);
         }
     }
 

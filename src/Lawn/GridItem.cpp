@@ -29,9 +29,9 @@
 #include "../Resources.h"
 #include "MessageWidget.h"
 #include "System/ReanimationLawn.h"
-#include "../Sexy.TodLib/TodFoley.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/TodParticle.h"
+#include "../PvzpLib/PvzpFoley.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/PvzpParticle.h"
 #include "widget/WidgetManager.h"
 #include <algorithm>
 
@@ -73,7 +73,7 @@ void GridItem::GridItemDie()
         mGridItemReanimID = ReanimationID::REANIMATIONID_NULL;
     }
 
-    TodParticleSystem* aGridItemParticle = mApp->ParticleTryToGet(mGridItemParticleID);
+    PvzpParticleSystem* aGridItemParticle = mApp->ParticleTryToGet(mGridItemParticleID);
     if (aGridItemParticle)
     {
         aGridItemParticle->ParticleSystemDie();
@@ -87,7 +87,7 @@ void GridItem::DrawGridItemOverlay(Graphics* g)
         if (mBoard->mCursorObject->mCursorType == CursorType::CURSOR_TYPE_CHOCOLATE && !mApp->mZenGarden->IsStinkyHighOnChocolate())
         {
             g->DrawImage(IMAGE_PLANTSPEECHBUBBLE, mPosX + 50.0f, mPosY - 36.0f);
-            TodDrawImageScaledF(g, IMAGE_CHOCOLATE, mPosX + 63.0f, mPosY - 28.0f, 0.44f, 0.44f);
+            PvzpDrawImageScaledF(g, IMAGE_CHOCOLATE, mPosX + 63.0f, mPosY - 28.0f, 0.44f, 0.44f);
         }
     }
 }
@@ -108,7 +108,7 @@ void GridItem::DrawGridItem(Graphics* g)
 //  case GridItemType::GRIDITEM_SQUIRREL:           DrawSquirrel(g);                                break;
     case GridItemType::GRIDITEM_STINKY:             DrawStinky(g);                                  break;
     case GridItemType::GRIDITEM_IZOMBIE_BRAIN:      DrawIZombieBrain(g);                            break;
-    default:                                        TOD_ASSERT(false);                                   break;
+    default:                                        PVZP_ASSERT(false);                                   break;
     }
 
     Reanimation* aGridItemReanim = mApp->ReanimationTryToGet(mGridItemReanimID);
@@ -117,7 +117,7 @@ void GridItem::DrawGridItem(Graphics* g)
         aGridItemReanim->Draw(g);
     }
 
-    TodParticleSystem* aGridItemParticle = mApp->ParticleTryToGet(mGridItemParticleID);
+    PvzpParticleSystem* aGridItemParticle = mApp->ParticleTryToGet(mGridItemParticleID);
     if (aGridItemParticle)
     {
         aGridItemParticle->Draw(g);
@@ -128,7 +128,7 @@ void GridItem::DrawIZombieBrain(Graphics* g)
 {
     if (mGridItemState == GridItemState::GRIDITEM_STATE_BRAIN_SQUISHED)
     {
-        TodDrawImageScaledF(g, IMAGE_BRAIN, mPosX, mPosY + 20.0f, 1.0f, 0.25f);
+        PvzpDrawImageScaledF(g, IMAGE_BRAIN, mPosX, mPosY + 20.0f, 1.0f, 0.25f);
         return;
     }
 
@@ -159,7 +159,7 @@ void GridItem::DrawGraveStone(Graphics* g)
     if (mGridItemCounter <= 0)
         return;
 
-    int aHeightPosition = TodAnimateCurve(0, 100, mGridItemCounter, 1000, 0, TodCurves::CURVE_EASE_IN_OUT);
+    int aHeightPosition = PvzpAnimateCurve(0, 100, mGridItemCounter, 1000, 0, PvzpCurves::CURVE_EASE_IN_OUT);
     int aGridCelLook = mBoard->mGridCelLook[mGridX][mGridY];
     int aGridCelOffsetX = mBoard->mGridCelOffset[mGridX][mGridY][0];
     int aGridCelOffsetY = mBoard->mGridCelOffset[mGridX][mGridY][1];
@@ -180,14 +180,14 @@ void GridItem::DrawGraveStone(Graphics* g)
         aGraveRow = 2 + aGridCelLook % 2;
     }
 
-    int aVisibleHeight = TodAnimateCurve(0, 1000, aHeightPosition, aCelHeight, 0, TodCurves::CURVE_EASE_IN_OUT);
-    int aExtraBottomClip = TodAnimateCurve(0, 50, aHeightPosition, 0, 14, TodCurves::CURVE_EASE_IN_OUT);
-    int aVisibleHeightDirt = TodAnimateCurve(500, 1000, aHeightPosition, aCelHeight, 0, TodCurves::CURVE_EASE_IN_OUT);
+    int aVisibleHeight = PvzpAnimateCurve(0, 1000, aHeightPosition, aCelHeight, 0, PvzpCurves::CURVE_EASE_IN_OUT);
+    int aExtraBottomClip = PvzpAnimateCurve(0, 50, aHeightPosition, 0, 14, PvzpCurves::CURVE_EASE_IN_OUT);
+    int aVisibleHeightDirt = PvzpAnimateCurve(500, 1000, aHeightPosition, aCelHeight, 0, PvzpCurves::CURVE_EASE_IN_OUT);
     int aExtraTopClip = 0;
     Plant* aPlant = mBoard->GetTopPlantAt(mGridX, mGridY, PlantPriority::TOPPLANT_ONLY_NORMAL_POSITION);
     if (aPlant && aPlant->mState == PlantState::STATE_GRAVEBUSTER_EATING)
     {
-        aExtraTopClip = TodAnimateCurveFloat(400, 0, aPlant->mStateCountdown, 10.0f, 40.0f, TodCurves::CURVE_LINEAR);
+        aExtraTopClip = PvzpAnimateCurveFloat(400, 0, aPlant->mStateCountdown, 10.0f, 40.0f, PvzpCurves::CURVE_LINEAR);
     }
 
     Rect aSrcRect(aCelWidth * aGraveCol, aCelHeight * aGraveRow + aExtraTopClip, aCelWidth, aVisibleHeight - aExtraBottomClip - aExtraTopClip);
@@ -203,7 +203,7 @@ void GridItem::DrawStinky(Graphics* g)
     Reanimation* aStinkyReanim = mApp->ReanimationGet(mGridItemReanimID);
     float aOriginalTime = aStinkyReanim->mAnimTime;
 
-    TOD_ASSERT(mMotionTrailCount <= NUM_MOTION_TRAIL_FRAMES);
+    PVZP_ASSERT(mMotionTrailCount <= NUM_MOTION_TRAIL_FRAMES);
     for (int i = mMotionTrailCount - 1; i >= 0; i--)
     {
         if (i % 2)
@@ -212,7 +212,7 @@ void GridItem::DrawStinky(Graphics* g)
             float aDiffX = aFrame.mPosX - mPosX;
             float aDiffY = aFrame.mPosY - mPosY;
 
-            int anAlpha = TodAnimateCurve(0, 11, i, 64, 16, TodCurves::CURVE_LINEAR);
+            int anAlpha = PvzpAnimateCurve(0, 11, i, 64, 16, PvzpCurves::CURVE_LINEAR);
             g->SetColor(Color(255, 255, 255, anAlpha));
             g->SetColorizeImages(true);
             aStinkyReanim->mAnimTime = aFrame.mAnimTime;
@@ -244,7 +244,7 @@ void GridItem::DrawCrater(Graphics* g)
     float aYPos = mBoard->GridToPixelY(mGridX, mGridY) + 40.0f;
     if (mGridItemCounter < 25)
     {
-        int anAlpha = TodAnimateCurve(25, 0, mGridItemCounter, 255, 0, TodCurves::CURVE_LINEAR);
+        int anAlpha = PvzpAnimateCurve(25, 0, mGridItemCounter, 255, 0, PvzpCurves::CURVE_LINEAR);
         g->SetColor(Color(255, 255, 255, anAlpha));
         g->SetColorizeImages(true);
     }
@@ -308,18 +308,18 @@ void GridItem::DrawCrater(Graphics* g)
         aImage = IMAGE_CRATER_FADING;
     }
 
-    TodDrawImageCelF(g, aImage, aXPos, aYPos, aCelCol, 0);
+    PvzpDrawImageCelF(g, aImage, aXPos, aYPos, aCelCol, 0);
     g->SetColorizeImages(false);
 }
 
 void GridItem::DrawScaryPot(Graphics* g)
 {
     int aImageCol = static_cast<int>(mGridItemState) - static_cast<int>(GridItemState::GRIDITEM_STATE_SCARY_POT_QUESTION);
-    TOD_ASSERT(aImageCol >= 0 && aImageCol < 3);
+    PVZP_ASSERT(aImageCol >= 0 && aImageCol < 3);
 
     int aXPos = mBoard->GridToPixelX(mGridX, mGridY) - 5;
     int aYPos = mBoard->GridToPixelY(mGridX, mGridY) - 15;
-    TodDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW2, aXPos - 5.0f, aYPos + 72.0f, 0, 1.3f, 1.3f);
+    PvzpDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW2, aXPos - 5.0f, aYPos + 72.0f, 0, 1.3f, 1.3f);
 
     if (mTransparentCounter > 0)
     {
@@ -379,7 +379,7 @@ void GridItem::DrawScaryPot(Graphics* g)
             }
         }
 
-        int aAlpha = TodAnimateCurve(0, 50, mTransparentCounter, 255, 58, TodCurves::CURVE_LINEAR);
+        int aAlpha = PvzpAnimateCurve(0, 50, mTransparentCounter, 255, 58, PvzpCurves::CURVE_LINEAR);
         g->SetColorizeImages(true);
         g->SetColor(Color(255, 255, 255, aAlpha));
     }
@@ -404,7 +404,7 @@ void GridItem::DrawLadder(Graphics* g)
 {
     int aXPos = mBoard->GridToPixelX(mGridX, mGridY);
     int aYPos = mBoard->GridToPixelY(mGridX, mGridY);
-    TodDrawImageScaledF(g, IMAGE_REANIM_ZOMBIE_LADDER_5, aXPos + 25.0f, aYPos - 4.0f, 0.8f, 0.8f);
+    PvzpDrawImageScaledF(g, IMAGE_REANIM_ZOMBIE_LADDER_5, aXPos + 25.0f, aYPos - 4.0f, 0.8f, 0.8f);
 }
 
 /*
@@ -415,19 +415,19 @@ void GridItem::DrawSquirrel(Graphics* g)
     switch (mGridItemState)
     {
     case GridItemState::GRIDITEM_STATE_SQUIRREL_PEEKING:
-        aYPos += TodAnimateCurve(50, 0, mGridItemCounter, 0, -40, TodCurves::CURVE_BOUNCE_SLOW_MIDDLE);
+        aYPos += PvzpAnimateCurve(50, 0, mGridItemCounter, 0, -40, PvzpCurves::CURVE_BOUNCE_SLOW_MIDDLE);
         break;
     case GridItemState::GRIDITEM_STATE_SQUIRREL_RUNNING_UP:
-        aYPos += TodAnimateCurve(50, 0, mGridItemCounter, 100, 0, TodCurves::CURVE_EASE_IN);
+        aYPos += PvzpAnimateCurve(50, 0, mGridItemCounter, 100, 0, PvzpCurves::CURVE_EASE_IN);
         break;
     case GridItemState::GRIDITEM_STATE_SQUIRREL_RUNNING_DOWN:
-        aYPos += TodAnimateCurve(50, 0, mGridItemCounter, -100, 0, TodCurves::CURVE_EASE_IN);
+        aYPos += PvzpAnimateCurve(50, 0, mGridItemCounter, -100, 0, PvzpCurves::CURVE_EASE_IN);
         break;
     case GridItemState::GRIDITEM_STATE_SQUIRREL_RUNNING_LEFT:
-        aXPos += TodAnimateCurve(50, 0, mGridItemCounter, 80, 0, TodCurves::CURVE_EASE_IN);
+        aXPos += PvzpAnimateCurve(50, 0, mGridItemCounter, 80, 0, PvzpCurves::CURVE_EASE_IN);
         break;
     case GridItemState::GRIDITEM_STATE_SQUIRREL_RUNNING_RIGHT:
-        aXPos += TodAnimateCurve(50, 0, mGridItemCounter, -80, 0, TodCurves::CURVE_EASE_IN);
+        aXPos += PvzpAnimateCurve(50, 0, mGridItemCounter, -80, 0, PvzpCurves::CURVE_EASE_IN);
         break;
     default:
         break;
@@ -444,7 +444,7 @@ void GridItem::AddGraveStoneParticles()
     int aYOffset = mBoard->mGridCelOffset[mGridX][mGridY][1];
     int aXPos = mBoard->GridToPixelX(mGridX, mGridY) + 14 + aXOffset;
     int aYPos = mBoard->GridToPixelY(mGridX, mGridY) + 78 + aYOffset;
-    mApp->AddTodParticle(aXPos, aYPos, mRenderOrder + 1, ParticleEffect::PARTICLE_GRAVE_STONE_RISE);
+    mApp->AddPvzpParticle(aXPos, aYPos, mRenderOrder + 1, ParticleEffect::PARTICLE_GRAVE_STONE_RISE);
     mApp->PlayFoley(FoleyType::FOLEY_DIRT_RISE);
 }
 
@@ -471,7 +471,7 @@ void GridItem::OpenPortal()
         aPortalReanim->SetPosition(aXPos, aYPos);
     }
 
-    TodParticleSystem* aPortalParticle = mApp->ParticleTryToGet(mGridItemParticleID);
+    PvzpParticleSystem* aPortalParticle = mApp->ParticleTryToGet(mGridItemParticleID);
     if (aPortalParticle)
     {
         aPortalParticle->ParticleSystemDie();
@@ -490,7 +490,7 @@ void GridItem::ClosePortal()
         aPortalReanim->PlayReanim("anim_dissapear", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 0, 12.0f);
     }
 
-    TodParticleSystem* aPortalParticle = mApp->ParticleTryToGet(mGridItemParticleID);
+    PvzpParticleSystem* aPortalParticle = mApp->ParticleTryToGet(mGridItemParticleID);
     if (aPortalParticle)
     {
         aPortalParticle->ParticleSystemDie();
@@ -530,14 +530,14 @@ void GridItem::UpdatePortal()
             aYPos += 15.0f;
         }
 
-        TodParticleSystem* aParticle = mApp->AddTodParticle(aXPos, aYPos, 0, aEffect);
+        PvzpParticleSystem* aParticle = mApp->AddPvzpParticle(aXPos, aYPos, 0, aEffect);
         mGridItemParticleID = mApp->ParticleGetID(aParticle);
     }
 }
 
 void GridItem::UpdateScaryPot()
 {
-    if (mApp->mTodCheatKeys && mApp->mWidgetManager->mKeyDown[KeyCode::KEYCODE_SHIFT])
+    if (mApp->mCheatKeys && mApp->mWidgetManager->mKeyDown[KeyCode::KEYCODE_SHIFT])
     {
         if (mTransparentCounter < 50)
         {
@@ -596,7 +596,7 @@ void GridItem::Update()
         aGridItemReanim->Update();
     }
 
-    TodParticleSystem* aGridItemParticle = mApp->ParticleTryToGet(mGridItemParticleID);
+    PvzpParticleSystem* aGridItemParticle = mApp->ParticleTryToGet(mGridItemParticleID);
     if (aGridItemParticle)
     {
         aGridItemParticle->Update();

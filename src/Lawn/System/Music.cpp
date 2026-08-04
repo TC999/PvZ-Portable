@@ -24,8 +24,8 @@
 #include "PlayerInfo.h"
 #include "../../LawnApp.h"
 #include "paklib/PakInterface.h"
-#include "../../Sexy.TodLib/TodDebug.h"
-#include "../../Sexy.TodLib/TodCommon.h"
+#include "../../PvzpLib/PvzpDebug.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "sound/SDLMusicInterface.h"
 
 using namespace Sexy;
@@ -68,7 +68,7 @@ static constexpr MusicLoadEntry MUSIC_LOADING_FILES[] = {
 
 const int Music::MUSIC_LOADING_TASKS = MUSIC_LOADING_TASK_WEIGHT * static_cast<int>(sizeof(MUSIC_LOADING_FILES) / sizeof(MUSIC_LOADING_FILES[0]));
 
-bool Music::TodLoadMusic(MusicFile theMusicFile, std::string_view theFileName)
+bool Music::PvzpLoadMusic(MusicFile theMusicFile, std::string_view theFileName)
 {
 	Mix_Music* aHMusic = 0;
 	SDLMusicInterface* anSDL = (SDLMusicInterface*)mApp->mMusicInterface;
@@ -168,15 +168,15 @@ void Music::SetupVolumeForTune(MusicTune theMusicTune, float theDrumsVolume, flo
 
 void Music::LoadSong(MusicFile theMusicFile, std::string_view theFileName)
 {
-	TodHesitationTrace("preloadsong");
-	if (!TodLoadMusic(theMusicFile, theFileName))
+	PvzpHesitationTrace("preloadsong");
+	if (!PvzpLoadMusic(theMusicFile, theFileName))
 	{
-		TodTrace("music failed to load\n");
+		PvzpTrace("music failed to load\n");
 		mMusicDisabled = true;
 	}
 	else
 	{
-		TodHesitationTrace("song '%.*s'", static_cast<int>(theFileName.size()), theFileName.data());
+		PvzpHesitationTrace("song '%.*s'", static_cast<int>(theFileName.size()), theFileName.data());
 	}
 }
 
@@ -229,7 +229,7 @@ Mix_Music* Music::GetMusicHandle(MusicFile theMusicFile)
 {
 	SDLMusicInterface* anSDL = (SDLMusicInterface*)mApp->mMusicInterface;
 	auto anItr = anSDL->mMusicMap.find((int)theMusicFile);
-	TOD_ASSERT(anItr != anSDL->mMusicMap.end());
+	PVZP_ASSERT(anItr != anSDL->mMusicMap.end());
 	return anItr->second.mHMusic;
 }
 
@@ -237,7 +237,7 @@ void Music::PlayFromOffset(MusicFile theMusicFile, int theOffset, double theVolu
 {
 	SDLMusicInterface* anSDL = (SDLMusicInterface*)mApp->mMusicInterface;
 	auto anItr = anSDL->mMusicMap.find((int)theMusicFile);
-	TOD_ASSERT(anItr != anSDL->mMusicMap.end());
+	PVZP_ASSERT(anItr != anSDL->mMusicMap.end());
 	SDLMusicInfo* aMusicInfo = &anItr->second;
 
 	if (mCurMusicTune == MusicTune::MUSIC_TUNE_CREDITS_ZOMBIES_ON_YOUR_LAWN)
@@ -368,7 +368,7 @@ void Music::PlayMusic(MusicTune theMusicTune, int theOffset, int theDrumsOffset)
 		break;
 
 	default:
-		TOD_ASSERT(false);
+		PVZP_ASSERT(false);
 		break;
 	}
 
@@ -384,7 +384,7 @@ void Music::PlayMusic(MusicTune theMusicTune, int theOffset, int theDrumsOffset)
 
 unsigned long Music::GetMusicOrder(MusicFile theMusicFile)
 {
-	TOD_ASSERT(theMusicFile != MusicFile::MUSIC_FILE_NONE);
+	PVZP_ASSERT(theMusicFile != MusicFile::MUSIC_FILE_NONE);
 	return ((SDLMusicInterface*)mApp->mMusicInterface)->GetMusicOrder((int)theMusicFile);
 }
 
@@ -470,7 +470,7 @@ void Music::UpdateMusicBurst()
 		case MusicBurstState::MUSIC_BURST_STARTING:
 			if (aBurstScheme == 1)
 			{
-				aFadeTrackVolume = TodAnimateCurveFloat(400, 0, mBurstStateCounter, 0.0f, 1.0f, TodCurves::CURVE_LINEAR);
+				aFadeTrackVolume = PvzpAnimateCurveFloat(400, 0, mBurstStateCounter, 0.0f, 1.0f, PvzpCurves::CURVE_LINEAR);
 				if (mBurstStateCounter == 100)
 				{
 					mMusicDrumsState = MusicDrumsState::MUSIC_DRUMS_ON_QUEUED;
@@ -494,7 +494,7 @@ void Music::UpdateMusicBurst()
 					mBurstStateCounter = 400;
 				else
 				{
-					aMainTrackVolume = TodAnimateCurveFloat(400, 0, mBurstStateCounter, 1.0f, 0.0f, TodCurves::CURVE_LINEAR);
+					aMainTrackVolume = PvzpAnimateCurveFloat(400, 0, mBurstStateCounter, 1.0f, 0.0f, PvzpCurves::CURVE_LINEAR);
 					if (mBurstStateCounter == 0)
 					{
 						mMusicBurstState = MusicBurstState::MUSIC_BURST_ON;
@@ -527,9 +527,9 @@ void Music::UpdateMusicBurst()
 			break;
 		case MusicBurstState::MUSIC_BURST_FINISHING:
 			if (aBurstScheme == 1)
-				aFadeTrackVolume = TodAnimateCurveFloat(800, 0, mBurstStateCounter, 1.0f, 0.0f, TodCurves::CURVE_LINEAR);
+				aFadeTrackVolume = PvzpAnimateCurveFloat(800, 0, mBurstStateCounter, 1.0f, 0.0f, PvzpCurves::CURVE_LINEAR);
 			else
-				aMainTrackVolume = TodAnimateCurveFloat(400, 0, mBurstStateCounter, 0.0f, 1.0f, TodCurves::CURVE_LINEAR);
+				aMainTrackVolume = PvzpAnimateCurveFloat(400, 0, mBurstStateCounter, 0.0f, 1.0f, PvzpCurves::CURVE_LINEAR);
 			if (mBurstStateCounter == 0 && mMusicDrumsState == MusicDrumsState::MUSIC_DRUMS_OFF)
 				mMusicBurstState = MusicBurstState::MUSIC_BURST_OFF;
 			break;
@@ -572,9 +572,9 @@ void Music::UpdateMusicBurst()
 			break;
 		case MusicDrumsState::MUSIC_DRUMS_FADING:
 			if (aBurstScheme == 2)
-				aDrumsVolume = TodAnimateCurveFloat(800, 0, mDrumsStateCounter, 1.0f, 0.0f, TodCurves::CURVE_LINEAR);
+				aDrumsVolume = PvzpAnimateCurveFloat(800, 0, mDrumsStateCounter, 1.0f, 0.0f, PvzpCurves::CURVE_LINEAR);
 			else
-				aDrumsVolume = TodAnimateCurveFloat(50, 0, mDrumsStateCounter, 1.0f, 0.0f, TodCurves::CURVE_LINEAR);
+				aDrumsVolume = PvzpAnimateCurveFloat(50, 0, mDrumsStateCounter, 1.0f, 0.0f, PvzpCurves::CURVE_LINEAR);
 			if (mDrumsStateCounter == 0)
 				mMusicDrumsState = MusicDrumsState::MUSIC_DRUMS_OFF;
 			break;
@@ -604,7 +604,7 @@ void Music::MusicUpdate()
 			StopAllMusic();
 		else
 		{
-			float aFadeLevel = TodAnimateCurveFloat(mFadeOutDuration, 0, mFadeOutCounter, 1.0f, 0.0f, TodCurves::CURVE_LINEAR);
+			float aFadeLevel = PvzpAnimateCurveFloat(mFadeOutDuration, 0, mFadeOutCounter, 1.0f, 0.0f, PvzpCurves::CURVE_LINEAR);
 			mMusicInterface->SetSongVolume(mCurMusicFileMain, aFadeLevel);
 		}
 	}
@@ -627,7 +627,7 @@ void Music::MakeSureMusicIsPlaying(MusicTune theMusicTune)
 
 void Music::StartGameMusic()
 {
-	TOD_ASSERT(mApp->mBoard);
+	PVZP_ASSERT(mApp->mBoard);
 
 	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN || mApp->mGameMode == GameMode::GAMEMODE_TREE_OF_WISDOM)
 		MakeSureMusicIsPlaying(MusicTune::MUSIC_TUNE_ZEN_GARDEN);

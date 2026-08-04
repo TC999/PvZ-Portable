@@ -33,13 +33,13 @@
 #include "Widget/LawnDialog.h"
 #include "Widget/StoreScreen.h"
 #include "System/ReanimationLawn.h"
-#include "../Sexy.TodLib/TodFoley.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/Attachment.h"
-#include "../Sexy.TodLib/TodParticle.h"
-#include "../Sexy.TodLib/EffectSystem.h"
+#include "../PvzpLib/PvzpFoley.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/Attachment.h"
+#include "../PvzpLib/PvzpParticle.h"
+#include "../PvzpLib/EffectSystem.h"
 #include "graphics/Graphics.h"
-#include "../Sexy.TodLib/TodStringFile.h"
+#include "../PvzpLib/PvzpStringFile.h"
 
 constexpr const float STINKY_SLEEP_POS_Y = 461.0f;
 
@@ -194,7 +194,7 @@ void ZenGarden::DrawPottedPlant(Graphics* g, float x, float y, PottedPlant* theP
 void ZenGarden::PlantSetLaunchCounter(Plant* thePlant)
 {
     int aTime = PlantGetMinutesSinceHappy(thePlant);
-    int aCounterMax = TodAnimateCurve(5, 30, aTime, 3000, 15000, TodCurves::CURVE_LINEAR);
+    int aCounterMax = PvzpAnimateCurve(5, 30, aTime, 3000, 15000, PvzpCurves::CURVE_LINEAR);
     thePlant->mLaunchCounter = RandRangeInt(1800, aCounterMax);
 }
 
@@ -279,7 +279,7 @@ void ZenGarden::RemovePottedPlant(Plant* thePlant)
 
 PottedPlant* ZenGarden::PottedPlantFromIndex(intptr_t thePottedPlantIndex)
 {
-    TOD_ASSERT(thePottedPlantIndex >= 0 && thePottedPlantIndex < mApp->mPlayerInfo->mNumPottedPlants);
+    PVZP_ASSERT(thePottedPlantIndex >= 0 && thePottedPlantIndex < mApp->mPlayerInfo->mNumPottedPlants);
     return &mApp->mPlayerInfo->mPottedPlant[thePottedPlantIndex];
 }
 
@@ -347,7 +347,7 @@ bool ZenGarden::CanDropPottedPlantLoot()
 
 void ZenGarden::FindOpenZenGardenSpot(int& theSpotX, int& theSpotY)
 {
-    TodWeightedGridArray aPicks[ZEN_MAX_GRIDSIZE_X * ZEN_MAX_GRIDSIZE_Y];
+    PvzpWeightedGridArray aPicks[ZEN_MAX_GRIDSIZE_X * ZEN_MAX_GRIDSIZE_Y];
     int aPickCount = 0;
 
     for (int x = 0; x < ZEN_MAX_GRIDSIZE_X; x++)
@@ -377,14 +377,14 @@ void ZenGarden::FindOpenZenGardenSpot(int& theSpotX, int& theSpotY)
         }
     }
 
-    TodWeightedGridArray* aSpot = TodPickFromWeightedGridArray(aPicks, aPickCount);
+    PvzpWeightedGridArray* aSpot = PvzpPickFromWeightedGridArray(aPicks, aPickCount);
     theSpotX = aSpot->mX;
     theSpotY = aSpot->mY;
 }
 
 void ZenGarden::AddPottedPlant(PottedPlant* thePottedPlant)
 {
-    TOD_ASSERT(mApp->mPlayerInfo->mNumPottedPlants < MAX_POTTED_PLANTS);
+    PVZP_ASSERT(mApp->mPlayerInfo->mNumPottedPlants < MAX_POTTED_PLANTS);
 
     int aPottedPlantIndex = mApp->mPlayerInfo->mNumPottedPlants;
     PottedPlant* aPottedPlant = &mApp->mPlayerInfo->mPottedPlant[aPottedPlantIndex];
@@ -425,7 +425,7 @@ int ZenGarden::GetPlantSellPrice(Plant* thePlant)
         {
             return 300;
         }
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
     }
     if (aPottedPlant->mPlantAge == PottedPlantAge::PLANTAGE_SPROUT)
     {
@@ -447,7 +447,7 @@ int ZenGarden::GetPlantSellPrice(Plant* thePlant)
         }
         return 800;
     }
-    TOD_ASSERT(false);
+    PVZP_ASSERT(false);
 
     unreachable();
 }
@@ -456,8 +456,8 @@ void ZenGarden::MouseDownWithMoneySign(Plant* thePlant)
 {
     mBoard->ClearCursor();
 
-    std::string aHeader = TodStringTranslate("[ZEN_SELL_HEADER]");
-    std::string aLines = TodStringTranslate("[ZEN_SELL_LINES]");
+    std::string aHeader = PvzpStringTranslate("[ZEN_SELL_HEADER]");
+    std::string aLines = PvzpStringTranslate("[ZEN_SELL_LINES]");
     int aPrice = GetPlantSellPrice(thePlant);
     if (mApp->mCrazyDaveState == CrazyDaveState::CRAZY_DAVE_OFF)
     {
@@ -466,18 +466,18 @@ void ZenGarden::MouseDownWithMoneySign(Plant* thePlant)
 
     PottedPlant* aPottedPlant = PottedPlantFromIndex(thePlant->mPottedPlantIndex);
     std::string aMessageText = mApp->GetCrazyDaveText(1700);
-    aMessageText = TodReplaceNumberString(aMessageText, "{SELL_PRICE}", aPrice);
+    aMessageText = PvzpReplaceNumberString(aMessageText, "{SELL_PRICE}", aPrice);
 
     std::string aPlantName;
     if (thePlant->mSeedType == SeedType::SEED_SPROUT && aPottedPlant->mSeedType == SeedType::SEED_MARIGOLD)
     {
-        aPlantName = TodStringTranslate("[MARIGOLD_SPROUT]");
+        aPlantName = PvzpStringTranslate("[MARIGOLD_SPROUT]");
     }
     else
     {
         aPlantName = Plant::GetNameString(thePlant->mSeedType, thePlant->mImitaterType);
     }
-    aMessageText = TodReplaceString(aMessageText, "{PLANT_TYPE}", aPlantName);
+    aMessageText = PvzpReplaceString(aMessageText, "{PLANT_TYPE}", aPlantName);
 
     mApp->CrazyDaveTalkMessage(aMessageText);
     Reanimation* aCrazyDaveReanim = mApp->ReanimationGet(mApp->mCrazyDaveReanimID);
@@ -741,7 +741,7 @@ void ZenGarden::AddHappyEffect(Plant* thePlant)
 void ZenGarden::RemoveHappyEffect(Plant* thePlant)
 {
     Plant* aFlowerPot = mBoard->GetTopPlantAt(thePlant->mPlantCol, thePlant->mRow, PlantPriority::TOPPLANT_ONLY_UNDER_PLANT);
-    TodParticleSystem* aParticleSystem;
+    PvzpParticleSystem* aParticleSystem;
     if (aFlowerPot)
     {
         aParticleSystem = mApp->ParticleTryToGet(aFlowerPot->mParticleID);
@@ -911,13 +911,13 @@ void ZenGarden::MouseDownWithFeedingTool(int x, int y, CursorType theCursorType)
 
     if (theCursorType == CursorType::CURSOR_TYPE_CHOCOLATE)
     {
-        TOD_ASSERT(mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_CHOCOLATE] > PURCHASE_COUNT_OFFSET);
+        PVZP_ASSERT(mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_CHOCOLATE] > PURCHASE_COUNT_OFFSET);
 
         GridItem* aStinky = GetStinky();
         if (aStinky && aStinky->mHighlighted)
         {
             WakeStinky();
-            mApp->AddTodParticle(aStinky->mPosX + 40.0f, aStinky->mPosY + 40.0f, aStinky->mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+            mApp->AddPvzpParticle(aStinky->mPosX + 40.0f, aStinky->mPosY + 40.0f, aStinky->mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
             mApp->mPlayerInfo->mLastStinkyChocolateTime = static_cast<uint32_t>(mNowTime);
             mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_CHOCOLATE]--;
 
@@ -972,7 +972,7 @@ void ZenGarden::MouseDownWithFeedingTool(int x, int y, CursorType theCursorType)
             aZenTool->mGridItemState = GridItemState::GRIDITEM_STATE_ZEN_TOOL_FERTILIZER;
             mApp->PlayFoley(FoleyType::FOLEY_FERTILIZER);
 
-            TOD_ASSERT(mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_FERTILIZER] > PURCHASE_COUNT_OFFSET);
+            PVZP_ASSERT(mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_FERTILIZER] > PURCHASE_COUNT_OFFSET);
             mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_FERTILIZER]--;
         }
         else if (theCursorType == CursorType::CURSOR_TYPE_BUG_SPRAY)
@@ -983,7 +983,7 @@ void ZenGarden::MouseDownWithFeedingTool(int x, int y, CursorType theCursorType)
             aZenTool->mGridItemState = GridItemState::GRIDITEM_STATE_ZEN_TOOL_BUG_SPRAY;
             mApp->PlayFoley(FoleyType::FOLEY_BUGSPRAY);
 
-            TOD_ASSERT(mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_BUG_SPRAY] > PURCHASE_COUNT_OFFSET);
+            PVZP_ASSERT(mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_BUG_SPRAY] > PURCHASE_COUNT_OFFSET);
             mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_BUG_SPRAY]--;
         }
         else if (theCursorType == CursorType::CURSOR_TYPE_PHONOGRAPH)
@@ -1005,7 +1005,7 @@ void ZenGarden::FeedChocolateToPlant(Plant* thePlant)
     PottedPlant* aPottedPlant = PottedPlantFromIndex(thePlant->mPottedPlantIndex);
     aPottedPlant->mLastChocolateTime = static_cast<int64_t>(mNowTime);
     thePlant->mLaunchCounter = 60;
-    mApp->AddTodParticle(thePlant->mX + 40.0f, thePlant->mY + 40.0f, thePlant->mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+    mApp->AddPvzpParticle(thePlant->mX + 40.0f, thePlant->mY + 40.0f, thePlant->mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
 }
 
 void ZenGarden::DoFeedingTool(int x, int y, GridItemState theToolType)
@@ -1126,7 +1126,7 @@ void ZenGarden::MovePlant(Plant* thePlant, int theGridX, int theGridY)
 
     int aPosX = mBoard->GridToPixelX(theGridX, theGridY);
     int aPosY = mBoard->GridToPixelY(theGridX, theGridY);
-    TOD_ASSERT(mBoard->GetTopPlantAt(theGridX, theGridY, PlantPriority::TOPPLANT_ANY) == nullptr);
+    PVZP_ASSERT(mBoard->GetTopPlantAt(theGridX, theGridY, PlantPriority::TOPPLANT_ANY) == nullptr);
 
     //bool aIsSleeping = thePlant->mIsAsleep; // unused
     thePlant->SetSleeping(false);
@@ -1147,10 +1147,10 @@ void ZenGarden::MovePlant(Plant* thePlant, int theGridX, int theGridY)
     thePlant->mRow = theGridY;
     thePlant->mRenderOrder = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_PLANT, 0, aPosY + 1);
 
-    TodParticleSystem* aParticle = mApp->ParticleTryToGet(thePlant->mParticleID);
+    PvzpParticleSystem* aParticle = mApp->ParticleTryToGet(thePlant->mParticleID);
     if (aParticle && aParticle->mEmitterList.mSize)
     {
-        TodParticleEmitter* aEmitter = aParticle->mParticleHolder->mEmitters.DataArrayGet(static_cast<unsigned int>(aParticle->mEmitterList.GetHead()->mValue));
+        PvzpParticleEmitter* aEmitter = aParticle->mParticleHolder->mEmitters.DataArrayGet(static_cast<unsigned int>(aParticle->mEmitterList.GetHead()->mValue));
         aParticle->SystemMove(aEmitter->mSystemCenter.x + aDeltaX, aEmitter->mSystemCenter.y + aDeltaY);
     }
 
@@ -1341,7 +1341,7 @@ void ZenGarden::StinkyPickGoal(GridItem* theStinky)
                 if (aDistFromLastGoal < 5.0f)
                 {
                     aWeight -= 20.0f;
-                    aWeight += TodAnimateCurve(3000, 6000, aCoin->mDisappearCounter, 0, -40, TodCurves::CURVE_LINEAR);
+                    aWeight += PvzpAnimateCurve(3000, 6000, aCoin->mDisappearCounter, 0, -40, PvzpCurves::CURVE_LINEAR);
                 }
 
                 if (aBestCoin == nullptr || aWeight < aCurWeight)
@@ -1365,12 +1365,12 @@ void ZenGarden::StinkyPickGoal(GridItem* theStinky)
             return;
         }
 
-        TodWeightedGridArray aPicks[MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y];
+        PvzpWeightedGridArray aPicks[MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y];
         int aPickCount = 0;
 
         int aCount;
         const SpecialGridPlacement* aSpecialGrids = GetSpecialGridPlacements(aCount);
-        TOD_ASSERT(aCount < MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y);
+        PVZP_ASSERT(aCount < MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y);
 
         for (int i = 0; i < aCount; i++)
         {
@@ -1391,7 +1391,7 @@ void ZenGarden::StinkyPickGoal(GridItem* theStinky)
             aPickCount++;
         }
 
-        TodWeightedGridArray* aTarget = TodPickFromWeightedGridArray(aPicks, aPickCount);
+        PvzpWeightedGridArray* aTarget = PvzpPickFromWeightedGridArray(aPicks, aPickCount);
         theStinky->mGoalX = aTarget->mX;
         theStinky->mGoalY = aTarget->mY;
     }
@@ -1530,7 +1530,7 @@ void ZenGarden::StinkyUpdate(GridItem* theStinky)
     if (theStinky->mGridItemState == GridItemState::GRIDITEM_STINKY_SLEEPING)
     {
         Reanimation* aSleepingReanim = FindReanimAttachment(aStinkyReanim->GetTrackInstanceByName("shell")->mAttachmentID);
-        TOD_ASSERT(aSleepingReanim);
+        PVZP_ASSERT(aSleepingReanim);
 
         if (mBoard->mCursorObject->mCursorType == CursorType::CURSOR_TYPE_CHOCOLATE)
         {
@@ -1633,7 +1633,7 @@ void ZenGarden::StinkyUpdate(GridItem* theStinky)
         aSpeedY = 0.0f;
         aSpeedX = 0.0f;
     }
-    aSpeedY *= TodAnimateCurveFloatTime(20.0f, 5.0f, fabs(aDeltaY), 1.0f, 0.2f, TodCurves::CURVE_LINEAR);
+    aSpeedY *= PvzpAnimateCurveFloatTime(20.0f, 5.0f, fabs(aDeltaY), 1.0f, 0.2f, PvzpCurves::CURVE_LINEAR);
     if (theStinky->mGridItemState == GridItemState::GRIDITEM_STINKY_WALKING_LEFT)
     {
         theStinky->mPosX -= aSpeedX;
@@ -1890,11 +1890,11 @@ void ZenGarden::GotoNextGarden()
     }
     else
     {
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
     }
 
 	for (std::string& resource : mLoadedResourceNames)
-		TodLoadResources(resource.c_str());
+		PvzpLoadResources(resource.c_str());
 
     if ((mBoard->mBackground == BackgroundType::BACKGROUND_MUSHROOM_GARDEN || mBoard->mBackground == BackgroundType::BACKGROUND_ZOMBIQUARIUM))
     {
@@ -1910,7 +1910,7 @@ void ZenGarden::GotoNextGarden()
 void ZenGarden::MouseDownWithFullWheelBarrow(int x, int y)
 {
     PottedPlant* aPottedPlant = GetPottedPlantInWheelbarrow();
-    TOD_ASSERT(aPottedPlant);
+    PVZP_ASSERT(aPottedPlant);
 
     if (mApp->mZenGarden->mGardenType == GardenType::GARDEN_AQUARIUM && !Plant::IsAquatic(aPottedPlant->mSeedType))
     {
@@ -1974,7 +1974,7 @@ const SpecialGridPlacement* ZenGarden::GetSpecialGridPlacements(int& theCount)
         theCount = LENGTH(gGreenhouseGridPlacement);
         return gGreenhouseGridPlacement;
     }
-    TOD_ASSERT(false);
+    PVZP_ASSERT(false);
     return nullptr;
 }
 
@@ -2056,7 +2056,7 @@ void ZenGarden::DrawBackdrop(Graphics* g)
             const SpecialGridPlacement& aGrid = aSpecialGrids[i];
             if (mBoard->GetTopPlantAt(aGrid.mGridX, aGrid.mGridY, PlantPriority::TOPPLANT_ZEN_TOOL_ORDER) == nullptr)
             {
-                TodDrawImageCelScaled(g, IMAGE_PLANTSHADOW, aGrid.mPixelX - 35, (aGrid.mPixelY + 33), 0, 0, 1.7f, 1.7f);
+                PvzpDrawImageCelScaled(g, IMAGE_PLANTSHADOW, aGrid.mPixelX - 35, (aGrid.mPixelY + 33), 0, 0, 1.7f, 1.7f);
             }
         }
     }
@@ -2246,7 +2246,7 @@ void ZenGarden::PlantUpdateProduction(Plant* thePlant)
         mApp->PlayFoley(FoleyType::FOLEY_SPAWN_SUN);
 
         int aCoinHit = Rand(1000);
-        aCoinHit += TodAnimateCurve(5, 30, PlantGetMinutesSinceHappy(thePlant), 0, 80, TodCurves::CURVE_LINEAR);
+        aCoinHit += PvzpAnimateCurve(5, 30, PlantGetMinutesSinceHappy(thePlant), 0, 80, PvzpCurves::CURVE_LINEAR);
         CoinType aCoinType = CoinType::COIN_SILVER;
         if (aCoinHit < 100)
         {
@@ -2426,7 +2426,7 @@ SeedType ZenGarden::PickRandomSeedType()
             aSeedCount++;
         }
     }
-    return TodPickFromArray(aSeedList, aSeedCount);
+    return PvzpPickFromArray(aSeedList, aSeedCount);
 }
 
 void ZenGarden::LeaveGarden()

@@ -24,7 +24,7 @@
 
 #include "ConstEnums.h"
 #include "SexyAppFramework/SexyApp.h"
-#include "Sexy.TodLib/TodFoley.h"
+#include "PvzpLib/PvzpFoley.h"
 
 class Board;
 class GameSelector;
@@ -32,12 +32,12 @@ class ChallengeDefinition;
 class SeedChooserScreen;
 class AwardScreen;
 class CreditScreen;
-class TodFoley;
+class PvzpFoley;
 class PoolEffect;
 class ZenGarden;
 class PottedPlant;
 class EffectSystem;
-class TodParticleSystem;
+class PvzpParticleSystem;
 class Reanimation;
 class ReanimatorCache;
 class ProfileMgr;
@@ -81,14 +81,14 @@ public:
 	AwardScreen*					mAwardScreen;
 	CreditScreen*					mCreditScreen;
 	ChallengeScreen*				mChallengeScreen;
-	TodFoley*						mSoundSystem;
+	PvzpFoley*						mSoundSystem;
 	ButtonList						mControlButtonList;
 	ImageList						mCreatedImageList;
 	std::string						mReferId;
 	std::string						mRegisterLink;
 	std::string						mMod;
 	bool							mRegisterResourcesLoaded;
-	bool							mTodCheatKeys;
+	bool							mCheatKeys;
 	GameMode						mGameMode;
 	GameScenes						mGameScene;
 	bool							mLoadingZombiesThreadCompleted;
@@ -248,10 +248,10 @@ public:
 	bool							KillAlmanacDialog();
 	int								GetSeedsAvailable();
 	Reanimation*					AddReanimation(float theX, float theY, int theRenderOrder, ReanimationType theReanimationType);
-	TodParticleSystem*				AddTodParticle(float theX, float theY, int theRenderOrder, ParticleEffect theEffect);
-	/*inline*/ ParticleSystemID		ParticleGetID(TodParticleSystem* theParticle);
-	/*inline*/ TodParticleSystem*	ParticleGet(ParticleSystemID theParticleID);
-	/*inline*/ TodParticleSystem*	ParticleTryToGet(ParticleSystemID theParticleID);
+	PvzpParticleSystem*				AddPvzpParticle(float theX, float theY, int theRenderOrder, ParticleEffect theEffect);
+	/*inline*/ ParticleSystemID		ParticleGetID(PvzpParticleSystem* theParticle);
+	/*inline*/ PvzpParticleSystem*	ParticleGet(ParticleSystemID theParticleID);
+	/*inline*/ PvzpParticleSystem*	ParticleTryToGet(ParticleSystemID theParticleID);
 	/*inline*/ ReanimationID		ReanimationGetID(Reanimation* theReanimation);
 	/*inline*/ Reanimation*			ReanimationGet(ReanimationID theReanimationID);
 	/*inline*/ Reanimation*			ReanimationTryToGet(ReanimationID theReanimationID);

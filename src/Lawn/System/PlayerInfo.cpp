@@ -26,8 +26,8 @@
 #include "PlayerInfo.h"
 #include "../LawnCommon.h"
 #include "../Widget/ChallengeScreen.h"
-#include "../../Sexy.TodLib/TodDebug.h"
-#include "../../Sexy.TodLib/TodCommon.h"
+#include "../../PvzpLib/PvzpDebug.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "misc/Buffer.h"
 #include "../../SexyAppFramework/SexyAppBase.h"
 
@@ -120,7 +120,7 @@ void PlayerInfo::SyncDetails(DataSync& theSync)
 	theSync.SyncUInt32(mPlaceHolderPlayerStats);
 	theSync.SyncUInt32(mNumPottedPlants);
 	
-	TOD_ASSERT(mNumPottedPlants <= MAX_POTTED_PLANTS);
+	PVZP_ASSERT(mNumPottedPlants <= MAX_POTTED_PLANTS);
 	for (int i = 0; i < mNumPottedPlants; i++)
 	{
 		if (theSync.GetWriter())
@@ -230,7 +230,7 @@ void PlayerInfo::LoadDetails()
 	}
 	catch (DataReaderException&)
 	{
-		TodTrace("Failed to player data, resetting it\n");
+		PvzpTrace("Failed to player data, resetting it\n");
 		Reset();
 	}
 }
@@ -308,7 +308,7 @@ void PlayerInfo::AddCoins(int theAmount)
 void PlayerInfo::ResetChallengeRecord(GameMode theGameMode)
 {
 	int aGameMode = static_cast<int>(theGameMode) - static_cast<int>(GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1);
-	TOD_ASSERT(aGameMode >= 0 && aGameMode <= NUM_CHALLENGE_MODES);
+	PVZP_ASSERT(aGameMode >= 0 && aGameMode <= NUM_CHALLENGE_MODES);
 	mChallengeRecords[aGameMode] = 0;
 }
 

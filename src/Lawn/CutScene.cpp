@@ -37,14 +37,14 @@
 #include "System/PlayerInfo.h"
 #include "Widget/StoreScreen.h"
 #include "Widget/ChallengeScreen.h"
-#include "../Sexy.TodLib/TodFoley.h"
+#include "../PvzpLib/PvzpFoley.h"
 #include "Widget/SeedChooserScreen.h"
-#include "../Sexy.TodLib/TodCommon.h"
-#include "../Sexy.TodLib/Attachment.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/TodParticle.h"
-#include "../Sexy.TodLib/EffectSystem.h"
-#include "../Sexy.TodLib/TodStringFile.h"
+#include "../PvzpLib/PvzpCommon.h"
+#include "../PvzpLib/Attachment.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/PvzpParticle.h"
+#include "../PvzpLib/EffectSystem.h"
+#include "../PvzpLib/PvzpStringFile.h"
 #include "misc/PerfTimer.h"
 #include "widget/WidgetManager.h"
 #include <algorithm>
@@ -141,7 +141,7 @@ void CutScene::PlaceAZombie(ZombieType theZombieType, int theGridX, int theGridY
 	}
 
 	Zombie* aZombie = mBoard->AddZombieInRow(theZombieType, theGridY, -2);
-	TOD_ASSERT(aZombie);
+	PVZP_ASSERT(aZombie);
 	aZombie->mPosX = theGridX * 56 + 830;
 	aZombie->mPosY = theGridY * 90 + 70;
 	if (theGridX % 2 == 1)
@@ -277,7 +277,7 @@ void CutScene::FindPlaceForStreetZombies(ZombieType theZombieType, bool theZombi
 	}
 
 	int aPicksCount = 0;
-	TodWeightedGridArray aPicks[25];
+	PvzpWeightedGridArray aPicks[25];
 	for (int aGridX = 0; aGridX < 5; aGridX++)
 	{
 		for (int aGridY = 0; aGridY < 5; aGridY++)
@@ -294,13 +294,13 @@ void CutScene::FindPlaceForStreetZombies(ZombieType theZombieType, bool theZombi
 
 	if (aPicksCount == 0)
 	{
-		TodTrace("No place for street zombie!!");
+		PvzpTrace("No place for street zombie!!");
 		thePosX = 2;
 		thePosY = 2;
 	}
 	else
 	{
-		TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aPicks, aPicksCount);
+		PvzpWeightedGridArray* aGrid = PvzpPickFromWeightedGridArray(aPicks, aPicksCount);
 		thePosX = aGrid->mX;
 		thePosY = aGrid->mY;
 	}
@@ -317,7 +317,7 @@ void CutScene::FindAndPlaceZombie(ZombieType theZombieType, bool theZombieGrid[5
 	}
 	if (Is2x2Zombie(theZombieType))
 	{
-		TOD_ASSERT(aGridX > 0 && aGridY > 0);
+		PVZP_ASSERT(aGridX > 0 && aGridY > 0);
 		theZombieGrid[aGridX - 1][aGridY] = true;
 		theZombieGrid[aGridX][aGridY - 1] = true;
 		theZombieGrid[aGridX - 1][aGridY - 1] = true;
@@ -339,7 +339,7 @@ bool CutScene::Is2x2Zombie(ZombieType theZombieType)
 // GOTY @Patoke: 0x43C840
 void CutScene::PreloadResources()
 {
-	TodHesitationTrace("pre-CutScene::PreloadResources()");
+	PvzpHesitationTrace("pre-CutScene::PreloadResources()");
 
 	if (mPreloaded)
 	{
@@ -497,13 +497,13 @@ void CutScene::PreloadResources()
 	}
 
 	for (std::string& resource : mLoadedResourceNames)
-		TodLoadResources(resource.c_str());
+		PvzpLoadResources(resource.c_str());
 
 	PlaceStreetZombies();
 
 	mBoard->mPreloadTime = std::max(aTimer.GetDuration(), 0.0);
-	TodTrace("preloading: %d ms", mBoard->mPreloadTime);
-	TodHesitationTrace("CutScene::PreloadResources");
+	PvzpTrace("preloading: %d ms", mBoard->mPreloadTime);
+	PvzpHesitationTrace("CutScene::PreloadResources");
 }
 
 void CutScene::PlaceStreetZombies()
@@ -519,7 +519,7 @@ void CutScene::PlaceStreetZombies()
 	// int aZombieValueTotal = 0;
 	int aTotalZombieCount = 0;
 	int aZombieTypeCount[ZombieType::NUM_ZOMBIE_TYPES] = { 0 };
-	TOD_ASSERT(mBoard->mNumWaves <= MAX_ZOMBIE_WAVES);
+	PVZP_ASSERT(mBoard->mNumWaves <= MAX_ZOMBIE_WAVES);
 
 	for (int aWave = 0; aWave < mBoard->mNumWaves; aWave++)
 	{
@@ -547,7 +547,7 @@ void CutScene::PlaceStreetZombies()
 				continue;
 			}
 
-			TOD_ASSERT(aZombieType >= 0 && aZombieType < ZombieType::NUM_ZOMBIE_TYPES);
+			PVZP_ASSERT(aZombieType >= 0 && aZombieType < ZombieType::NUM_ZOMBIE_TYPES);
 
 			++aZombieTypeCount[aZombieType];
 			++aTotalZombieCount;
@@ -907,19 +907,19 @@ void CutScene::StartLevelIntro()
 		{
 			if (mBoard->mBackground == BackgroundType::BACKGROUND_1_DAY || mBoard->mBackground == BackgroundType::BACKGROUND_2_NIGHT)
 			{
-				aHouseMessage = TodStringTranslate("[PLAYERS_HOUSE]");
+				aHouseMessage = PvzpStringTranslate("[PLAYERS_HOUSE]");
 			}
 			else if (mBoard->mBackground == BackgroundType::BACKGROUND_3_POOL || mBoard->mBackground == BackgroundType::BACKGROUND_4_FOG)
 			{
-				aHouseMessage = TodStringTranslate("[PLAYERS_BACKYARD]");
+				aHouseMessage = PvzpStringTranslate("[PLAYERS_BACKYARD]");
 			}
 			else if (mBoard->mBackground == BackgroundType::BACKGROUND_5_ROOF || mBoard->mBackground == BackgroundType::BACKGROUND_6_BOSS)
 			{
-				aHouseMessage = TodStringTranslate("[PLAYERS_ROOF]");
+				aHouseMessage = PvzpStringTranslate("[PLAYERS_ROOF]");
 			}
 			else
 			{
-				TOD_ASSERT(false);
+				PVZP_ASSERT(false);
 			}
 		}
 		else
@@ -928,7 +928,7 @@ void CutScene::StartLevelIntro()
 		}
 	}
 
-	aHouseMessage = TodReplaceString(aHouseMessage, "{PLAYER}", mApp->mPlayerInfo->mName);
+	aHouseMessage = PvzpReplaceString(aHouseMessage, "{PLAYER}", mApp->mPlayerInfo->mName);
 	if (!aHouseMessage.empty())
 	{
 		mBoard->DisplayAdvice(aHouseMessage, MessageStyle::MESSAGE_STYLE_HOUSE_NAME, AdviceType::ADVICE_NONE);
@@ -1099,7 +1099,7 @@ void CutScene::AddFlowerPots()
 
 int CutScene::CalcPosition(int theTimeStart, int theTimeEnd, int thePositionStart, int thePositionEnd)
 {
-	return TodAnimateCurve(theTimeStart, theTimeEnd, mCutsceneTime, thePositionStart, thePositionEnd, TodCurves::CURVE_EASE_IN_OUT);
+	return PvzpAnimateCurve(theTimeStart, theTimeEnd, mCutsceneTime, thePositionStart, thePositionEnd, PvzpCurves::CURVE_EASE_IN_OUT);
 }
 
 void CutScene::AnimateBoard()
@@ -1210,7 +1210,7 @@ void CutScene::AnimateBoard()
 	if (mCutsceneTime > aTimeSeedBankRightStart)
 	{
 		int aSeedBankX = CalcPosition(aTimeSeedBankRightStart, aTimeSeedBankRightEnd, SEED_BANK_OFFSET_X, SEED_BANK_OFFSET_X_END);
-		int aDarken = TodAnimateCurve(aTimeSeedBankRightStart, aTimeSeedBankRightEnd, mCutsceneTime, 255, 128, TodCurves::CURVE_EASE_OUT);
+		int aDarken = PvzpAnimateCurve(aTimeSeedBankRightStart, aTimeSeedBankRightEnd, mCutsceneTime, 255, 128, PvzpCurves::CURVE_EASE_OUT);
 		mBoard->mSeedBank->mCutSceneDarken = aDarken;
 		mBoard->mSeedBank->Move(aSeedBankX, mBoard->mSeedBank->mY);
 	}
@@ -1222,7 +1222,7 @@ void CutScene::AnimateBoard()
 	{
 		int aTimeRollSodStart = TimeRollSodStart + mCrazyDaveTime;
 		int aTimeRollSodEnd = TimeRollSodEnd + mCrazyDaveTime;
-		mBoard->mSodPosition = TodAnimateCurve(aTimeRollSodStart, aTimeRollSodEnd, mCutsceneTime, 0, 1000, TodCurves::CURVE_LINEAR);
+		mBoard->mSodPosition = PvzpAnimateCurve(aTimeRollSodStart, aTimeRollSodEnd, mCutsceneTime, 0, 1000, PvzpCurves::CURVE_LINEAR);
 
 		if (mCutsceneTime == aTimeRollSodStart)
 		{
@@ -1230,21 +1230,21 @@ void CutScene::AnimateBoard()
 			if (mBoard->mLevel == 1)
 			{
 				mApp->AddReanimation(0, 0, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ReanimationType::REANIM_SODROLL);
-				mApp->AddTodParticle(35, 348, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
+				mApp->AddPvzpParticle(35, 348, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
 			}
 			else if (mBoard->mLevel == 2)
 			{
 				mApp->AddReanimation(0, -102, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ReanimationType::REANIM_SODROLL);
 				mApp->AddReanimation(0, 111, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ReanimationType::REANIM_SODROLL);
-				mApp->AddTodParticle(35, 246, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
-				mApp->AddTodParticle(35, 459, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
+				mApp->AddPvzpParticle(35, 246, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
+				mApp->AddPvzpParticle(35, 459, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
 			}
 			else if (mBoard->mLevel == 4)
 			{
 				mApp->AddReanimation(-3, -198, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ReanimationType::REANIM_SODROLL);
 				mApp->AddReanimation(-3, 203, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0), ReanimationType::REANIM_SODROLL);
-				mApp->AddTodParticle(32, 150, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
-				mApp->AddTodParticle(32, 511, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
+				mApp->AddPvzpParticle(32, 150, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
+				mApp->AddPvzpParticle(32, 511, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1), ParticleEffect::PARTICLE_SOD_ROLL);
 			}
 		}
 
@@ -1563,7 +1563,7 @@ void CutScene::UpdateZombiesWon()
 		{
 			int aFlagsCompleted = mBoard->GetSurvivalFlagsCompleted();
 			std::string aFlagsStr = mApp->Pluralize(aFlagsCompleted, "[ONE_FLAG]", "[COUNT_FLAGS]");
-			std::string aStr = TodReplaceString("[SURVIVAL_DEATH_MESSAGE]", "{FLAGS}", aFlagsStr);
+			std::string aStr = PvzpReplaceString("[SURVIVAL_DEATH_MESSAGE]", "{FLAGS}", aFlagsStr);
 			GameOverDialog* aDialog = new GameOverDialog(aStr, true);
 			mApp->AddDialog(Dialogs::DIALOG_GAME_OVER, aDialog);
 			mApp->mWidgetManager->SetFocus(aDialog);
@@ -1579,13 +1579,13 @@ void CutScene::UpdateZombiesWon()
 
 bool CutScene::IsCutSceneOver()
 {
-	TOD_ASSERT(mApp->mGameScene == GameScenes::SCENE_ZOMBIES_WON);
+	PVZP_ASSERT(mApp->mGameScene == GameScenes::SCENE_ZOMBIES_WON);
 	return mCutsceneTime >= LostTimeEnd;
 }
 
 void CutScene::ZombieWonClick()
 {
-	if (IsCutSceneOver() || mApp->mTodCheatKeys)
+	if (IsCutSceneOver() || mApp->mCheatKeys)
 	{
 		mApp->EndLevel();
 	}
@@ -1661,7 +1661,7 @@ void CutScene::AdvanceCrazyDaveDialog(bool theJustSkipping)
 	{
 		int aCost = StoreScreen::GetItemCost(StoreItem::STORE_ITEM_PACKET_UPGRADE);
 		int aNumPackets = mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_PACKET_UPGRADE];
-		std::string aBodyString = TodReplaceNumberString("[UPGRADE_DIALOG_BODY]", "{SLOTS}", aNumPackets + 7);
+		std::string aBodyString = PvzpReplaceNumberString("[UPGRADE_DIALOG_BODY]", "{SLOTS}", aNumPackets + 7);
 		std::string aAmountString = mApp->GetMoneyString(aCost);
 		// 创建询问是否升级卡槽格数的对话
 		Dialog* aDialog = mApp->DoDialog(Dialogs::DIALOG_PURCHASE_PACKET_SLOT, true, aAmountString, aBodyString, "", Dialog::BUTTONS_YES_NO);
@@ -1710,7 +1710,7 @@ void CutScene::AdvanceCrazyDaveDialog(bool theJustSkipping)
 void CutScene::MouseDown(int theX, int theY)
 {
 	(void)theX;(void)theY;
-	if (mApp->mTodCheatKeys && mApp->mGameMode == GameMode::GAMEMODE_UPSELL)
+	if (mApp->mCheatKeys && mApp->mGameMode == GameMode::GAMEMODE_UPSELL)
 	{
 		mCrazyDaveCountDown = std::min(mCrazyDaveCountDown, 1);
 	}
@@ -1720,7 +1720,7 @@ void CutScene::MouseDown(int theX, int theY)
 		{
 			AdvanceCrazyDaveDialog(false);
 		}
-		else if (mApp->mTodCheatKeys)
+		else if (mApp->mCheatKeys)
 		{
 			CancelIntro();
 		}
@@ -1731,7 +1731,7 @@ void CutScene::KeyDown(KeyCode theKey)
 {
 	if (mApp->mGameMode == GameMode::GAMEMODE_UPSELL)
 	{
-		if (mApp->mTodCheatKeys && theKey == KeyCode::KEYCODE_ESCAPE)
+		if (mApp->mCheatKeys && theKey == KeyCode::KEYCODE_ESCAPE)
 		{
 			mCrazyDaveLastTalkIndex = 3316; // “这足够把你的脑子吹到火星，再吹回来！”
 			mCrazyDaveCountDown = 1;
@@ -1765,7 +1765,7 @@ void CutScene::KeyDown(KeyCode theKey)
 		{
 			AdvanceCrazyDaveDialog(false);
 		}
-		else if (mApp->mTodCheatKeys && (theKey == KeyCode::KEYCODE_SPACE || theKey == KeyCode::KEYCODE_RETURN || theKey == KeyCode::KEYCODE_ESCAPE))
+		else if (mApp->mCheatKeys && (theKey == KeyCode::KEYCODE_SPACE || theKey == KeyCode::KEYCODE_RETURN || theKey == KeyCode::KEYCODE_ESCAPE))
 		{
 			CancelIntro();
 		}
@@ -1813,7 +1813,7 @@ void CutScene::ClearUpsellBoard()
 	mBoard->mGridItems.DataArrayFreeAll();
 	mBoard->mLawnMowers.DataArrayFreeAll();
 
-	for (TodParticleSystem* aParticle : mBoard->mApp->mEffectSystem->mParticleHolder->mParticleSystems)
+	for (PvzpParticleSystem* aParticle : mBoard->mApp->mEffectSystem->mParticleHolder->mParticleSystems)
 	{
 		if (aParticle->mDead)
 			continue;
@@ -2209,7 +2209,7 @@ void CutScene::UpdateUpsell()
 			aReanimHead->AttachToAnotherReanimation(aReanimThreepeater, StrFormat("anim_head%d", i).c_str());
 		}
 		AttachEffect* anAttachEffect = AttachReanim(aCrazyDaveReanim->GetTrackInstanceByName("Dave_body1")->mAttachmentID, aReanimThreepeater, 0.0f, 0.0f);
-		TodScaleRotateTransformMatrix(anAttachEffect->mOffset, -70.0f, 260.0f, 0.5f, 1.2f, 1.2f);
+		PvzpScaleRotateTransformMatrix(anAttachEffect->mOffset, -70.0f, 260.0f, 0.5f, 1.2f, 1.2f);
 		aCrazyDaveReanim->Update();
 		aReanimThreepeater->Update();
 		break;
@@ -2219,7 +2219,7 @@ void CutScene::UpdateUpsell()
 	{
 		Reanimation* aReanimMagnet = mApp->AddReanimation(0, 0, 0, ReanimationType::REANIM_MAGNETSHROOM);
 		aReanimMagnet->PlayReanim("anim_idle", ReanimLoopType::REANIM_LOOP, 0, 15.0f);
-		TodScaleRotateTransformMatrix(aReanimMagnet->mOverlayMatrix, 0, 0, 0.3f, 1, 1);
+		PvzpScaleRotateTransformMatrix(aReanimMagnet->mOverlayMatrix, 0, 0, 0.3f, 1, 1);
 		AttachEffect* anAttachEffect = AttachReanim(aCrazyDaveReanim->GetTrackInstanceByName("Dave_pot")->mAttachmentID, aReanimMagnet, 25.0f, 49.0f);
 		anAttachEffect->mOffset.m00 = 1.2f;
 		anAttachEffect->mOffset.m11 = 1.2f;
@@ -2255,7 +2255,7 @@ void CutScene::UpdateUpsell()
 		ClearUpsellBoard();
 		mApp->PlaySample(SOUND_FINALWAVE);
 		mUpsellHideBoard = true;
-		mApp->AddTodParticle(592, 240, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_SCREEN_FADE, 0, 0), ParticleEffect::PARTICLE_PERSENT_PICK_UP_ARROW);
+		mApp->AddPvzpParticle(592, 240, Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_SCREEN_FADE, 0, 0), ParticleEffect::PARTICLE_PERSENT_PICK_UP_ARROW);
 		break;
 
 	case 3316:  // “这足够把你的脑子吹到火星，再吹回来！”
@@ -2294,7 +2294,7 @@ void CutScene::DrawUpsell(Graphics* g)
 
 void CutScene::UpdateIntro()
 {
-	mBoard->Move(-TodAnimateCurve(TimeIntro_PanRightStart, TimeIntro_PanRightEnd, mCutsceneTime, -100, 100, TodCurves::CURVE_LINEAR), 0);
+	mBoard->Move(-PvzpAnimateCurve(TimeIntro_PanRightStart, TimeIntro_PanRightEnd, mCutsceneTime, -100, 100, PvzpCurves::CURVE_LINEAR), 0);
 
 	if (mCutsceneTime == 10)
 	{
@@ -2307,7 +2307,7 @@ void CutScene::UpdateIntro()
 	if (mCutsceneTime == TimeIntro_LogoEnd)
 	{
 		int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 0);
-		mApp->AddTodParticle(400, 300, aRenderPosition, ParticleEffect::PARTICLE_SCREEN_FLASH);
+		mApp->AddPvzpParticle(400, 300, aRenderPosition, ParticleEffect::PARTICLE_SCREEN_FLASH);
 
 		mApp->mMuteSoundsForCutscene = false;
 		mApp->PlaySample(SOUND_HUGE_WAVE);
@@ -2338,10 +2338,10 @@ void CutScene::DrawIntro(Graphics* g)
 	if (mCutsceneTime > TimeIntro_PresentsFadeIn && mCutsceneTime <= aTimePanRightStart)
 	{
 		int anAlpha = mCutsceneTime < aTimePanRightStart - 600 ?
-					  TodAnimateCurve(TimeIntro_PresentsFadeIn, TimeIntro_PresentsFadeIn + 300, mCutsceneTime, 0, 255, TodCurves::CURVE_LINEAR) :
-					  TodAnimateCurve(aTimePanRightStart - 600, aTimePanRightStart - 300, mCutsceneTime, 255, 0, TodCurves::CURVE_LINEAR);
+					  PvzpAnimateCurve(TimeIntro_PresentsFadeIn, TimeIntro_PresentsFadeIn + 300, mCutsceneTime, 0, 255, PvzpCurves::CURVE_LINEAR) :
+					  PvzpAnimateCurve(aTimePanRightStart - 600, aTimePanRightStart - 300, mCutsceneTime, 255, 0, PvzpCurves::CURVE_LINEAR);
 
-		TodDrawString(
+		PvzpDrawString(
 			g, 
 			"[INTRO_PRESENTS]", 
 			BOARD_WIDTH / 2 - mBoard->mX, 
@@ -2355,19 +2355,19 @@ void CutScene::DrawIntro(Graphics* g)
 	// 绘制“Plants Vs Zombies”的 Logo
 	if (mCutsceneTime > TimeIntro_LogoStart && mCutsceneTime <= TimeIntro_PanRightEnd)
 	{
-		float aScale = TodAnimateCurveFloat(TimeIntro_LogoStart, TimeIntro_LogoEnd, mCutsceneTime, 5, 1, TodCurves::CURVE_EASE_OUT);
+		float aScale = PvzpAnimateCurveFloat(TimeIntro_LogoStart, TimeIntro_LogoEnd, mCutsceneTime, 5, 1, PvzpCurves::CURVE_EASE_OUT);
 		float aCenter = aScale * 0.5;
 		int aOffsetX = BOARD_WIDTH / 2 - mBoard->mX, aOffsetY = BOARD_HEIGHT / 2 - mBoard->mY;
 		Rect aRect(aOffsetX - BOARD_WIDTH * aCenter, aOffsetY - 75 * aScale, BOARD_WIDTH * aScale, 150 * aScale);
 		g->SetColor(Color(0, 0, 0, 128));
 		g->FillRect(aRect);
 		Image* aImage = IMAGE_PVZ_LOGO;
-		TodDrawImageScaledF(g, aImage, aOffsetX - aImage->GetWidth() * aCenter, aOffsetY - aImage->GetHeight() * aCenter, aScale, aScale);
+		PvzpDrawImageScaledF(g, aImage, aOffsetX - aImage->GetWidth() * aCenter, aOffsetY - aImage->GetHeight() * aCenter, aScale, aScale);
 	}
 
 	if (mCutsceneTime > TimeIntro_FadeOut && mCutsceneTime <= TimeIntro_FadeOutEnd)
 	{
-		g->SetColor(Color(0, 0, 0, TodAnimateCurve(TimeIntro_FadeOut, TimeIntro_FadeOutEnd, mCutsceneTime, 0, 255, TodCurves::CURVE_LINEAR)));
+		g->SetColor(Color(0, 0, 0, PvzpAnimateCurve(TimeIntro_FadeOut, TimeIntro_FadeOutEnd, mCutsceneTime, 0, 255, PvzpCurves::CURVE_LINEAR)));
 		g->FillRect(-mBoard->mX, -mBoard->mY, BOARD_WIDTH, BOARD_HEIGHT);
 	}
 }

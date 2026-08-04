@@ -25,8 +25,8 @@
 #include "../../LawnApp.h"
 #include "ContinueDialog.h"
 #include "../../Resources.h"
-#include "../../Sexy.TodLib/TodFoley.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpFoley.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 
 // GOTY @Patoke: 0x435E40
 ContinueDialog::ContinueDialog(LawnApp* theApp) : LawnDialog(
@@ -176,7 +176,7 @@ void ContinueDialog::ButtonDepress(int theId)
                 "", 
                 Dialog::BUTTONS_OK_CANCEL
             );
-            aDialog->mLawnYesButton->mLabel = TodStringTranslate("[RESTART_BUTTON]");
+            aDialog->mLawnYesButton->mLabel = PvzpStringTranslate("[RESTART_BUTTON]");
             //aDialog->CalcSize(0, 0);
         }
         else
@@ -189,7 +189,7 @@ void ContinueDialog::ButtonDepress(int theId)
                 "", 
                 Dialog::BUTTONS_OK_CANCEL
             );
-            aDialog->mLawnYesButton->mLabel = TodStringTranslate("[NEW_GAME_BUTTON]");
+            aDialog->mLawnYesButton->mLabel = PvzpStringTranslate("[NEW_GAME_BUTTON]");
             //aDialog->CalcSize(0, 0);
         }
     }

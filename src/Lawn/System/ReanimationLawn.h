@@ -23,7 +23,7 @@
 #define __REANIMATORCACHE_H__
 
 #include "../../ConstEnums.h"
-#include "../../Sexy.TodLib/TodList.h"
+#include "../../PvzpLib/PvzpList.h"
 namespace Sexy
 {
     class Graphics;
@@ -39,7 +39,7 @@ public:
     DrawVariation           mDrawVariation;
     MemoryImage*            mImage;
 };
-typedef TodList<ReanimCacheImageVariation> ImageVariationList;
+typedef PvzpList<ReanimCacheImageVariation> ImageVariationList;
 
 class Reanimation;
 class ReanimatorCache

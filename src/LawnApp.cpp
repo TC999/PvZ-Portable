@@ -31,30 +31,30 @@
 #include "ProjectVersion.h"
 #include "Lawn/Challenge.h"
 #include "Lawn/ZenGarden.h"
-#include "Sexy.TodLib/Trail.h"
+#include "PvzpLib/Trail.h"
 #include "Lawn/System/Music.h"
 #include "Lawn/System/SaveGame.h"
-#include "Sexy.TodLib/TodDebug.h"
-#include "Sexy.TodLib/TodFoley.h"
-#include "Sexy.TodLib/Attachment.h"
+#include "PvzpLib/PvzpDebug.h"
+#include "PvzpLib/PvzpFoley.h"
+#include "PvzpLib/Attachment.h"
 #include "Lawn/System/PlayerInfo.h"
 #include "Lawn/System/PoolEffect.h"
 #include "Lawn/System/ProfileMgr.h"
 #include "Lawn/Widget/GameButton.h"
-#include "Sexy.TodLib/Reanimator.h"
+#include "PvzpLib/Reanimator.h"
 #include "Lawn/Widget/UserDialog.h"
 #include "Lawn/System/TypingCheck.h"
-#include "Sexy.TodLib/TodParticle.h"
+#include "PvzpLib/PvzpParticle.h"
 #include "Lawn/Widget/AwardScreen.h"
 #include "Lawn/Widget/TitleScreen.h"
 #include "Lawn/Widget/StoreScreen.h"
 #include "Lawn/Widget/CheatDialog.h"
 #include "Lawn/Widget/GameSelector.h"
 #include "Lawn/Widget/CreditScreen.h"
-#include "Sexy.TodLib/EffectSystem.h"
-#include "Sexy.TodLib/FilterEffect.h"
+#include "PvzpLib/EffectSystem.h"
+#include "PvzpLib/FilterEffect.h"
 #include "graphics/Graphics.h"
-#include "Sexy.TodLib/TodStringFile.h"
+#include "PvzpLib/PvzpStringFile.h"
 #include "Lawn/Widget/AlmanacDialog.h"
 #include "Lawn/Widget/NewUserDialog.h"
 #include "Lawn/Widget/ContinueDialog.h"
@@ -110,9 +110,9 @@ bool LawnHasUsedCheatKeys()
 
 LawnApp::LawnApp()
 {
-	// Replace the base-class resource manager with the Tod-capable subclass.
+	// Replace the base-class resource manager with the PvZP-capable subclass.
 	delete mResourceManager;
-	mResourceManager = new TodResourceManager(this);
+	mResourceManager = new PvzpResourceManager(this);
 
 	mBoard = nullptr;
 	mGameSelector = nullptr;
@@ -146,8 +146,8 @@ LawnApp::LawnApp()
 	mEffectSystem = nullptr;
 	mReanimatorCache = nullptr;
 	mCloseRequest = false;
-	mWidth = BOARD_WIDTH/IMG_DOWNSCALE;
-	mHeight = BOARD_HEIGHT/IMG_DOWNSCALE;
+	mWidth = BOARD_WIDTH;
+	mHeight = BOARD_HEIGHT;
 	mFullscreenBits = 32;
 	mAppCounter = 0;
 	mAppRandSeed = time(0);
@@ -171,7 +171,7 @@ LawnApp::LawnApp()
 	mGameMode = GameMode::GAMEMODE_ADVENTURE;
 	mEasyPlantingCheat = false;
 	mAutoEnable3D = true;
-	Tod_SWTri_AddAllDrawTriFuncs();
+	Pvzp_SWTri_AddAllDrawTriFuncs();
 	mLoadingZombiesThreadCompleted = true;
 	mGamesPlayed = 0;
 	mMaxExecutions = 0;
@@ -180,7 +180,7 @@ LawnApp::LawnApp()
 	mCompletedLoadingThreadTasks = 0;
 	mProfileMgr = new ProfileMgr();
 	mRegisterResourcesLoaded = false;
-	mTodCheatKeys = false;
+	mCheatKeys = false;
 	mCrazyDaveReanimID = ReanimationID::REANIMATIONID_NULL;
 	mCrazyDaveState = CrazyDaveState::CRAZY_DAVE_OFF;
 	mCrazyDaveBlinkCounter = 0;
@@ -301,7 +301,7 @@ LawnApp::~LawnApp()
 	}
 
 	FilterEffectDisposeForApp();
-	TodParticleFreeDefinitions();
+	PvzpParticleFreeDefinitions();
 	ReanimatorFreeDefinitions();
 	TrailFreeDefinitions();
 	FreeGlobalAllocators();
@@ -403,7 +403,7 @@ void LawnApp::GotFocus()
 void LawnApp::LostFocus()
 {
 #if (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__IPHONEOS__)
-	if (!mTodCheatKeys && CanPauseNow())
+	if (!mCheatKeys && CanPauseNow())
 	{
 		DoPauseDialog();
 	}
@@ -642,7 +642,7 @@ void LawnApp::KillChallengeScreen()
 StoreScreen* LawnApp::ShowStoreScreen()
 {
 	//FinishModelessDialogs();
-	TOD_ASSERT(!GetDialog(static_cast<int>(Dialogs::DIALOG_STORE)));
+	PVZP_ASSERT(!GetDialog(static_cast<int>(Dialogs::DIALOG_STORE)));
 
 	StoreScreen* aStoreScreen = new StoreScreen(this);
 	AddDialog(aStoreScreen);
@@ -663,7 +663,7 @@ void LawnApp::KillStoreScreen()
 // GOTY @Patoke: 0x453050
 void LawnApp::ShowSeedChooserScreen()
 {
-	TOD_ASSERT(mSeedChooserScreen == nullptr);
+	PVZP_ASSERT(mSeedChooserScreen == nullptr);
 
 	mSeedChooserScreen = new SeedChooserScreen();
 	mSeedChooserScreen->Resize(0, 0, mWidth, mHeight);
@@ -721,8 +721,8 @@ void LawnApp::DoConfirmBackToMain()
 		Dialog::BUTTONS_YES_NO
 	);
 
-	aDialog->mLawnYesButton->mLabel = TodStringTranslate("[LEAVE_BUTTON]");
-	aDialog->mLawnNoButton->mLabel = TodStringTranslate("[DIALOG_BUTTON_CANCEL]");
+	aDialog->mLawnYesButton->mLabel = PvzpStringTranslate("[LEAVE_BUTTON]");
+	aDialog->mLawnNoButton->mLabel = PvzpStringTranslate("[DIALOG_BUTTON_CANCEL]");
 	//aDialog->CalcSize(0, 0);
 }
 
@@ -767,7 +767,7 @@ AlmanacDialog* LawnApp::DoAlmanacDialog(SeedType theSeedType, ZombieType theZomb
 	}
 
 	int aDuration = mTimer.GetDuration();
-	TodTrace("almanac load time: %d ms", aDuration);
+	PvzpTrace("almanac load time: %d ms", aDuration);
 
 	return aDialog;
 }
@@ -809,11 +809,11 @@ int LawnApp::LawnMessageBox(int theDialogId, const char* theHeaderName, const ch
 	LawnDialog* aDialog = (LawnDialog*)DoDialog(theDialogId, true, theHeaderName, theLinesName, theButton1Name, theButtonMode);
 	if (aDialog->mLawnYesButton)
 	{
-		aDialog->mLawnYesButton->mLabel = TodStringTranslate(theButton1Name);
+		aDialog->mLawnYesButton->mLabel = PvzpStringTranslate(theButton1Name);
 	}
 	if (aDialog->mLawnNoButton)
 	{
-		aDialog->mLawnNoButton->mLabel = TodStringTranslate(theButton2Name);
+		aDialog->mLawnNoButton->mLabel = PvzpStringTranslate(theButton2Name);
 	}
 	//aDialog->CalcSize(0, 0);
 
@@ -826,9 +826,9 @@ int LawnApp::LawnMessageBox(int theDialogId, const char* theHeaderName, const ch
 
 Dialog* LawnApp::DoDialog(int theDialogId, bool isModal, const std::string& theDialogHeader, const std::string& theDialogLines, const std::string& theDialogFooter, int theButtonMode)
 {
-	std::string aHeader = TodStringTranslate(theDialogHeader);
-	std::string aLines = TodStringTranslate(theDialogLines);
-	std::string aFooter = TodStringTranslate(theDialogFooter);
+	std::string aHeader = PvzpStringTranslate(theDialogHeader);
+	std::string aLines = PvzpStringTranslate(theDialogLines);
+	std::string aFooter = PvzpStringTranslate(theDialogFooter);
 
 	Dialog* aDialog = SexyAppBase::DoDialog(theDialogId, isModal, aHeader, aLines, aFooter, theButtonMode);
 	if (mWidgetManager->mFocusWidget == nullptr)
@@ -1257,21 +1257,21 @@ void BetaSubmitFunc()
 void LawnApp::Init()
 {
 	DoParseCmdLine();
-	if (!mTodCheatKeys)
+	if (!mCheatKeys)
 	{
 		mOnlyAllowOneCopyToRun = true;
 	}
 
 	// GOTY @Patoke: 0x60C590
 	//if (!gSexyCache->Connected() &&
-	//	gLawnApp->mTodCheatKeys &&
+	//	gLawnApp->mCheatKeys &&
 	//	MessageBox(gLawnApp->mHWnd, "Start SexyCache now?", "SexyCache", MB_YESNO) == IDYES &&
 	//	WinExec("SexyCache.exe", SW_MINIMIZE) >= 32)
 	//{
 	//  // GOTY @Patoke: 0x60C490
 	//	gSexyCache = SexyCache();
 	//}
-	//if (gSexyCache->Connected() && !gLawnApp->mTodCheatKeys)
+	//if (gSexyCache->Connected() && !gLawnApp->mCheatKeys)
 	//{
 	//  // GOTY @Patoke: 0x60C5B0
 	//	gSexyCache->Disconnect();
@@ -1293,8 +1293,8 @@ void LawnApp::Init()
 
 	// @Patoke: horrible debug checks, breaks the whole exe in release mode
 //#ifdef PVZ_DEBUG
-	TodAssertInitForApp();
-	TodLogLn("session id: %u", mSessionID);
+	PvzpAssertInitForApp();
+	PvzpLogLn("session id: %u", mSessionID);
 //#endif
 
 	if (!mResourceManager->ParseResourcesFile("properties/resources.xml"))
@@ -1303,7 +1303,7 @@ void LawnApp::Init()
 		return;
 	}
 
-	if (!TodLoadResources("Init"))
+	if (!PvzpLoadResources("Init"))
 	{
 		return;
 	}
@@ -1334,12 +1334,12 @@ void LawnApp::Init()
 
 #ifdef PVZ_DEBUG
 	int aDuration = mTimer.GetDuration();
-	TodTrace("loading: 'profiles' %d ms", aDuration);
+	PvzpTrace("loading: 'profiles' %d ms", aDuration);
 #endif
 	mTimer.Start();
 
 	mMusic = new Music();
-	mSoundSystem = new TodFoley();
+	mSoundSystem = new PvzpFoley();
 	mEffectSystem = new EffectSystem();
 	mEffectSystem->EffectSystemInitialize();
 
@@ -1366,7 +1366,7 @@ void LawnApp::Init()
 
 #ifdef PVZ_DEBUG
 	aDuration = mTimer.GetDuration();
-	TodTrace("loading: 'system' %d ms", aDuration);
+	PvzpTrace("loading: 'system' %d ms", aDuration);
 #endif
 	mTimer.Start();
 
@@ -1376,7 +1376,7 @@ void LawnApp::Init()
 
 #ifdef PVZ_DEBUG
 	aDuration = mTimer.GetDuration();
-	TodTrace("loading: 'loaderbar' %d ms", aDuration);
+	PvzpTrace("loading: 'loaderbar' %d ms", aDuration);
 #endif
 	mTimer.Start();
 }
@@ -1401,10 +1401,10 @@ bool LawnApp::DebugKeyDown(int theKey)
 
 void LawnApp::HandleCmdLineParam(std::string_view theParamName, std::string_view theParamValue)
 {
-	if (theParamName == "-tod")
+	if (theParamName == "-cheat")
 	{
 #ifdef PVZ_DEBUG
-		mTodCheatKeys = true;
+		mCheatKeys = true;
 		mDebugKeysEnabled = true;
 #endif
 	}
@@ -1627,7 +1627,7 @@ void LawnApp::UpdatePlayTimeStats()
 	int aTickCount = SDL_GetTicks();
 	int aSession = (aTickCount - aLastTime) / 1000;
 
-	if (mPlayerInfo && !mPlayerInfo->mHasUsedCheatKeys && !mDebugKeysEnabled && mTodCheatKeys)
+	if (mPlayerInfo && !mPlayerInfo->mHasUsedCheatKeys && !mDebugKeysEnabled && mCheatKeys)
 	{
 		mPlayerInfo->mHasUsedCheatKeys = 1;
 	}
@@ -1742,7 +1742,7 @@ void LawnApp::LoadGroup(const char* theGroupName, int theGroupAveMsToLoad)
 	aTimer.Start();
 
 	mResourceManager->StartLoadResources(theGroupName);
-	while (!mShutdown && !mCloseRequest && !mLoadingFailed && TodLoadNextResource())
+	while (!mShutdown && !mCloseRequest && !mLoadingFailed && PvzpLoadNextResource())
 	{
 		mCompletedLoadingThreadTasks += theGroupAveMsToLoad;
 	}
@@ -1763,11 +1763,11 @@ void LawnApp::LoadGroup(const char* theGroupName, int theGroupAveMsToLoad)
 
 void LawnApp::LoadingThreadProc()
 {
-	if (!TodLoadResources("LoaderBar"))
+	if (!PvzpLoadResources("LoaderBar"))
 		return;
 
-	TodStringListLoad("Properties/LawnStrings.txt");
-	TodStringListReadFile("Properties/ZombatarTOS.txt");
+	PvzpStringListLoad("Properties/LawnStrings.txt");
+	PvzpStringListReadFile("Properties/ZombatarTOS.txt");
 
 	// Load localized properties AFTER LawnStrings so they can override string values
 	LoadProperties("properties/default.xml", false, false);
@@ -1791,9 +1791,9 @@ void LawnApp::LoadingThreadProc()
 	PerfTimer aTimer;
 	aTimer.Start();
 
-	TodHesitationTrace("start loading");
-	TodHesitationBracket aHesitationResources("Resources");
-	TodHesitationTrace("loading thread start");
+	PvzpHesitationTrace("start loading");
+	PvzpHesitationBracket aHesitationResources("Resources");
+	PvzpHesitationTrace("loading thread start");
 
 	LoadGroup("LoadingImages", 9);
 	LoadGroup("LoadingFonts", 54);
@@ -1802,7 +1802,7 @@ void LawnApp::LoadingThreadProc()
 	mDefaultFont = FONT_PICO129; // framework widgets fall back to this when no font is set
 
 	aHesitationResources.EndBracket();
-	TodTrace("loading '%s' %d ms", "resources", static_cast<int>(aTimer.GetDuration()));
+	PvzpTrace("loading '%s' %d ms", "resources", static_cast<int>(aTimer.GetDuration()));
 
 	mMusic->MusicInit();
 	// aDuration goes unused
@@ -1814,17 +1814,17 @@ void LawnApp::LoadingThreadProc()
 	mZenGarden = new ZenGarden();
 	mReanimatorCache = new ReanimatorCache();
 	mReanimatorCache->ReanimatorCacheInitialize();
-	TodFoleyInitialize(gLawnFoleyParamArray, LENGTH(gLawnFoleyParamArray));
+	PvzpFoleyInitialize(gLawnFoleyParamArray, LENGTH(gLawnFoleyParamArray));
 
-	TodTrace("loading '%s' %d ms", "stuff", static_cast<int>(aTimer.GetDuration()));
+	PvzpTrace("loading '%s' %d ms", "stuff", static_cast<int>(aTimer.GetDuration()));
 	aTimer.Start();
 
 	TrailLoadDefinitions(gLawnTrailArray, LENGTH(gLawnTrailArray));
-	TodTrace("loading '%s' %d ms", "trail", static_cast<int>(aTimer.GetDuration()));
+	PvzpTrace("loading '%s' %d ms", "trail", static_cast<int>(aTimer.GetDuration()));
 	aTimer.Start();
-	TodHesitationTrace("trail");
+	PvzpHesitationTrace("trail");
 	
-	TodParticleLoadDefinitions(gLawnParticleArray, LENGTH(gLawnParticleArray));
+	PvzpParticleLoadDefinitions(gLawnParticleArray, LENGTH(gLawnParticleArray));
 	//aDuration = max(aTimer.GetDuration(), 0.0);
 	aTimer.Start();
 
@@ -1837,7 +1837,7 @@ void LawnApp::LoadingThreadProc()
 
 	GetNumPreloadingTasks();
 	LoadGroup("LoadingSounds", 54);
-	TodHesitationTrace("finished loading");
+	PvzpHesitationTrace("finished loading");
 }
 
 void LawnApp::FastLoad(GameMode theGameMode)
@@ -1907,10 +1907,10 @@ bool LawnApp::OpenURL(const std::string& theURL, bool shutdownOnOpen)
 // GOTY @Patoke: 0x4564F0
 void LawnApp::ConfirmQuit()
 {
-	std::string aBody = TodStringTranslate("[QUIT_MESSAGE]");
-	std::string aHeader = TodStringTranslate("[QUIT_HEADER]");
+	std::string aBody = PvzpStringTranslate("[QUIT_MESSAGE]");
+	std::string aHeader = PvzpStringTranslate("[QUIT_HEADER]");
 	LawnDialog* aDialog = (LawnDialog*)DoDialog(Dialogs::DIALOG_QUIT, true, aHeader, aBody, "", Dialog::BUTTONS_OK_CANCEL);
-	aDialog->mLawnYesButton->mLabel = TodStringTranslate("[QUIT_BUTTON]");
+	aDialog->mLawnYesButton->mLabel = PvzpStringTranslate("[QUIT_BUTTON]");
 	CenterDialog(aDialog, aDialog->mWidth, aDialog->mHeight);
 }
 
@@ -2332,7 +2332,7 @@ const ChallengeDefinition& LawnApp::GetCurrentChallengeDef()
 
 PottedPlant* LawnApp::GetPottedPlantByIndex(int thePottedPlantIndex)
 {
-	TOD_ASSERT(thePottedPlantIndex >= 0 && thePottedPlantIndex < mPlayerInfo->mNumPottedPlants);
+	PVZP_ASSERT(thePottedPlantIndex >= 0 && thePottedPlantIndex < mPlayerInfo->mNumPottedPlants);
 	return &mPlayerInfo->mPottedPlant[thePottedPlantIndex];
 }
 
@@ -2450,12 +2450,12 @@ Reanimation* LawnApp::AddReanimation(float theX, float theY, int theRenderOrder,
 	return mEffectSystem->mReanimationHolder->AllocReanimation(theX, theY, theRenderOrder, theReanimationType);
 }
 
-TodParticleSystem* LawnApp::AddTodParticle(float theX, float theY, int theRenderOrder, ParticleEffect theEffect)
+PvzpParticleSystem* LawnApp::AddPvzpParticle(float theX, float theY, int theRenderOrder, ParticleEffect theEffect)
 {
 	return mEffectSystem->mParticleHolder->AllocParticleSystem(theX, theY, theRenderOrder, theEffect);
 }
 
-ParticleSystemID LawnApp::ParticleGetID(TodParticleSystem* theParticle)
+ParticleSystemID LawnApp::ParticleGetID(PvzpParticleSystem* theParticle)
 {
 	return (ParticleSystemID)mEffectSystem->mParticleHolder->mParticleSystems.DataArrayGetID(theParticle);
 }
@@ -2465,12 +2465,12 @@ ReanimationID LawnApp::ReanimationGetID(Reanimation* theReanimation)
 	return static_cast<ReanimationID>(mEffectSystem->mReanimationHolder->mReanimations.DataArrayGetID(theReanimation));
 }
 
-TodParticleSystem* LawnApp::ParticleGet(ParticleSystemID theParticleID)
+PvzpParticleSystem* LawnApp::ParticleGet(ParticleSystemID theParticleID)
 {
 	return mEffectSystem->mParticleHolder->mParticleSystems.DataArrayGet(static_cast<unsigned int>(theParticleID));
 }
 
-TodParticleSystem* LawnApp::ParticleTryToGet(ParticleSystemID theParticleID)
+PvzpParticleSystem* LawnApp::ParticleTryToGet(ParticleSystemID theParticleID)
 {
 	return mEffectSystem->mParticleHolder->mParticleSystems.DataArrayTryToGet(static_cast<unsigned int>(theParticleID));
 }
@@ -2497,7 +2497,7 @@ void LawnApp::RemoveReanimation(ReanimationID theReanimationID)
 
 void LawnApp::RemoveParticle(ParticleSystemID theParticleID)
 {
-	TodParticleSystem* aParticle = ParticleTryToGet(theParticleID);
+	PvzpParticleSystem* aParticle = ParticleTryToGet(theParticleID);
 	if (aParticle)
 	{
 		aParticle->ParticleSystemDie();
@@ -2507,7 +2507,7 @@ void LawnApp::RemoveParticle(ParticleSystemID theParticleID)
 bool LawnApp::AdvanceCrazyDaveText()
 {
 	std::string aMessageName = StrFormat("[CRAZY_DAVE_%d]", mCrazyDaveMessageIndex + 1);
-	if (!TodStringListExists(aMessageName))
+	if (!PvzpStringListExists(aMessageName))
 	{
 		return false;
 	}
@@ -2519,10 +2519,10 @@ bool LawnApp::AdvanceCrazyDaveText()
 std::string LawnApp::GetCrazyDaveText(int theMessageIndex)
 {
 	std::string aMessage = StrFormat("[CRAZY_DAVE_%d]", theMessageIndex);
-	aMessage = TodReplaceString(aMessage, "{PLAYER_NAME}", mPlayerInfo->mName);
-	aMessage = TodReplaceString(aMessage, "{MONEY}", GetMoneyString(mPlayerInfo->mCoins));
+	aMessage = PvzpReplaceString(aMessage, "{PLAYER_NAME}", mPlayerInfo->mName);
+	aMessage = PvzpReplaceString(aMessage, "{MONEY}", GetMoneyString(mPlayerInfo->mCoins));
 	int aCost = StoreScreen::GetItemCost(StoreItem::STORE_ITEM_PACKET_UPGRADE);
-	aMessage = TodReplaceString(aMessage, "{UPGRADE_COST}", GetMoneyString(aCost));
+	aMessage = PvzpReplaceString(aMessage, "{UPGRADE_COST}", GetMoneyString(aCost));
 	return aMessage;
 }
 
@@ -2571,7 +2571,7 @@ bool LawnApp::HasBeatenChallenge(GameMode theGameMode)
 		return false;
 
 	int aChallengeIndex = theGameMode - GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1;
-	TOD_ASSERT(aChallengeIndex >= 0 && aChallengeIndex < NUM_CHALLENGE_MODES);
+	PVZP_ASSERT(aChallengeIndex >= 0 && aChallengeIndex < NUM_CHALLENGE_MODES);
 	if (IsSurvivalNormal(theGameMode))
 	{
 		return mPlayerInfo->mChallengeRecords[aChallengeIndex] >= SURVIVAL_NORMAL_FLAGS;
@@ -2599,8 +2599,8 @@ bool LawnApp::IsFirstTimeAdventureMode()
 
 void LawnApp::CrazyDaveEnter()
 {
-	TOD_ASSERT(mCrazyDaveState == CRAZY_DAVE_OFF);
-	TOD_ASSERT(!ReanimationTryToGet(mCrazyDaveReanimID));
+	PVZP_ASSERT(mCrazyDaveState == CRAZY_DAVE_OFF);
+	PVZP_ASSERT(!ReanimationTryToGet(mCrazyDaveReanimID));
 
 	Reanimation* aCrazyDaveReanim = AddReanimation(0.0f, 0.0f, 0, ReanimationType::REANIM_CRAZY_DAVE);
 	aCrazyDaveReanim->mIsAttachment = true;
@@ -2669,7 +2669,7 @@ void LawnApp::CrazyDaveDoneHanding()
 	ReanimatorTrackInstance* aHandTrackInstance = aCrazyDaveReanim->GetTrackInstanceByName("Dave_handinghand");
 	AttachmentDie(aHandTrackInstance->mAttachmentID);
 
-	TodTrace("DoneHanding");
+	PvzpTrace("DoneHanding");
 }
 
 void LawnApp::CrazyDaveStopSound()
@@ -2787,7 +2787,7 @@ void LawnApp::CrazyDaveTalkMessage(const std::string& theMessage)
 
 			Reanimation* aWallnutReanim = AddReanimation(0.0f, 0.0f, 0, ReanimationType::REANIM_WALLNUT);
 			aWallnutReanim->PlayReanim("anim_idle", ReanimLoopType::REANIM_LOOP, 0, 12.0f);
-			TodTrace("Handed");
+			PvzpTrace("Handed");
 
 			ReanimatorTrackInstance* aHandTrackInstance = aCrazyDaveReanim->GetTrackInstanceByName("Dave_handinghand");
 			AttachEffect* aAttachEffect = AttachReanim(aHandTrackInstance->mAttachmentID, aWallnutReanim, 100.0f, 393.0f);
@@ -3062,7 +3062,7 @@ void LawnApp::DrawCrazyDave(Graphics* g)
 		Rect aRect(aPosX + 25, aPosY + 6, 233, 144);
 		if (aBubbleText.find("{SHAKE}") != std::string::npos)
 		{
-			aBubbleText = TodReplaceString(aBubbleText, "{SHAKE}", "");
+			aBubbleText = PvzpReplaceString(aBubbleText, "{SHAKE}", "");
 			aRect.mX += rand() % 2;
 			aRect.mY += rand() % 2;
 		}
@@ -3074,15 +3074,15 @@ void LawnApp::DrawCrazyDave(Graphics* g)
 		}
 		else if (aBubbleText.find("{NO_CLICK}") != std::string::npos)
 		{
-			aBubbleText = TodReplaceString(aBubbleText, "{NO_CLICK}", "");
+			aBubbleText = PvzpReplaceString(aBubbleText, "{NO_CLICK}", "");
 			clickToContinue = false;
 		}
 
 		auto aWrapEnum = static_cast<DrawStringJustification>(GetInteger("CRAZY_DAVE_MESSAGE_TEXT_WRAP_ENUM", DS_ALIGN_CENTER_VERTICAL_MIDDLE));
-		TodDrawStringWrapped(g, aBubbleText, aRect, FONT_BRIANNETOD16, Color::Black, aWrapEnum);
+		PvzpDrawStringWrapped(g, aBubbleText, aRect, FONT_BRIANNETOD16, Color::Black, aWrapEnum);
 		if (clickToContinue)
 		{
-			TodDrawString(g, GetString("CLICK_TO_CONTINUE", "click to continue"), aPosX + 139, aPosY + 140, FONT_PICO129, Color::Black, DrawStringJustification::DS_ALIGN_CENTER);
+			PvzpDrawString(g, GetString("CLICK_TO_CONTINUE", "click to continue"), aPosX + 139, aPosY + 140, FONT_PICO129, Color::Black, DrawStringJustification::DS_ALIGN_CENTER);
 		}
 	}
 
@@ -3129,7 +3129,7 @@ void LawnApp::PreloadForUser()
 	int aNumTasks = mCompletedLoadingThreadTasks + GetNumPreloadingTasks();
 	if (mTitleScreen && mTitleScreen->mQuickLoadKey != KeyCode::KEYCODE_UNKNOWN)
 	{
-		TodTrace("preload canceled\n");
+		PvzpTrace("preload canceled\n");
 		mNumLoadingThreadTasks = aNumTasks;
 		return;
 	}
@@ -3166,7 +3166,7 @@ void LawnApp::PreloadForUser()
 
 				if (mTitleScreen && mTitleScreen->mQuickLoadKey != KeyCode::KEYCODE_UNKNOWN)
 				{
-					TodTrace("preload canceled\n");
+					PvzpTrace("preload canceled\n");
 					mNumLoadingThreadTasks = aNumTasks;
 					return;
 				}
@@ -3198,7 +3198,7 @@ void LawnApp::PreloadForUser()
 
 			if (mTitleScreen && mTitleScreen->mQuickLoadKey != KeyCode::KEYCODE_UNKNOWN)
 			{
-				TodTrace("preload canceled\n");
+				PvzpTrace("preload canceled\n");
 				mNumLoadingThreadTasks = aNumTasks;
 				return;
 			}
@@ -3213,7 +3213,7 @@ void LawnApp::PreloadForUser()
 
 	if (mCompletedLoadingThreadTasks != aNumTasks)
 	{
-		TodTrace("num preload tasks wasn't calculated correctly");
+		PvzpTrace("num preload tasks wasn't calculated correctly");
 		mCompletedLoadingThreadTasks = aNumTasks;
 	}
 }
@@ -3222,10 +3222,10 @@ std::string LawnApp::Pluralize(int theCount, const char* theSingular, const char
 {
 	if (theCount == 1)
 	{
-		return TodReplaceNumberString(theSingular, "{COUNT}", theCount);
+		return PvzpReplaceNumberString(theSingular, "{COUNT}", theCount);
 	}
 
-	return TodReplaceNumberString(thePlural, "{COUNT}", theCount);
+	return PvzpReplaceNumberString(thePlural, "{COUNT}", theCount);
 }
 
 int LawnApp::GetNumTrophies(ChallengePage thePage)

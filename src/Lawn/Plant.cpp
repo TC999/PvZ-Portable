@@ -34,13 +34,13 @@
 #include "../GameConstants.h"
 #include "System/PlayerInfo.h"
 #include "System/ReanimationLawn.h"
-#include "../Sexy.TodLib/TodFoley.h"
-#include "../Sexy.TodLib/TodDebug.h"
-#include "../Sexy.TodLib/Attachment.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/TodParticle.h"
-#include "../Sexy.TodLib/EffectSystem.h"
-#include "../Sexy.TodLib/TodStringFile.h"
+#include "../PvzpLib/PvzpFoley.h"
+#include "../PvzpLib/PvzpDebug.h"
+#include "../PvzpLib/Attachment.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/PvzpParticle.h"
+#include "../PvzpLib/EffectSystem.h"
+#include "../PvzpLib/PvzpStringFile.h"
 #include "Widget/AchievementsScreen.h"
 #include <algorithm>
 
@@ -238,7 +238,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
         break;
     case SeedType::SEED_SPLITPEA:
     {
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
 
         aBodyReanim->mAnimRate = RandRangeFloat(15.0f, 20.0f);
         Reanimation* aHeadReanim1 = mApp->AddReanimation(0.0f, 0.0f, mRenderOrder + 2, aPlantDef.mReanimationType);
@@ -259,7 +259,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
     }
     case SeedType::SEED_THREEPEATER:
     {
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
 
         aBodyReanim->mAnimRate = RandRangeFloat(15.0f, 20.0f);
         Reanimation* aHeadReanim1 = mApp->AddReanimation(0.0f, 0.0f, mRenderOrder + 2, aPlantDef.mReanimationType);
@@ -304,23 +304,23 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
         mBlinkCountdown = 1000 + Sexy::Rand(1000);
         break;
     case SeedType::SEED_GARLIC:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         mPlantHealth = 400;
         aBodyReanim->SetTruncateDisappearingFrames();
         break;
     case SeedType::SEED_GOLD_MAGNET:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->SetTruncateDisappearingFrames();
         break;
     case SeedType::SEED_IMITATER:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->mAnimRate = RandRangeFloat(25.0f, 30.0f);
         mStateCountdown = 200;
         break;
     case SeedType::SEED_CHERRYBOMB:
     case SeedType::SEED_JALAPENO:
     {
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
 
         if (IsInPlay())
         {
@@ -336,7 +336,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
     }
     case SeedType::SEED_POTATOMINE:
     {
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
 
         aBodyReanim->mAnimRate = 12.0f;
 
@@ -355,7 +355,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
     }
     case SeedType::SEED_GRAVEBUSTER:
     {
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
 
         if (IsInPlay())
         {
@@ -370,7 +370,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
     }
     case SeedType::SEED_SUNSHROOM:
     {
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
 
         aBodyReanim->mFrameBasePose = 6;
 
@@ -402,7 +402,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
         mPlantHealth = 4000;
         mWidth = 120;
 
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->AssignRenderGroupToTrack("Pumpkin_back", 1);
         break;
     }
@@ -427,7 +427,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
     case SeedType::SEED_TORCHWOOD:
         break;
     case SeedType::SEED_MARIGOLD:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->mAnimRate = RandRangeFloat(15.0f, 20.0f);
         break;
     case SeedType::SEED_CACTUS:
@@ -445,21 +445,21 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
             mState = PlantState::STATE_COBCANNON_ARMING;
             mStateCountdown = 500;
 
-            TOD_ASSERT(aBodyReanim);
+            PVZP_ASSERT(aBodyReanim);
             aBodyReanim->SetFramesForLayer("anim_unarmed_idle");
         }
         break;
     case SeedType::SEED_KERNELPULT:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->AssignRenderGroupToPrefix("Cornpult_butter", RENDER_GROUP_HIDDEN);
         break;
     case SeedType::SEED_MAGNETSHROOM:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->SetTruncateDisappearingFrames();
         break;
     case SeedType::SEED_SPIKEROCK:
         mPlantHealth = 450;
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         break;
     case SeedType::SEED_SPROUT:
         break;
@@ -478,7 +478,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
         }
         break;
     case SeedType::SEED_TANGLEKELP:
-        TOD_ASSERT(aBodyReanim);
+        PVZP_ASSERT(aBodyReanim);
         aBodyReanim->SetTruncateDisappearingFrames();
     default:
         break;
@@ -493,7 +493,7 @@ void Plant::PlantInitialize(int theGridX, int theGridY, SeedType theSeedType, Se
 
     if (mSeedType != SeedType::SEED_FLOWERPOT && IsOnBoard())
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
         Plant* aFlowerPot = mBoard->GetFlowerPotAt(mPlantCol, mRow);
         if (aFlowerPot)
             mApp->ReanimationGet(aFlowerPot->mBodyReanimID)->mAnimRate = 0.0f;
@@ -716,13 +716,13 @@ void Plant::DoRowAreaDamage(int theDamage, unsigned int theDamageFlags)
     }
 }
 
-TodParticleSystem* Plant::AddAttachedParticle(int thePosX, int thePosY, int theRenderPosition, ParticleEffect theEffect)
+PvzpParticleSystem* Plant::AddAttachedParticle(int thePosX, int thePosY, int theRenderPosition, ParticleEffect theEffect)
 {
-    TodParticleSystem* aParticle = mApp->ParticleTryToGet(mParticleID);
+    PvzpParticleSystem* aParticle = mApp->ParticleTryToGet(mParticleID);
     if (aParticle)
         aParticle->ParticleSystemDie();
 
-    TodParticleSystem* aNewParticle = mApp->AddTodParticle(thePosX, thePosY, theRenderPosition, theEffect);
+    PvzpParticleSystem* aNewParticle = mApp->AddPvzpParticle(thePosX, thePosY, theRenderPosition, theEffect);
     if (aNewParticle)
         mParticleID = mApp->ParticleGetID(aNewParticle);
 
@@ -937,7 +937,7 @@ void Plant::StarFruitFire()
         case 2:     aProjectile->mVelX = 0.0f;          aProjectile->mVelY = -3.33f;            break;
         case 3:     aProjectile->mVelX = aShootAngleX;  aProjectile->mVelY = aShootAngleY;      break;
         case 4:     aProjectile->mVelX = aShootAngleX;  aProjectile->mVelY = -aShootAngleY;     break;
-        default:    TOD_ASSERT(false);                                                               break;
+        default:    PVZP_ASSERT(false);                                                               break;
         }
     }
 }
@@ -1026,7 +1026,7 @@ void Plant::UpdateProductionPlant()
     mLaunchCounter--;
     if (mLaunchCounter <= 100)
     {
-        int aFlashCountdown = TodAnimateCurve(100, 0, mLaunchCounter, 0, 100, TodCurves::CURVE_LINEAR);
+        int aFlashCountdown = PvzpAnimateCurve(100, 0, mLaunchCounter, 0, 100, PvzpCurves::CURVE_LINEAR);
         mEatenFlashCountdown = std::max(mEatenFlashCountdown, aFlashCountdown);
     }
     if (mLaunchCounter <= 0)
@@ -1122,7 +1122,7 @@ void Plant::UpdateGraveBuster()
             mBoard->mGravesCleared++;
         }
 
-        mApp->AddTodParticle(mX + 40, mY + 40, mRenderOrder + 4, ParticleEffect::PARTICLE_GRAVE_BUSTER_DIE);
+        mApp->AddPvzpParticle(mX + 40, mY + 40, mRenderOrder + 4, ParticleEffect::PARTICLE_GRAVE_BUSTER_DIE);
         Die();
         mBoard->DropLootPiece(mX + 40, mY, 12);
     }
@@ -1151,7 +1151,7 @@ void Plant::UpdatePotato()
     {
         if (mStateCountdown == 0)
         {
-            mApp->AddTodParticle(mX + mWidth / 2, mY + mHeight / 2, mRenderOrder, ParticleEffect::PARTICLE_POTATO_MINE_RISE);
+            mApp->AddPvzpParticle(mX + mWidth / 2, mY + mHeight / 2, mRenderOrder, ParticleEffect::PARTICLE_POTATO_MINE_RISE);
             PlayBodyReanim("anim_rise", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 20, 18.0f);
             mState = PlantState::STATE_POTATO_RISING;
             mApp->PlayFoley(FoleyType::FOLEY_DIRT_RISE);
@@ -1189,7 +1189,7 @@ void Plant::UpdatePotato()
             Reanimation* aLightReanim = mApp->ReanimationTryToGet(mLightReanimID);
             if (aLightReanim)
             {
-                aLightReanim->mFrameCount = TodAnimateCurve(200, 50, DistanceToClosestZombie(), 10, 3, TodCurves::CURVE_LINEAR);
+                aLightReanim->mFrameCount = PvzpAnimateCurve(200, 50, DistanceToClosestZombie(), 10, 3, PvzpCurves::CURVE_LINEAR);
             }
         }
     }
@@ -1248,7 +1248,7 @@ void Plant::UpdateTanglekelp()
             Reanimation* aSplashReanim = mApp->AddReanimation(mX - 23, mY + 7, aRenderPosition, ReanimationType::REANIM_SPLASH);
             aSplashReanim->OverrideScale(1.3f, 1.3f);
 
-            mApp->AddTodParticle(mX + 31, mY + 64, aRenderPosition, ParticleEffect::PARTICLE_PLANTING_POOL);
+            mApp->AddPvzpParticle(mX + 31, mY + 64, aRenderPosition, ParticleEffect::PARTICLE_PLANTING_POOL);
             mApp->PlayFoley(FoleyType::FOLEY_ZOMBIE_ENTERING_WATER);
         }
 
@@ -1267,7 +1267,7 @@ void Plant::UpdateTanglekelp()
 
 void Plant::SpikeweedAttack()
 {
-    TOD_ASSERT(IsSpiky());
+    PVZP_ASSERT(IsSpiky());
 
     if (mState != PlantState::STATE_SPIKEWEED_ATTACKING)
     {
@@ -1485,7 +1485,7 @@ void Plant::UpdateSquash()
 {
     Reanimation* aBodyReanim = mApp->ReanimationTryToGet(mBodyReanimID);
     (void)aBodyReanim; // unused in Release mode
-    TOD_ASSERT(aBodyReanim);
+    PVZP_ASSERT(aBodyReanim);
 
     if (mState == PlantState::STATE_NOTREADY)
     {
@@ -1531,8 +1531,8 @@ void Plant::UpdateSquash()
 
         if (mState == PlantState::STATE_SQUASH_RISING)
         {
-            mX = TodAnimateCurve(50, 20, mStateCountdown, mBoard->GridToPixelX(mPlantCol, mStartRow), mTargetX, TodCurves::CURVE_EASE_IN_OUT);
-            mY = TodAnimateCurve(50, 20, mStateCountdown, mBoard->GridToPixelY(mPlantCol, mStartRow), aDestY - 120, TodCurves::CURVE_EASE_IN_OUT);
+            mX = PvzpAnimateCurve(50, 20, mStateCountdown, mBoard->GridToPixelX(mPlantCol, mStartRow), mTargetX, PvzpCurves::CURVE_EASE_IN_OUT);
+            mY = PvzpAnimateCurve(50, 20, mStateCountdown, mBoard->GridToPixelY(mPlantCol, mStartRow), aDestY - 120, PvzpCurves::CURVE_EASE_IN_OUT);
 
             if (mStateCountdown == 0)
             {
@@ -1543,7 +1543,7 @@ void Plant::UpdateSquash()
         }
         else if (mState == PlantState::STATE_SQUASH_FALLING)
         {
-            mY = TodAnimateCurve(10, 0, mStateCountdown, aDestY - 120, aDestY, TodCurves::CURVE_EASE_IN_OUT);
+            mY = PvzpAnimateCurve(10, 0, mStateCountdown, aDestY - 120, aDestY, PvzpCurves::CURVE_EASE_IN_OUT);
 
             if (mStateCountdown == 5)
             {
@@ -1568,7 +1568,7 @@ void Plant::UpdateSquash()
                     mBoard->ShakeBoard(1, 4);
                     mApp->PlayFoley(FoleyType::FOLEY_THUMP);
                     float aOffsetY = mBoard->StageHasRoof() ? 69.0f : 80.0f;
-                    mApp->AddTodParticle(mX + 40, mY + aOffsetY, mRenderOrder + 4, ParticleEffect::PARTICLE_DUST_SQUASH);
+                    mApp->AddPvzpParticle(mX + 40, mY + aOffsetY, mRenderOrder + 4, ParticleEffect::PARTICLE_DUST_SQUASH);
                 }
             }
         }
@@ -1591,7 +1591,7 @@ void Plant::UpdateDoomShroom()
     mDoSpecialCountdown = 100;
 
     Reanimation* aBodyReanim = mApp->ReanimationTryToGet(mBodyReanimID);
-    TOD_ASSERT(aBodyReanim);
+    PVZP_ASSERT(aBodyReanim);
 
     aBodyReanim->SetFramesForLayer("anim_explode");
     aBodyReanim->mAnimRate = 23.0f;
@@ -1905,7 +1905,7 @@ void Plant::MagnetShroomAttactItem(Zombie* theZombie)
         theZombie->mZombiePhase = ZombiePhase::PHASE_ZOMBIE_NORMAL;
         if (!theZombie->mIsEating)
         {
-            TOD_ASSERT(theZombie->mZombieHeight == ZombieHeight::HEIGHT_ZOMBIE_NORMAL);
+            PVZP_ASSERT(theZombie->mZombieHeight == ZombieHeight::HEIGHT_ZOMBIE_NORMAL);
             theZombie->StartWalkAnim(0);
         }
         theZombie->GetTrackPosition("anim_screendoor", aMagnetItem->mPosX, aMagnetItem->mPosY);
@@ -2190,7 +2190,7 @@ void Plant::GoldMagnetFindTargets()
 {
     if (GetFreeMagnetItem() == nullptr)
     {
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
         return;
     }
 
@@ -2214,7 +2214,7 @@ void Plant::GoldMagnetFindTargets()
         case CoinType::COIN_SILVER:     aMagnetItem->mItemType = MagnetItemType::MAGNET_ITEM_SILVER_COIN;   break;
         case CoinType::COIN_GOLD:       aMagnetItem->mItemType = MagnetItemType::MAGNET_ITEM_GOLD_COIN;     break;
         case CoinType::COIN_DIAMOND:    aMagnetItem->mItemType = MagnetItemType::MAGNET_ITEM_DIAMOND;       break;
-        default:                        TOD_ASSERT(false);                                                       return;
+        default:                        PVZP_ASSERT(false);                                                       return;
         }
         
         aCoin->Die();
@@ -2260,7 +2260,7 @@ void Plant::UpdateGoldMagnetShroom()
                 case MagnetItemType::MAGNET_ITEM_SILVER_COIN:   aCoinType = CoinType::COIN_SILVER;      break;
                 case MagnetItemType::MAGNET_ITEM_GOLD_COIN:     aCoinType = CoinType::COIN_GOLD;        break;
                 case MagnetItemType::MAGNET_ITEM_DIAMOND:       aCoinType = CoinType::COIN_DIAMOND;     break;
-                default:                                        TOD_ASSERT(false);                           return;
+                default:                                        PVZP_ASSERT(false);                           return;
                 }
 
                 int aValue = Coin::GetCoinValue(aCoinType);
@@ -2272,7 +2272,7 @@ void Plant::UpdateGoldMagnetShroom()
             }
             else
             {
-                float aSpeed = TodAnimateCurveFloatTime(30.0f, 0.0f, aDistance, 0.02f, 0.05f, TodCurves::CURVE_LINEAR);
+                float aSpeed = PvzpAnimateCurveFloatTime(30.0f, 0.0f, aDistance, 0.02f, 0.05f, PvzpCurves::CURVE_LINEAR);
                 aMagnetItem->mPosX += aVectorToPlant.x * aSpeed;
                 aMagnetItem->mPosY += aVectorToPlant.y * aSpeed;
 
@@ -2416,7 +2416,7 @@ void Plant::UpdateBowling()
 
             int aDamageRangeFlags = GetDamageRangeFlags(PlantWeapon::WEAPON_PRIMARY) | 32U;
             mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, 90, 1, true, aDamageRangeFlags);
-            mApp->AddTodParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_POWIE);
+            mApp->AddPvzpParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_POWIE);
             mBoard->ShakeBoard(3, -4);
 
             Die();
@@ -2701,7 +2701,7 @@ void Plant::UpdateReanimColor()
     }
     else if (mBeghouledFlashCountdown > 0)
     {
-        int anAlpha = TodAnimateCurve(50, 0, mBeghouledFlashCountdown % 50, 1, 128, TodCurves::CURVE_BOUNCE);
+        int anAlpha = PvzpAnimateCurve(50, 0, mBeghouledFlashCountdown % 50, 1, 128, PvzpCurves::CURVE_BOUNCE);
         aBodyReanim->mExtraAdditiveColor = Color(255, 255, 255, anAlpha);
         aBodyReanim->mEnableExtraAdditiveDraw = true;
     }
@@ -2718,7 +2718,7 @@ void Plant::UpdateReanimColor()
 
     if (mBeghouledFlashCountdown > 0)
     {
-        int anAlpha = TodAnimateCurve(50, 0, mBeghouledFlashCountdown % 50, 1, 128, TodCurves::CURVE_BOUNCE);
+        int anAlpha = PvzpAnimateCurve(50, 0, mBeghouledFlashCountdown % 50, 1, 128, PvzpCurves::CURVE_BOUNCE);
         aBodyReanim->mExtraOverlayColor = Color(255, 255, 255, anAlpha);
         aBodyReanim->mEnableExtraOverlayDraw = true;
     }
@@ -2736,7 +2736,7 @@ bool Plant::IsOnBoard()
     if (!mIsOnBoard)
         return false;
 
-    TOD_ASSERT(mBoard);
+    PVZP_ASSERT(mBoard);
     return true;
 }
 
@@ -2787,11 +2787,11 @@ void Plant::UpdateReanim()
     }
     if (mState == PlantState::STATE_GRAVEBUSTER_EATING)
     {
-        aOffsetY += TodAnimateCurveFloat(400, 0, mStateCountdown, 0.0f, 30.0f, TodCurves::CURVE_LINEAR);
+        aOffsetY += PvzpAnimateCurveFloat(400, 0, mStateCountdown, 0.0f, 30.0f, PvzpCurves::CURVE_LINEAR);
     }
     if (mWakeUpCounter > 0)
     {
-        float aScaleFactor = TodAnimateCurveFloat(70, 0, mWakeUpCounter, 1.0f, 0.8f, TodCurves::CURVE_EASE_SIN_WAVE);
+        float aScaleFactor = PvzpAnimateCurveFloat(70, 0, mWakeUpCounter, 1.0f, 0.8f, PvzpCurves::CURVE_EASE_SIN_WAVE);
         aScaleY *= aScaleFactor;
         aOffsetY += 80.0f - 80.0f * aScaleFactor;
     }
@@ -2845,9 +2845,9 @@ void Plant::UpdateReanim()
             aScaleEnd = 1.0f;
         }
 
-        float aAnimatedOffsetX = TodAnimateCurveFloat(100, 0, mStateCountdown, aOffsetXStart, aOffsetXEnd, TodCurves::CURVE_LINEAR);
-        float aAnimatedOffsetY = TodAnimateCurveFloat(100, 0, mStateCountdown, aOffsetYStart, aOffsetYEnd, TodCurves::CURVE_LINEAR);
-        float aAnimatedScale = TodAnimateCurveFloat(100, 0, mStateCountdown, aScaleStart, aScaleEnd, TodCurves::CURVE_LINEAR);
+        float aAnimatedOffsetX = PvzpAnimateCurveFloat(100, 0, mStateCountdown, aOffsetXStart, aOffsetXEnd, PvzpCurves::CURVE_LINEAR);
+        float aAnimatedOffsetY = PvzpAnimateCurveFloat(100, 0, mStateCountdown, aOffsetYStart, aOffsetYEnd, PvzpCurves::CURVE_LINEAR);
+        float aAnimatedScale = PvzpAnimateCurveFloat(100, 0, mStateCountdown, aScaleStart, aScaleEnd, PvzpCurves::CURVE_LINEAR);
 
         aOffsetX += aAnimatedOffsetX * aScaleX;
         aOffsetY += aAnimatedOffsetY * aScaleY;
@@ -2986,7 +2986,7 @@ Reanimation* Plant::AttachBlinkAnim(Reanimation* theReanimBody)
 
     if (aAnimToAttach == nullptr)
     {
-        TodTrace("Missing head anim");
+        PvzpTrace("Missing head anim");
         return nullptr;
     }
 
@@ -3013,7 +3013,7 @@ Reanimation* Plant::AttachBlinkAnim(Reanimation* theReanimBody)
     }
     else
     {
-        TodTrace("Missing anim_idle for blink");
+        PvzpTrace("Missing anim_idle for blink");
     }
 
     aBlinkReanim->mFilterEffect = theReanimBody->mFilterEffect;
@@ -3132,7 +3132,7 @@ void Plant::AnimateNuts()
         if (aImageOverride != aCracked2)
         {
             aBodyReanim->SetImageOverride(aTrackToOverride, aCracked2);
-            mApp->AddTodParticle(aPosX, aPosY, mRenderOrder + 4, ParticleEffect::PARTICLE_WALLNUT_EAT_LARGE);
+            mApp->AddPvzpParticle(aPosX, aPosY, mRenderOrder + 4, ParticleEffect::PARTICLE_WALLNUT_EAT_LARGE);
         }
     }
     else if (mPlantHealth < mPlantMaxHealth * 2 / 3)
@@ -3140,7 +3140,7 @@ void Plant::AnimateNuts()
         if (aImageOverride != aCracked1)
         {
             aBodyReanim->SetImageOverride(aTrackToOverride, aCracked1);
-            mApp->AddTodParticle(aPosX, aPosY, mRenderOrder + 4, ParticleEffect::PARTICLE_WALLNUT_EAT_LARGE);
+            mApp->AddPvzpParticle(aPosX, aPosY, mRenderOrder + 4, ParticleEffect::PARTICLE_WALLNUT_EAT_LARGE);
         }
     }
     else
@@ -3795,7 +3795,7 @@ void Plant::DrawMagnetItems(Graphics* g)
             }
             else
             {
-                TOD_ASSERT(false);
+                PVZP_ASSERT(false);
             }
 
             if (aScale == 1.0f)
@@ -3804,7 +3804,7 @@ void Plant::DrawMagnetItems(Graphics* g)
             }
             else
             {
-                TodDrawImageCelScaledF(g, aImage, aMagnetItem->mPosX - mX + aOffsetX, aMagnetItem->mPosY - mY + aOffsetY, aCelCol, aCelRow, aScale, aScale);
+                PvzpDrawImageCelScaledF(g, aImage, aMagnetItem->mPosX - mX + aOffsetX, aMagnetItem->mPosY - mY + aOffsetY, aCelCol, aCelRow, aScale, aScale);
             }
         }
     }
@@ -3936,11 +3936,11 @@ void Plant::DrawShadow(Sexy::Graphics* g, float theOffsetX, float theOffsetY)
 
     if (aShadowType == 0)
     {
-        TodDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW, theOffsetX + aShadowOffsetX, theOffsetY + aShadowOffsetY, 0, aScale, aScale);
+        PvzpDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW, theOffsetX + aShadowOffsetX, theOffsetY + aShadowOffsetY, 0, aScale, aScale);
     }
     else
     {
-        TodDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW2, theOffsetX + aShadowOffsetX, theOffsetY + aShadowOffsetY, 0, aScale, aScale);
+        PvzpDrawImageCelCenterScaledF(g, IMAGE_PLANTSHADOW2, theOffsetX + aShadowOffsetX, theOffsetY + aShadowOffsetY, 0, aScale, aScale);
     }
 }
 
@@ -4078,14 +4078,14 @@ void Plant::Draw(Graphics* g)
                 g->SetColor(GetFlashingColor(mBoard->mMainCounter, 90));
             }
 
-            TodDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
+            PvzpDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
             g->SetColorizeImages(false);
             if (mHighlighted)
             {
                 g->SetDrawMode(Graphics::DRAWMODE_ADDITIVE);
                 g->SetColorizeImages(true);
                 g->SetColor(Color(255, 255, 255, 196));
-                TodDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
+                PvzpDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
                 g->SetDrawMode(Graphics::DRAWMODE_NORMAL);
                 g->SetColorizeImages(false);
             }
@@ -4094,7 +4094,7 @@ void Plant::Draw(Graphics* g)
                 g->SetDrawMode(Graphics::DRAWMODE_ADDITIVE);
                 g->SetColorizeImages(true);
                 g->SetColor(Color(255, 255, 255, std::clamp(mEatenFlashCountdown * 3, 0, 255)));
-                TodDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
+                PvzpDrawImageCelF(g, aPlantImage, aOffsetX, aOffsetY, aImageIndex, 0);
                 g->SetDrawMode(Graphics::DRAWMODE_NORMAL);
                 g->SetColorizeImages(false);
             }
@@ -4165,7 +4165,7 @@ void Plant::DrawSeedType(Graphics* g, SeedType theSeedType, SeedType theImitater
         {
             aSeedG.mScaleX *= 1.4f;
             aSeedG.mScaleY *= 1.4f;
-            TodDrawImageScaledF(&aSeedG, IMAGE_REANIM_WALLNUT_BODY, thePosX - 53.0f, thePosY - 56.0f, aSeedG.mScaleX, aSeedG.mScaleY);
+            PvzpDrawImageScaledF(&aSeedG, IMAGE_REANIM_WALLNUT_BODY, thePosX - 53.0f, thePosY - 56.0f, aSeedG.mScaleX, aSeedG.mScaleY);
         }
         else if (aPlantDef.mReanimationType != ReanimationType::REANIM_NONE)
         {
@@ -4188,7 +4188,7 @@ void Plant::DrawSeedType(Graphics* g, SeedType theSeedType, SeedType theImitater
                 aCelCol = aPlantImage->mNumCols - 1;
             }
 
-            TodDrawImageCelScaledF(&aSeedG, aPlantImage, thePosX + aOffsetX, thePosY + aOffsetY, aCelCol, aCelRow, aSeedG.mScaleX, aSeedG.mScaleY);
+            PvzpDrawImageCelScaledF(&aSeedG, aPlantImage, thePosX + aOffsetX, thePosY + aOffsetY, aCelCol, aCelRow, aSeedG.mScaleX, aSeedG.mScaleY);
         }
     }
 }
@@ -4222,7 +4222,7 @@ void Plant::IceZombies()
     }
 
     mBoard->mIceTrapCounter = 300;
-    TodParticleSystem* aPoolSparklyParticle = mApp->ParticleTryToGet(mBoard->mPoolSparklyParticleID);
+    PvzpParticleSystem* aPoolSparklyParticle = mApp->ParticleTryToGet(mBoard->mPoolSparklyParticleID);
     if (aPoolSparklyParticle)
     {
         aPoolSparklyParticle->mDontUpdate = false;
@@ -4328,7 +4328,7 @@ void Plant::DoSpecial()
         if (mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, 115, 1, true, aDamageRangeFlags) >= 10)
             ReportAchievement::GiveAchievement(mApp, Explodonator, true); // @Patoke: add achievement
 
-        mApp->AddTodParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_POWIE);
+        mApp->AddPvzpParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_POWIE);
         mBoard->ShakeBoard(3, -4);
 
         Die();
@@ -4341,7 +4341,7 @@ void Plant::DoSpecial()
         mBoard->KillAllZombiesInRadius(mRow, aPosX, aPosY, 250, 3, true, aDamageRangeFlags);
         KillAllPlantsNearDoom();
 
-        mApp->AddTodParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_DOOM);
+        mApp->AddPvzpParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_DOOM);
         mBoard->AddACrater(mPlantCol, mRow)->mGridItemCounter = 18000;
         mBoard->ShakeBoard(3, -4);
 
@@ -4378,7 +4378,7 @@ void Plant::DoSpecial()
     {
         mApp->PlayFoley(FoleyType::FOLEY_FROZEN);
         IceZombies();
-        mApp->AddTodParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_ICE_TRAP);
+        mApp->AddPvzpParticle(aPosX, aPosY, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_ICE_TRAP);
 
         Die();
         break;
@@ -4393,7 +4393,7 @@ void Plant::DoSpecial()
             ReportAchievement::GiveAchievement(mApp, Spudow, true); // @Patoke: add achievement
 
         int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_PARTICLE, mRow, 0);
-        mApp->AddTodParticle(aPosX + 20.0f, aPosY, aRenderPosition, ParticleEffect::PARTICLE_POTATO_MINE);
+        mApp->AddPvzpParticle(aPosX + 20.0f, aPosY, aRenderPosition, ParticleEffect::PARTICLE_POTATO_MINE);
         mBoard->ShakeBoard(3, -4);
 
         Die();
@@ -4463,7 +4463,7 @@ void Plant::UpdateImitater()
         Reanimation* aBodyReanim = mApp->ReanimationGet(mBodyReanimID);
         if (aBodyReanim->ShouldTriggerTimedEvent(0.8f))
         {
-            mApp->AddTodParticle(mX + 40, mY + 40, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_IMITATER_MORPH);
+            mApp->AddPvzpParticle(mX + 40, mY + 40, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_IMITATER_MORPH);
         }
         if (aBodyReanim->mLoopCount > 0)
         {
@@ -4474,7 +4474,7 @@ void Plant::UpdateImitater()
 
 void Plant::CobCannonFire(int theTargetX, int theTargetY)
 {
-    TOD_ASSERT(mState == PlantState::STATE_COBCANNON_READY);
+    PVZP_ASSERT(mState == PlantState::STATE_COBCANNON_READY);
 
     mState = PlantState::STATE_COBCANNON_FIRING;
     mShootingCounter = 206;
@@ -4546,7 +4546,7 @@ void Plant::Fire(Zombie* theTargetZombie, int theRow, PlantWeapon thePlantWeapon
         aProjectileType = ProjectileType::PROJECTILE_COBBIG;
         break;
     default:
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
         break;
     }
     if (mSeedType == SeedType::SEED_KERNELPULT && thePlantWeapon == PlantWeapon::WEAPON_SECONDARY)
@@ -4677,17 +4677,17 @@ void Plant::Fire(Zombie* theTargetZombie, int theRow, PlantWeapon thePlantWeapon
     if (mSeedType == SeedType::SEED_SNOWPEA)
     {
         int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_LAWN_MOWER, mRow, 1);
-        mApp->AddTodParticle(aOriginX + 8, aOriginY + 13, aRenderPosition, ParticleEffect::PARTICLE_SNOWPEA_PUFF);
+        mApp->AddPvzpParticle(aOriginX + 8, aOriginY + 13, aRenderPosition, ParticleEffect::PARTICLE_SNOWPEA_PUFF);
     }
     else if (mSeedType == SeedType::SEED_PUFFSHROOM)
     {
         int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_LAWN_MOWER, mRow, 1);
-        mApp->AddTodParticle(aOriginX + 18, aOriginY + 13, aRenderPosition, ParticleEffect::PARTICLE_PUFFSHROOM_MUZZLE);
+        mApp->AddPvzpParticle(aOriginX + 18, aOriginY + 13, aRenderPosition, ParticleEffect::PARTICLE_PUFFSHROOM_MUZZLE);
     }
     else if (mSeedType == SeedType::SEED_SCAREDYSHROOM)
     {
         int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_LAWN_MOWER, mRow, 1);
-        mApp->AddTodParticle(aOriginX + 27, aOriginY + 13, aRenderPosition, ParticleEffect::PARTICLE_PUFFSHROOM_MUZZLE);
+        mApp->AddPvzpParticle(aOriginX + 27, aOriginY + 13, aRenderPosition, ParticleEffect::PARTICLE_PUFFSHROOM_MUZZLE);
     }
 
     Projectile* aProjectile = mBoard->AddProjectile(aOriginX, aOriginY, mRenderOrder - 1, theRow, aProjectileType);
@@ -4982,8 +4982,8 @@ void Plant::Die()
 
 const PlantDefinition& GetPlantDefinition(SeedType theSeedType)
 {
-    TOD_ASSERT(gPlantDefs[theSeedType].mSeedType == theSeedType);
-    TOD_ASSERT(theSeedType >= 0 && theSeedType < static_cast<int>(SeedType::NUM_SEED_TYPES));
+    PVZP_ASSERT(gPlantDefs[theSeedType].mSeedType == theSeedType);
+    PVZP_ASSERT(theSeedType >= 0 && theSeedType < static_cast<int>(SeedType::NUM_SEED_TYPES));
     
     return gPlantDefs[theSeedType];
 }
@@ -5056,13 +5056,13 @@ std::string Plant::GetNameString(SeedType theSeedType, SeedType theImitaterType)
 {
     const PlantDefinition& aPlantDef = GetPlantDefinition(theSeedType);
     std::string aName = StrFormat("[%s]", aPlantDef.mPlantName);
-    std::string aTranslatedName = TodStringTranslate(aName);
+    std::string aTranslatedName = PvzpStringTranslate(aName);
 
     if (theSeedType == SeedType::SEED_IMITATER && theImitaterType != SeedType::SEED_NONE)
     {
         const PlantDefinition& aImitaterDef = GetPlantDefinition(theImitaterType);
         std::string aImitaterName = StrFormat("[%s]", aImitaterDef.mPlantName);
-        std::string aTranslatedImitaterName = TodStringTranslate(aImitaterName);
+        std::string aTranslatedImitaterName = PvzpStringTranslate(aImitaterName);
         return StrFormat("%s %s", aTranslatedName.c_str(), aTranslatedImitaterName.c_str());
     }
 
@@ -5073,7 +5073,7 @@ std::string Plant::GetToolTip(SeedType theSeedType)
 {
     const PlantDefinition& aPlantDef = GetPlantDefinition(theSeedType);
     std::string aToolTip = StrFormat("[%s_TOOLTIP]", aPlantDef.mPlantName);
-    return TodStringTranslate(aToolTip);
+    return PvzpStringTranslate(aToolTip);
 }
 
 int Plant::GetRefreshTime(SeedType theSeedType, SeedType theImitaterType)

@@ -29,7 +29,7 @@
 #include "../../Resources.h"
 #include "../../GameConstants.h"
 #include "../../ConstEnums.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "widget/Slider.h"
 #include "widget/Checkbox.h"
 #include "widget/WidgetManager.h"
@@ -129,16 +129,16 @@ void ZombatarTOS::Draw(Graphics* g)
 	LawnDialog::Draw(g);
 
 	if (mBodyText.empty())
-		mBodyText = TodStringTranslate("[ZOMBATAR_TOS]");
+		mBodyText = PvzpStringTranslate("[ZOMBATAR_TOS]");
 	if (mTextHeight <= 0)
-		mTextHeight = TodDrawStringWrappedHelper(g, mBodyText, Rect(0, 0, TOS_TEXT_W, 0), FONT_PICO129, Color::White, DrawStringJustification::DS_ALIGN_LEFT, false);
+		mTextHeight = PvzpDrawStringWrappedHelper(g, mBodyText, Rect(0, 0, TOS_TEXT_W, 0), FONT_PICO129, Color::White, DrawStringJustification::DS_ALIGN_LEFT, false);
 
 	int aMaxScroll = std::max(0, mTextHeight - TOS_CLIP_H);
 	int aOffset = static_cast<int>(mTOSSlider->mVal * aMaxScroll);
 
 	g->PushState();
 	g->ClipRect(Rect(TOS_TEXT_X, TOS_TEXT_Y, TOS_TEXT_W, TOS_CLIP_H));
-	TodDrawStringWrapped(g, mBodyText, Rect(TOS_TEXT_X, TOS_TEXT_Y - aOffset, TOS_TEXT_W, mTextHeight), FONT_PICO129, Color::White, DrawStringJustification::DS_ALIGN_LEFT);
+	PvzpDrawStringWrapped(g, mBodyText, Rect(TOS_TEXT_X, TOS_TEXT_Y - aOffset, TOS_TEXT_W, mTextHeight), FONT_PICO129, Color::White, DrawStringJustification::DS_ALIGN_LEFT);
 	g->PopState();
 
 	if (mFlashArrow && IMAGE_ZOMBATAR_TOS_ARROW)

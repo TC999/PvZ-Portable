@@ -32,10 +32,10 @@
 #include "MessageWidget.h"
 #include "../GameConstants.h"
 #include "System/PlayerInfo.h"
-#include "../Sexy.TodLib/TodFoley.h"
-#include "../Sexy.TodLib/TodDebug.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/Attachment.h"
+#include "../PvzpLib/PvzpFoley.h"
+#include "../PvzpLib/PvzpDebug.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/Attachment.h"
 #include "Widget/AchievementsScreen.h"
 
 Coin::Coin()
@@ -197,7 +197,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
     }
     else if (mType == CoinType::COIN_PRESENT_PLANT || mType == CoinType::COIN_AWARD_PRESENT)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
         mWidth = IMAGE_PRESENT->GetCelWidth();
         mHeight = IMAGE_PRESENT->GetCelHeight();
@@ -219,7 +219,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
                 SeedType::SEED_CHOMPER
             };
             
-            SeedType aSeedType = TodPickFromArray(aSeedList, LENGTH(aSeedList));
+            SeedType aSeedType = PvzpPickFromArray(aSeedList, LENGTH(aSeedList));
             mPottedPlantSpec.InitializePottedPlant(aSeedType);
         }
         else if (mBoard->mBackground == BackgroundType::BACKGROUND_2_NIGHT)
@@ -235,7 +235,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
                 SeedType::SEED_DOOMSHROOM
             };
 
-            SeedType aSeedType = TodPickFromArray(aSeedList, LENGTH(aSeedList));
+            SeedType aSeedType = PvzpPickFromArray(aSeedList, LENGTH(aSeedList));
             mPottedPlantSpec.InitializePottedPlant(aSeedType);
         }
         else if (mBoard->mBackground == BackgroundType::BACKGROUND_3_POOL)
@@ -251,7 +251,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
                 SeedType::SEED_TALLNUT
             };
 
-            SeedType aSeedType = TodPickFromArray(aSeedList, LENGTH(aSeedList));
+            SeedType aSeedType = PvzpPickFromArray(aSeedList, LENGTH(aSeedList));
             mPottedPlantSpec.InitializePottedPlant(aSeedType);
         }
         else if (mBoard->mBackground == BackgroundType::BACKGROUND_4_FOG)
@@ -267,7 +267,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
                 SeedType::SEED_MAGNETSHROOM
             };
 
-            SeedType aSeedType = TodPickFromArray(aSeedList, LENGTH(aSeedList));
+            SeedType aSeedType = PvzpPickFromArray(aSeedList, LENGTH(aSeedList));
             mPottedPlantSpec.InitializePottedPlant(aSeedType);
         }
         else if (mBoard->mBackground == BackgroundType::BACKGROUND_5_ROOF)
@@ -281,7 +281,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
                 SeedType::SEED_MELONPULT
             };
 
-            SeedType aSeedType = TodPickFromArray(aSeedList, LENGTH(aSeedList));
+            SeedType aSeedType = PvzpPickFromArray(aSeedList, LENGTH(aSeedList));
             mPottedPlantSpec.InitializePottedPlant(aSeedType);
         }
         else
@@ -380,7 +380,7 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
         break;
 
     default:
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
         break;
     }
 
@@ -562,7 +562,7 @@ void Coin::UpdateFall()
                 aEffect = ParticleEffect::PARTICLE_AWARD_PICKUP_ARROW;
             }
 
-            TodParticleSystem* aParticle = mApp->AddTodParticle(mPosX + aParticleOffsetX, mPosY + aParticleOffsetY, 0, aEffect);
+            PvzpParticleSystem* aParticle = mApp->AddPvzpParticle(mPosX + aParticleOffsetX, mPosY + aParticleOffsetY, 0, aEffect);
             AttachParticle(mAttachmentID, aParticle, aParticleOffsetX, aParticleOffsetY);
             mHasBouncyArrow = true;
         }
@@ -662,9 +662,9 @@ void Coin::UpdateCollected()
 
     if (IsLevelAward())
     {
-        mScale = TodAnimateCurveFloat(0, 400, mDisappearCounter, 1.01f, 2.0f, TodCurves::CURVE_EASE_IN_OUT);
-        mPosX = TodAnimateCurveFloat(0, 350, mDisappearCounter, mCollectX, aDestX, TodCurves::CURVE_EASE_OUT);
-        mPosY = TodAnimateCurveFloat(0, 350, mDisappearCounter, mCollectY, aDestY, TodCurves::CURVE_EASE_OUT);
+        mScale = PvzpAnimateCurveFloat(0, 400, mDisappearCounter, 1.01f, 2.0f, PvzpCurves::CURVE_EASE_IN_OUT);
+        mPosX = PvzpAnimateCurveFloat(0, 350, mDisappearCounter, mCollectX, aDestX, PvzpCurves::CURVE_EASE_OUT);
+        mPosY = PvzpAnimateCurveFloat(0, 350, mDisappearCounter, mCollectY, aDestY, PvzpCurves::CURVE_EASE_OUT);
         return;
     }
 
@@ -784,7 +784,7 @@ Color Coin::GetColor()
 
     if (mFadeCount > 0)
     {
-        int aAlpha = TodAnimateCurve(15, 0, mFadeCount, 255, 0, TodCurves::CURVE_LINEAR);
+        int aAlpha = PvzpAnimateCurve(15, 0, mFadeCount, 255, 0, PvzpCurves::CURVE_LINEAR);
         return Color(255, 255, 255, aAlpha);
     }
 
@@ -855,7 +855,7 @@ void Coin::Draw(Graphics* g)
     if (mType == CoinType::COIN_SILVER || mType == CoinType::COIN_GOLD)
     {
         g->SetColorizeImages(true);
-        TodDrawImageCenterScaledF(g, IMAGE_REANIM_COINGLOW, mPosX - 14.0f, mPosY - 12.0f, mScale, mScale);
+        PvzpDrawImageCenterScaledF(g, IMAGE_REANIM_COINGLOW, mPosX - 14.0f, mPosY - 12.0f, mScale, mScale);
         g->SetColorizeImages(false);
     }
 
@@ -1000,17 +1000,17 @@ void Coin::Draw(Graphics* g)
     }
     else
     {
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
     }
 
     g->SetColorizeImages(true);
-    TodDrawImageCelCenterScaledF(g, aImage, mPosX + aOffsetX, mPosY + aOffsetY, aImageCelCol, aDrawScale, aDrawScale);
+    PvzpDrawImageCelCenterScaledF(g, aImage, mPosX + aOffsetX, mPosY + aOffsetY, aImageCelCol, aDrawScale, aDrawScale);
     g->SetColorizeImages(false);
 }
 
 void Coin::FanOutCoins(CoinType theCoinType, int theNumCoins)
 {
-    TOD_ASSERT(mBoard);
+    PVZP_ASSERT(mBoard);
 
     for (int i = 0; i < theNumCoins; i++)
     {
@@ -1064,7 +1064,7 @@ void Coin::Collect()
 
     if (mType == CoinType::COIN_PRESENT_PLANT || mType == CoinType::COIN_AWARD_PRESENT)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
         if (mApp->mZenGarden->IsZenGardenFull(false))
         {
@@ -1074,7 +1074,7 @@ void Coin::Collect()
         {
             mBoard->mPottedPlantsCollected++;
             mBoard->DisplayAdvice("[ADVICE_FOUND_PLANT]", MessageStyle::MESSAGE_STYLE_HINT_FAST, AdviceType::ADVICE_NONE);
-            mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+            mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
             mApp->mZenGarden->AddPottedPlant(&mPottedPlantSpec);
         }
 
@@ -1091,9 +1091,9 @@ void Coin::Collect()
 
     if (mType == CoinType::COIN_PRESENT_MINIGAMES)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
-        mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+        mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
 
         mDisappearCounter = 0;
         mFadeCount = 0;
@@ -1105,9 +1105,9 @@ void Coin::Collect()
     }
     if (mType == CoinType::COIN_PRESENT_PUZZLE_MODE)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
-        mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+        mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
 
         mDisappearCounter = 0;
         mFadeCount = 0;
@@ -1119,9 +1119,9 @@ void Coin::Collect()
     }
     if (mType == CoinType::COIN_PRESENT_SURVIVAL_MODE)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
-        mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+        mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
 
         mDisappearCounter = 0;
         mFadeCount = 0;
@@ -1134,10 +1134,10 @@ void Coin::Collect()
 
     if (mType == CoinType::COIN_CHOCOLATE || mType == CoinType::COIN_AWARD_CHOCOLATE)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
         mBoard->mChocolateCollected++;
-        mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+        mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
 
         if (mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_CHOCOLATE] < PURCHASE_COUNT_OFFSET)
         {
@@ -1223,9 +1223,9 @@ void Coin::Collect()
             mApp->PlaySample(SOUND_TAP2);
         }
 
-        mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_STARBURST);
+        mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_STARBURST);
 
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
         mBoard->FadeOutLevel();
         AttachmentDetachCrossFadeParticleType(mAttachmentID, ParticleEffect::PARTICLE_SEED_PACKET, nullptr);
@@ -1234,14 +1234,14 @@ void Coin::Collect()
 
         if (mType == CoinType::COIN_NOTE)
         {
-            mApp->AddTodParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
+            mApp->AddPvzpParticle(mPosX + 30.0f, mPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PRESENT_PICKUP);
             StartFade();
         }
         else if (!aIsEndlessAward && mApp->Is3DAccelerated())
         {
             float aParticleOffsetX = mWidth / 2;
             float aParticleOffsetY = mHeight / 2;
-            TodParticleSystem* aParticle = mApp->AddTodParticle(mPosX + aParticleOffsetX, mPosY + aParticleOffsetY, mRenderOrder - 1, PARTICLE_SEED_PACKET_PICKUP);
+            PvzpParticleSystem* aParticle = mApp->AddPvzpParticle(mPosX + aParticleOffsetX, mPosY + aParticleOffsetY, mRenderOrder - 1, PARTICLE_SEED_PACKET_PICKUP);
             AttachParticle(mAttachmentID, aParticle, aParticleOffsetX, aParticleOffsetY);
         }
 
@@ -1251,7 +1251,7 @@ void Coin::Collect()
 
     if (mType == CoinType::COIN_USABLE_SEED_PACKET)
     {
-        TOD_ASSERT(mBoard);
+        PVZP_ASSERT(mBoard);
 
         mBoard->mCursorObject->mType = mUsableSeedType;
         mBoard->mCursorObject->mCursorType = CursorType::CURSOR_TYPE_PLANT_FROM_USABLE_COIN;
@@ -1410,7 +1410,7 @@ void Coin::MouseDown(int x, int y, int theClickCount)
 // GOTY @Patoke: 0x435B20
 void Coin::Die()
 {
-    TOD_ASSERT(!mBoard || mBoard->mCursorObject->mCoinID != static_cast<CoinID>(mBoard->mCoins.DataArrayGetID(this)));
+    PVZP_ASSERT(!mBoard || mBoard->mCursorObject->mCoinID != static_cast<CoinID>(mBoard->mCoins.DataArrayGetID(this)));
 
     mDead = true;
     AttachmentDie(mAttachmentID);

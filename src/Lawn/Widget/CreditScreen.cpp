@@ -26,13 +26,13 @@
 #include "../System/Music.h"
 #include "../../GameConstants.h"
 #include "../System/PoolEffect.h"
-#include "../../Sexy.TodLib/TodFoley.h"
-#include "../../Sexy.TodLib/Attachment.h"
-#include "../../Sexy.TodLib/Reanimator.h"
-#include "../../Sexy.TodLib/TodParticle.h"
+#include "../../PvzpLib/PvzpFoley.h"
+#include "../../PvzpLib/Attachment.h"
+#include "../../PvzpLib/Reanimator.h"
+#include "../../PvzpLib/PvzpParticle.h"
 #include "widget/Dialog.h"
-#include "../../Sexy.TodLib/EffectSystem.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/EffectSystem.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "graphics/Font.h"
 
 static constexpr float CREDIT_SCREEN_ANIM_RATE = 0.3f;
@@ -339,7 +339,7 @@ CreditScreen::CreditScreen(LawnApp* theApp)
 	mApp->mEffectSystem->EffectSystemFreeAll();
 	mApp->mMusic->StopAllMusic();
 	mLoadedResourceNames.push_back("DelayLoad_Credits");
-	TodLoadResources("DelayLoad_Credits");
+	PvzpLoadResources("DelayLoad_Credits");
 
     mBrainPosX = 0.0f;
     mBrainPosY = 0.0f;
@@ -406,7 +406,7 @@ void CreditScreen::PreLoadCredits()
 	mLoadedResourceNames.push_back("DelayLoad_Background6");
 
 	for (std::string& resource : mLoadedResourceNames)
-		TodLoadResources(resource.c_str());
+		PvzpLoadResources(resource.c_str());
 
     ReanimatorEnsureDefinitionLoaded(ReanimationType::REANIM_CREDITS_MAIN, true);
     ReanimationPreload(ReanimationType::REANIM_CREDITS_MAIN);
@@ -554,7 +554,7 @@ void CreditScreen::GetTiming(CreditsTiming** theBeforeTiming, CreditsTiming** th
         {
             CreditsTiming* aTiming1 = &gCreditsTiming[i];
             CreditsTiming* aTiming2 = &gCreditsTiming[i + 1];
-            TOD_ASSERT(aTiming1->mFrame < aTiming2->mFrame);
+            PVZP_ASSERT(aTiming1->mFrame < aTiming2->mFrame);
 
             if (aTiming2->mFrame > aFrameCount)
             {
@@ -609,7 +609,7 @@ Reanimation* CreditScreen::PlayReanim(int aIndex)
     }
     else
     {
-        TOD_ASSERT(false);
+        PVZP_ASSERT(false);
         return nullptr;
     }
 
@@ -728,7 +728,7 @@ void CreditScreen::DrawOverlay(Graphics* g)
 {
     if (mCreditsPhase == CreditsPhase::CREDITS_END)
     {
-        int aFadeAlpha = TodAnimateCurve(50, 100, mCreditsPhaseCounter, 255, 0, TodCurves::CURVE_LINEAR);
+        int aFadeAlpha = PvzpAnimateCurve(50, 100, mCreditsPhaseCounter, 255, 0, PvzpCurves::CURVE_LINEAR);
         if (aFadeAlpha > 0)
         {
             g->SetColor(Color(0, 0, 0, aFadeAlpha));
@@ -751,16 +751,16 @@ static int DrawCreditsContent(Graphics* g, int theYPos, bool theDraw)
 
     // Title
     if (theDraw && aYPos > -aTitleFont->GetLineSpacing() && aYPos < BOARD_HEIGHT + aTitleFont->GetLineSpacing())
-        TodDrawString(g, "[CREDITS_GAMENAME]", BOARD_WIDTH / 2, aYPos, aTitleFont, Color::White, DrawStringJustification::DS_ALIGN_CENTER);
+        PvzpDrawString(g, "[CREDITS_GAMENAME]", BOARD_WIDTH / 2, aYPos, aTitleFont, Color::White, DrawStringJustification::DS_ALIGN_CENTER);
     aYPos += aTitleFont->GetLineSpacing() + 20;
 
     for (int aSection = 3; aSection <= 11; aSection++)
     {
         std::string aRolesKey = StrFormat("[CREDITS_ROLES%d]", aSection);
-        if (!TodStringListExists(aRolesKey))
+        if (!PvzpStringListExists(aRolesKey))
             continue;
 
-        std::string aRoles = TodStringTranslate(aRolesKey);
+        std::string aRoles = PvzpStringTranslate(aRolesKey);
 
         // ^ prefix: spacer or centered header
         if (!aRoles.empty() && aRoles[0] == '^')
@@ -768,14 +768,14 @@ static int DrawCreditsContent(Graphics* g, int theYPos, bool theDraw)
             if (aRoles.size() > 1)
             {
                 if (theDraw && aYPos > -aLineHeight && aYPos < BOARD_HEIGHT + aLineHeight)
-                    TodDrawString(g, std::string_view(aRoles).substr(1), BOARD_WIDTH / 2, aYPos, aCreditsFont, Color::White, DrawStringJustification::DS_ALIGN_CENTER);
+                    PvzpDrawString(g, std::string_view(aRoles).substr(1), BOARD_WIDTH / 2, aYPos, aCreditsFont, Color::White, DrawStringJustification::DS_ALIGN_CENTER);
             }
             aYPos += aLineHeight + 10;
             continue;
         }
 
         std::string aNamesKey = StrFormat("[CREDITS_NAMES%d]", aSection);
-        std::string aNames = TodStringListExists(aNamesKey) ? TodStringTranslate(aNamesKey) : "";
+        std::string aNames = PvzpStringListExists(aNamesKey) ? PvzpStringTranslate(aNamesKey) : "";
 
         // Split roles and names by newline, draw side by side
         size_t aRolePos = 0;
@@ -788,7 +788,7 @@ static int DrawCreditsContent(Graphics* g, int theYPos, bool theDraw)
                 size_t aRoleEnd = aRoles.find('\n', aRolePos);
                 if (aRoleEnd == std::string::npos) aRoleEnd = aRoles.size();
                 if (aVisible && aRoleEnd > aRolePos)
-                    TodDrawString(g, std::string_view(aRoles).substr(aRolePos, aRoleEnd - aRolePos), ROLES_RIGHT_X, aYPos, aCreditsFont, Color::White, DrawStringJustification::DS_ALIGN_RIGHT);
+                    PvzpDrawString(g, std::string_view(aRoles).substr(aRolePos, aRoleEnd - aRolePos), ROLES_RIGHT_X, aYPos, aCreditsFont, Color::White, DrawStringJustification::DS_ALIGN_RIGHT);
                 aRolePos = aRoleEnd + 1;
             }
             if (aNamePos < aNames.size())
@@ -796,7 +796,7 @@ static int DrawCreditsContent(Graphics* g, int theYPos, bool theDraw)
                 size_t aNameEnd = aNames.find('\n', aNamePos);
                 if (aNameEnd == std::string::npos) aNameEnd = aNames.size();
                 if (aVisible && aNameEnd > aNamePos)
-                    TodDrawString(g, std::string_view(aNames).substr(aNamePos, aNameEnd - aNamePos), NAMES_LEFT_X, aYPos, aCreditsFont, Color::White, DrawStringJustification::DS_ALIGN_LEFT);
+                    PvzpDrawString(g, std::string_view(aNames).substr(aNamePos, aNameEnd - aNamePos), NAMES_LEFT_X, aYPos, aCreditsFont, Color::White, DrawStringJustification::DS_ALIGN_LEFT);
                 aNamePos = aNameEnd + 1;
             }
             aYPos += aLineHeight;
@@ -1054,7 +1054,7 @@ void CreditScreen::Draw(Graphics* g)
     }
     aCreditsReanim->DrawRenderGroup(g, 3);
 
-    for (TodParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
+    for (PvzpParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
     {
         if (!aParticle->mIsAttachment && !aParticle->mDead)
         {
@@ -1064,7 +1064,7 @@ void CreditScreen::Draw(Graphics* g)
 
     if (aDrawFog)
     {
-        float aPercent = TodAnimateCurveFloatTime(aFrameFactor * 189.0f, aFrameFactor * 249.0f, aCreditsReanim->mAnimTime, 0.0f, 1.0f, TodCurves::CURVE_LINEAR);
+        float aPercent = PvzpAnimateCurveFloatTime(aFrameFactor * 189.0f, aFrameFactor * 249.0f, aCreditsReanim->mAnimTime, 0.0f, 1.0f, PvzpCurves::CURVE_LINEAR);
         DrawFogEffect(&aBackground2G, aPercent);
     }
     aCreditsReanim->DrawRenderGroup(g, 3);
@@ -1176,11 +1176,11 @@ void CreditScreen::Update()
             int aUnsyncedFrames = (aUnsyncedDuration + 5) / 10;
             if (aUnsyncedFrames < 0)
             {
-                TodTrace("Movie playing too fast %d frames", 1 - aUnsyncedFrames);
+                PvzpTrace("Movie playing too fast %d frames", 1 - aUnsyncedFrames);
             }
             else if (aUnsyncedFrames > 2)
             {
-                TodTrace("Movie playing too slow %d frames", aUnsyncedFrames - 1);
+                PvzpTrace("Movie playing too slow %d frames", aUnsyncedFrames - 1);
             }
 
             if (aUnsyncedDuration > 10000)
@@ -1247,11 +1247,11 @@ void CreditScreen::UpdateMovie()
             aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 140.0f) ||
             aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 142.0f))
         {
-            mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
+            mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
         }
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 136.5f))
         {
-            mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDITS_RAYSWIPE);
+            mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDITS_RAYSWIPE);
         }
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 330.0f))
         {
@@ -1300,7 +1300,7 @@ void CreditScreen::UpdateMovie()
 
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 120.0f))
         {
-            mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDITS_ZOMBIEHEADWIPE);
+            mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDITS_ZOMBIEHEADWIPE);
         }
     }
     if (mCreditsPhase == CreditsPhase::CREDITS_MAIN2)
@@ -1342,15 +1342,15 @@ void CreditScreen::UpdateMovie()
             aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 239.5f) ||
             aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 243.5f))
         {
-            mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
+            mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
         }
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 332.75f))
         {
-            mApp->AddTodParticle(678.0f, 352.0f, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_MELONSPLASH);
+            mApp->AddPvzpParticle(678.0f, 352.0f, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_MELONSPLASH);
         }
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 336.0f))
         {
-            for (TodParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
+            for (PvzpParticleSystem* aParticle : mApp->mEffectSystem->mParticleHolder->mParticleSystems)
             {
                 if (aParticle->mEffectType == ParticleEffect::PARTICLE_MELONSPLASH)
                 {
@@ -1360,7 +1360,7 @@ void CreditScreen::UpdateMovie()
         }
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 342.0f))
         {
-            mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
+            mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
         }
 
         int aBackground2Index = aCreditsReanim->FindTrackIndex("Background2");
@@ -1370,10 +1370,10 @@ void CreditScreen::UpdateMovie()
         float aFogPosX = aTransformBackground2.mTransX + 856.0f;
         if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 188.0f))
         {
-            TodParticleSystem* aFogParticle = mApp->AddTodParticle(aFogPosX, 230.0f, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDITS_FOG);
+            PvzpParticleSystem* aFogParticle = mApp->AddPvzpParticle(aFogPosX, 230.0f, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDITS_FOG);
             mFogParticleID = mApp->ParticleGetID(aFogParticle);
         }
-        TodParticleSystem* aFogParticle = mApp->ParticleTryToGet(mFogParticleID);
+        PvzpParticleSystem* aFogParticle = mApp->ParticleTryToGet(mFogParticleID);
         if (aFogParticle)
         {
             if (aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 248.0f))
@@ -1407,7 +1407,7 @@ void CreditScreen::UpdateMovie()
             aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 243.0f) ||
             aCreditsReanim->ShouldTriggerTimedEvent(aFrameFactor * 247.0f))
         {
-            mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
+            mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, static_cast<int>(RenderLayer::RENDER_LAYER_TOP), ParticleEffect::PARTICLE_CREDIT_STROBE);
         }
     }
 
@@ -1422,32 +1422,32 @@ void CreditScreen::UpdateMovie()
     {
         if (aAfterTiming->mBrainType == CreditBrainType::BRAIN_FLY_ON)
         {
-            mBrainPosX = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, -50.0f, aAfterTiming->mWordX - 15.0f, TodCurves::CURVE_EASE_IN_OUT);
-            mBrainPosY = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, TodCurves::CURVE_BOUNCE_FAST_MIDDLE);
+            mBrainPosX = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, -50.0f, aAfterTiming->mWordX - 15.0f, PvzpCurves::CURVE_EASE_IN_OUT);
+            mBrainPosY = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, PvzpCurves::CURVE_BOUNCE_FAST_MIDDLE);
             mDrawBrain = true;
         }
         else if (aAfterTiming->mBrainType == CreditBrainType::BRAIN_FAST_ON)
         {
-            mBrainPosX = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aAfterTiming->mWordX - 50.0f, aAfterTiming->mWordX - 15.0f, TodCurves::CURVE_EASE_IN_OUT);
-            mBrainPosY = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 485.0f, 505.0f, TodCurves::CURVE_EASE_IN_OUT);
+            mBrainPosX = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aAfterTiming->mWordX - 50.0f, aAfterTiming->mWordX - 15.0f, PvzpCurves::CURVE_EASE_IN_OUT);
+            mBrainPosY = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 485.0f, 505.0f, PvzpCurves::CURVE_EASE_IN_OUT);
             mDrawBrain = true;
         }
         else if (aAfterTiming->mBrainType == CreditBrainType::BRAIN_FLY_OFF)
         {
-            mBrainPosX = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aBeforeTiming->mWordX - 15.0f, 850.0f, TodCurves::CURVE_EASE_IN_OUT);
-            mBrainPosY = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, TodCurves::CURVE_BOUNCE_FAST_MIDDLE);
+            mBrainPosX = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aBeforeTiming->mWordX - 15.0f, 850.0f, PvzpCurves::CURVE_EASE_IN_OUT);
+            mBrainPosY = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, PvzpCurves::CURVE_BOUNCE_FAST_MIDDLE);
             mDrawBrain = true;
         }
         else if (aAfterTiming->mBrainType == CreditBrainType::BRAIN_FAST_OFF)
         {
-            mBrainPosX = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aBeforeTiming->mWordX - 15.0f, aBeforeTiming->mWordX + 25.0f, TodCurves::CURVE_EASE_IN_OUT);
-            mBrainPosY = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, TodCurves::CURVE_EASE_IN_OUT);
+            mBrainPosX = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aBeforeTiming->mWordX - 15.0f, aBeforeTiming->mWordX + 25.0f, PvzpCurves::CURVE_EASE_IN_OUT);
+            mBrainPosY = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, PvzpCurves::CURVE_EASE_IN_OUT);
             mDrawBrain = true;
         }
         else if (aBeforeTiming->mBrainType == CreditBrainType::BRAIN_FLY_ON || aBeforeTiming->mBrainType == CreditBrainType::BRAIN_FAST_ON || aBeforeTiming->mBrainType == CreditBrainType::BRAIN_NEXT_WORD)
         {
-            mBrainPosX = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aBeforeTiming->mWordX - 15.0f, aAfterTiming->mWordX - 15.0f, TodCurves::CURVE_EASE_IN_OUT);
-            mBrainPosY = TodAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, TodCurves::CURVE_BOUNCE_FAST_MIDDLE);
+            mBrainPosX = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, aBeforeTiming->mWordX - 15.0f, aAfterTiming->mWordX - 15.0f, PvzpCurves::CURVE_EASE_IN_OUT);
+            mBrainPosY = PvzpAnimateCurveFloatTime(0.0f, 1.0f, aFraction, 505.0f, 485.0f, PvzpCurves::CURVE_BOUNCE_FAST_MIDDLE);
             mDrawBrain = true;
         }
 

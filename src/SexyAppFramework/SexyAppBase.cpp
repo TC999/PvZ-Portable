@@ -48,8 +48,6 @@
 #include <switch.h>
 #include <locale>
 #include <codecvt>
-#elif defined(__3DS__)
-#include <3ds.h>
 #elif defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -71,7 +69,6 @@
 #include "misc/PropertiesParser.h"
 #include "misc/PerfTimer.h"
 #include "misc/MTRand.h"
-#include "misc/ModVal.h"
 #include "misc/ResourceManager.h"
 #include "sound/SDLMusicInterface.h"
 #include <mutex>
@@ -177,8 +174,6 @@ SexyAppBase::SexyAppBase()
 
 #ifdef __SWITCH__
 	mResourceDir = "sdmc:/switch/PvZPortable/";
-#elif defined(__3DS__)
-	mResourceDir = "sdmc:/3ds/PvZPortable/";
 #elif defined(__ANDROID__) && !defined(__TERMUX__)
 	const char* aExtPath = SDL_AndroidGetExternalStoragePath();
 	if (aExtPath)
@@ -228,7 +223,7 @@ SexyAppBase::SexyAppBase()
 	mWidth = 640;
 	mHeight = 480;
 	mFullscreenBits = 16;
-#if defined(__IPHONEOS__) || (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__SWITCH__) || defined(__3DS__)
+#if defined(__IPHONEOS__) || (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__SWITCH__)
 	mIsWindowed = false;
 #else
 	mIsWindowed = true;
@@ -285,7 +280,7 @@ SexyAppBase::SexyAppBase()
 	mLastDrawTick = SDL_GetTicks();
 	mNextDrawTick = SDL_GetTicks();
 	mSysCursor = true;	
-#if defined(__IPHONEOS__) || (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__SWITCH__) || defined(__3DS__)
+#if defined(__IPHONEOS__) || (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__SWITCH__)
 	mForceFullscreen = true;
 #else
 	mForceFullscreen = false;
@@ -521,12 +516,16 @@ bool SexyAppBase::ReadDemoBuffer(std::string &theError)
 	if (!aFile.read(reinterpret_cast<char*>(&aTimeZoneOffsetLE), sizeof(aTimeZoneOffsetLE))) return false;
 	mDemoTimeZoneOffset = static_cast<int32_t>(FromLE32(aTimeZoneOffsetLE));
 
-	// Legacy product-version field, consumed but ignored; compatibility is gated by DEMO_VERSION.
-	uint16_t aStrLen = 4;
-	if (!aFile.read(reinterpret_cast<char*>(&aStrLen), sizeof(aStrLen))) return false;
-	aStrLen = std::min<uint16_t>(FromLE16(aStrLen), 255);
-	char aStr[256];
-	if (!aFile.read(aStr, aStrLen)) return false;
+	// Recorded program version (empty in older files); unknown or mismatched versions only warn.
+	uint16_t aStrLenLE;
+	if (!aFile.read(reinterpret_cast<char*>(&aStrLenLE), sizeof(aStrLenLE))) return false;
+	const uint16_t aStrLen = FromLE16(aStrLenLE);
+	std::string aRecordedVersion(aStrLen, '\0');
+	if (!aFile.read(aRecordedVersion.data(), aStrLen)) return false;
+	if (aRecordedVersion.empty())
+		SDL_Log("Demo has no program version tag; replay may diverge.");
+	else if (mProductVersion != aRecordedVersion)
+		SDL_Log("Demo was recorded with a different program version (recorded: %s, current: %s); replay may diverge.", aRecordedVersion.c_str(), mProductVersion.c_str());
 
 	std::streampos aFilePos = aFile.tellg();
 	aFile.seekg(0, std::ios::end);
@@ -665,9 +664,10 @@ void SexyAppBase::WriteDemoBuffer()
 			uint32_t aTimeZoneOffsetLE = ToLE32(static_cast<uint32_t>(mDemoTimeZoneOffset));
 			aFile.write(reinterpret_cast<const char*>(&aTimeZoneOffsetLE), sizeof(aTimeZoneOffsetLE));
 
-			// Legacy product-version field; kept empty so older builds that still validate it accept recordings from this build.
-			uint16_t aStrLen = ToLE16(0);
+			// Program version tag; playback only warns on mismatch.
+			uint16_t aStrLen = ToLE16(static_cast<uint16_t>(mProductVersion.size()));
 			aFile.write(reinterpret_cast<const char*>(&aStrLen), sizeof(aStrLen));
+			aFile.write(mProductVersion.data(), mProductVersion.size());
 
 			Buffer aMarkerBuffer;
 			aMarkerBuffer.WriteUInt32(static_cast<uint32_t>(mDemoMarkerList.size()));
@@ -1360,7 +1360,7 @@ void SexyAppBase::ReadFromRegistry()
 	if (RegistryReadInteger("Muted", &anInt))
 		mMuteCount = anInt;
 
-#if !defined(__IPHONEOS__) && (!defined(__ANDROID__) || defined(__TERMUX__)) && !defined(__SWITCH__) && !defined(__3DS__) && !defined(__EMSCRIPTEN__)
+#if !defined(__IPHONEOS__) && (!defined(__ANDROID__) || defined(__TERMUX__)) && !defined(__SWITCH__) && !defined(__EMSCRIPTEN__)
 	if (RegistryReadInteger("ScreenMode", &anInt))
 		mIsWindowed = anInt == 0;
 #endif
@@ -1968,7 +1968,7 @@ void SexyAppBase::Popup(const std::string& theString)
 		ErrorApplicationConfig c;
 		errorApplicationCreate(&c, "Fatal error", theString.c_str());
 		errorApplicationShow(&c);
-#elif !defined(__3DS__) && !defined(__EMSCRIPTEN__)
+#elif !defined(__EMSCRIPTEN__)
 		if (std::this_thread::get_id() == mPrimaryThreadId)
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "FATAL ERROR", theString.c_str(), NULL);
 #endif
@@ -2417,7 +2417,7 @@ void SexyAppBase::StartCursorThread()
 
 void SexyAppBase::SwitchScreenMode(bool wantWindowed, bool is3d, bool force)
 {
-#if defined(__IPHONEOS__) || (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__SWITCH__) || defined(__3DS__)
+#if defined(__IPHONEOS__) || (defined(__ANDROID__) && !defined(__TERMUX__)) || defined(__SWITCH__)
 	// Mobile/console platforms are always fullscreen; skip mode switching entirely.
 	Set3DAcclerated(is3d);
 	return;
@@ -3503,7 +3503,7 @@ void SexyAppBase::Init()
 	{
 		SetAppDataFolder("/saves/");
 	}
-#elif !defined(__SWITCH__) && !defined(__3DS__)
+#elif !defined(__SWITCH__)
 	{
 		char* aPrefPath = SDL_GetPrefPath("io.github.wszqkzqk", "PvZPortable"); // Avoid conflict with official Plants vs. Zombies
 		if (aPrefPath)

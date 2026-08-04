@@ -25,7 +25,7 @@
 #include "../LawnApp.h"
 #include "CursorObject.h"
 #include "../Resources.h"
-#include "../Sexy.TodLib/Reanimator.h"
+#include "../PvzpLib/Reanimator.h"
 #include "widget/WidgetManager.h"
 
 CursorObject::CursorObject()

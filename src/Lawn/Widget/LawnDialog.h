@@ -22,7 +22,7 @@
 #ifndef __LAWNDIALOG_H__
 #define __LAWNDIALOG_H__
 
-#include "../../Sexy.TodLib/TodCommon.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "widget/Dialog.h"
 
 class LawnApp;

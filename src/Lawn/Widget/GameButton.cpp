@@ -22,11 +22,11 @@
 #include "GameButton.h"
 #include "../../LawnApp.h"
 #include "../../Resources.h"
-#include "../../Sexy.TodLib/TodCommon.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "graphics/Font.h"
 //#include "graphics/SysFont.h"
 #include "graphics/Graphics.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "widget/WidgetManager.h"
 
 static Color gGameButtonColors[6] = { Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), Color(255, 255, 255), Color(132, 132, 132), Color(212, 212, 212) };
@@ -275,17 +275,17 @@ void GameButton::Update()
 
 void GameButton::SetLabel(std::string_view theLabel)
 {
-	mLabel = TodStringTranslate(theLabel);
+	mLabel = PvzpStringTranslate(theLabel);
 }
 
 void NewLawnButton::SetLabel(std::string_view theLabel)
 {
-	mLabel = TodStringTranslate(theLabel);
+	mLabel = PvzpStringTranslate(theLabel);
 }
 
 void LawnStoneButton::SetLabel(std::string_view theLabel)
 {
-	mLabel = TodStringTranslate(theLabel);
+	mLabel = PvzpStringTranslate(theLabel);
 }
 
 void LawnStoneButton::Draw(Graphics* g)
@@ -402,7 +402,7 @@ bool NewLawnButton::IsPointVisible(int x, int y)
 	if (!mUsePolygonShape)
 		return DialogButton::IsPointVisible(x, y);
 
-	return TodIsPointInPolygon(mPolygonShape, 4, SexyVector2(x, y));
+	return PvzpIsPointInPolygon(mPolygonShape, 4, SexyVector2(x, y));
 }
 
 // GOTY @Patoke: 0x44B810
@@ -423,9 +423,4 @@ NewLawnButton* MakeNewButton(int theId, ButtonListener* theListener, std::string
 	aButton->mTranslateY = 1;
 
 	return aButton;
-}
-
-void NewLawnButton::SetOffset(int theX, int theY) {
-	this->mButtonOffsetX = theX;
-	this->mButtonOffsetY = theY;
 }

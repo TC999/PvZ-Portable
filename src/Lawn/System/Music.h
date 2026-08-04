@@ -129,7 +129,7 @@ public:
 	void						GameMusicPause(bool thePause);
 	void						PlayFromOffset(MusicFile theMusicFile, int theOffset, double theVolume);
 	void						MusicResyncChannel(MusicFile theMusicFileToMatch, MusicFile theMusicFileToSync);
-	bool						TodLoadMusic(MusicFile theMusicFile, std::string_view theFileName);
+	bool						PvzpLoadMusic(MusicFile theMusicFile, std::string_view theFileName);
 	void						MusicTitleScreenInit();
 	/*inline*/ void				MakeSureMusicIsPlaying(MusicTune theMusicTune);
 	/*inline*/ void				FadeOut(int theFadeOutDuration);

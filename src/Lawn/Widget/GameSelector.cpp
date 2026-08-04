@@ -36,11 +36,11 @@
 #include "../System/PlayerInfo.h"
 #include "../System/ProfileMgr.h"
 #include "../System/TypingCheck.h"
-#include "../../Sexy.TodLib/TodFoley.h"
-#include "../../Sexy.TodLib/TodDebug.h"
+#include "../../PvzpLib/PvzpFoley.h"
+#include "../../PvzpLib/PvzpDebug.h"
 #include "graphics/Font.h"
-#include "../../Sexy.TodLib/Reanimator.h"
-#include "../../Sexy.TodLib/TodParticle.h"
+#include "../../PvzpLib/Reanimator.h"
+#include "../../PvzpLib/PvzpParticle.h"
 #include "widget/Dialog.h"
 #include "widget/WidgetManager.h"
 #include <algorithm>
@@ -62,12 +62,12 @@ GameSelectorOverlay::GameSelectorOverlay(GameSelector* theGameSelector)
 // GOTY @Patoke: 0x44B8D0
 GameSelector::GameSelector(LawnApp* theApp)
 {
-	TodHesitationTrace("pregameselector");
+	PvzpHesitationTrace("pregameselector");
 	mLoadedResourceNames.push_back("DelayLoad_Zombatar");
 	mLoadedResourceNames.push_back("DelayLoad_Almanac");
 
 	for (std::string& resource : mLoadedResourceNames)
-		TodLoadResources(resource.c_str());
+		PvzpLoadResources(resource.c_str());
 
 	mApp = theApp;
 	mLevel = 1;
@@ -180,17 +180,6 @@ GameSelector::GameSelector(LawnApp* theApp)
 	mAchievementsButton->mClip = false;
 	mAchievementsButton->mBtnNoDraw = mHasTrophy;
 	mAchievementsButton->mMouseVisible = false;
-
-	mQuickPlayButton = MakeNewButton(
-		GameSelector::GameSelector_QuickPlay,
-		this,
-		"",
-		nullptr,
-		Sexy::IMAGE_QUICKPLAY_BACK_BUTTON,
-		Sexy::IMAGE_QUICKPLAY_BACK_BUTTON_HIGHLIGHT,
-		Sexy::IMAGE_QUICKPLAY_BACK_BUTTON_HIGHLIGHT
-	);
-	mQuickPlayButton->Resize(mApp->mWidth - 150, 455, Sexy::IMAGE_QUICKPLAY_BACK_BUTTON->mWidth, Sexy::IMAGE_QUICKPLAY_BACK_BUTTON->mHeight);
 
 	mZenGardenButton = MakeNewButton(
 		GameSelector::GameSelector_ZenGarden, 
@@ -362,46 +351,33 @@ GameSelector::GameSelector(LawnApp* theApp)
 	mAchievementsWidget = new AchievementsWidget(this->mApp);
 	mAchievementsWidget->Move(0, mApp->mHeight);
 
-	TodHesitationTrace("gameselectorinit");
+	// Add as children in z-order (bottom to top).
+	AddWidget(mAchievementsButton);
+	AddWidget(mZombatarButton);
+	AddWidget(mChangeUserButton);
+	AddWidget(mSurvivalButton);
+	AddWidget(mZenGardenButton);
+	AddWidget(mPuzzleButton);
+	AddWidget(mMinigameButton);
+	AddWidget(mAdventureButton);
+	AddWidget(mOptionsButton);
+	AddWidget(mQuitButton);
+	AddWidget(mHelpButton);
+	AddWidget(mStoreButton);
+	AddWidget(mAlmanacButton);
+	AddWidget(mOverlayWidget);
+
+	PvzpHesitationTrace("gameselectorinit");
 }
 
 GameSelector::~GameSelector()
 {
-	if (mAdventureButton)
-		delete mAdventureButton;
-	if (mMinigameButton)
-		delete mMinigameButton;
-	if (mPuzzleButton)
-		delete mPuzzleButton;
-	if (mOptionsButton)
-		delete mOptionsButton;
-	if (mQuitButton)
-		delete mQuitButton;
-	if (mHelpButton)
-		delete mHelpButton;
-	if (mOverlayWidget)
-		delete mOverlayWidget;
-	if (mStoreButton)
-		delete mStoreButton;
-	if (mAlmanacButton)
-		delete mAlmanacButton;
-	if (mZenGardenButton)
-		delete mZenGardenButton;
-	if (mSurvivalButton)
-		delete mSurvivalButton;
-	if (mChangeUserButton)
-		delete mChangeUserButton;
-	// @Patoke: new widgets
-	if (mZombatarButton)
-		delete mZombatarButton;
+	RemoveAllWidgets(true);
+
 	if (mZombatarWidget)
-		delete mZombatarWidget;
-	if (mAchievementsButton)
-		delete mAchievementsButton;
+		delete mZombatarWidget; // top-level widget, not covered by RemoveAllWidgets
 	if (mAchievementsWidget)
-		delete mAchievementsWidget;
-	if (mQuickPlayButton)
-		delete mQuickPlayButton;
+		delete mAchievementsWidget; // top-level widget, not covered by RemoveAllWidgets
 
 	delete mToolTip;
 }
@@ -506,8 +482,8 @@ void GameSelector::SyncButtons()
 // GOTY @Patoke: 0x44D230
 void GameSelector::AddTrophySparkle()
 {
-	TOD_ASSERT(mTrophyParticleID == PARTICLESYSTEMID_NULL);
-	TodParticleSystem* aTrophyParticle = mApp->AddTodParticle(85.0f, 330.0f, RenderLayer::RENDER_LAYER_TOP, ParticleEffect::PARTICLE_TROPHY_SPARKLE);
+	PVZP_ASSERT(mTrophyParticleID == PARTICLESYSTEMID_NULL);
+	PvzpParticleSystem* aTrophyParticle = mApp->AddPvzpParticle(85.0f, 330.0f, RenderLayer::RENDER_LAYER_TOP, ParticleEffect::PARTICLE_TROPHY_SPARKLE);
 	mTrophyParticleID = mApp->ParticleGetID(aTrophyParticle);
 }
 
@@ -526,7 +502,7 @@ void GameSelector::SyncProfile(bool theShowLoading)
 		mLoading = false;
 	}
 
-	TodParticleSystem* aTrophyParticle = mApp->ParticleTryToGet(mTrophyParticleID);
+	PvzpParticleSystem* aTrophyParticle = mApp->ParticleTryToGet(mTrophyParticleID);
 	if (aTrophyParticle)
 	{
 		aTrophyParticle->ParticleSystemDie();
@@ -580,7 +556,6 @@ void GameSelector::SyncProfile(bool theShowLoading)
 	ReportAchievement::AchievementInitForPlayer(mApp); // @Patoke: add call
 }
 
-// GOTY @Patoke: seems to be inlined? 0x44DCC6
 void GameSelector::Draw(Graphics* g)
 {
 	if (mApp->GetDialog(Dialogs::DIALOG_STORE) || mApp->GetDialog(Dialogs::DIALOG_ALMANAC))
@@ -629,7 +604,7 @@ void GameSelector::Draw(Graphics* g)
 		SexyTransform2D aOffsetMatrix;
 		// @Patoke: add position so it moves when sliding to position
 		aOffsetMatrix.Translate(170.5f - static_cast<int>(aStringWidth * 0.5f) + mX, 102.5f + mY);
-		TodDrawStringMatrix(g, Sexy::FONT_BRIANNETOD16, aOverlayMatrix * aOffsetMatrix, aWelcomeStr, Color(255, 245, 200));
+		PvzpDrawStringMatrix(g, Sexy::FONT_BRIANNETOD16, aOverlayMatrix * aOffsetMatrix, aWelcomeStr, Color(255, 245, 200));
 
 	}
 }
@@ -690,15 +665,15 @@ void GameSelector::DrawOverlay(Graphics* g)
 		g->SetColorizeImages(true);
 		g->SetColor(mAdventureButton->mColors[ButtonWidget::COLOR_BKG]);
 		// @Patoke: changed positions for GOTY adventure icon
-		TodDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransAreaX + 486.0f, aTransAreaY + 47.f, aStage, 0);  // 绘制大关数
+		PvzpDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransAreaX + 486.0f, aTransAreaY + 47.f, aStage, 0);  // 绘制大关数
 		if (aSub < 10)
 		{
-			TodDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransSubX + 509.f, aTransSubY + 50.f, aSub, 0);
+			PvzpDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransSubX + 509.f, aTransSubY + 50.f, aSub, 0);
 		}
 		else if (aSub == 10)
 		{
-			TodDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransSubX + 509.f, aTransSubY + 50.f, 1, 0);
-			TodDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransSubX + 518.f, aTransSubY + 51.f, 0, 0);
+			PvzpDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransSubX + 509.f, aTransSubY + 50.f, 1, 0);
+			PvzpDrawImageCelF(g, Sexy::IMAGE_SELECTORSCREEN_LEVELNUMBERS, aTransSubX + 518.f, aTransSubY + 51.f, 0, 0);
 		}
 		g->SetColorizeImages(false);
 	}
@@ -730,11 +705,11 @@ void GameSelector::DrawOverlay(Graphics* g)
 	{
 		// @Patoke: updated pos to match GOTY
 		if (mApp->EarnedGoldTrophy())
-			TodDrawImageCelF(g, Sexy::IMAGE_SUNFLOWER_TROPHY, aTransformLeft.mTransX + 12.f, aTransformLeft.mTransY + 345.f, 1, 0);
+			PvzpDrawImageCelF(g, Sexy::IMAGE_SUNFLOWER_TROPHY, aTransformLeft.mTransX + 12.f, aTransformLeft.mTransY + 345.f, 1, 0);
 		else
-			TodDrawImageCelF(g, Sexy::IMAGE_SUNFLOWER_TROPHY, aTransformLeft.mTransX + 12.f, aTransformLeft.mTransY + 345.f, 0, 0);
+			PvzpDrawImageCelF(g, Sexy::IMAGE_SUNFLOWER_TROPHY, aTransformLeft.mTransX + 12.f, aTransformLeft.mTransY + 345.f, 0, 0);
 		
-		TodParticleSystem* aTrophyParticle = mApp->ParticleTryToGet(mTrophyParticleID);
+		PvzpParticleSystem* aTrophyParticle = mApp->ParticleTryToGet(mTrophyParticleID);
 		if (aTrophyParticle)
 			aTrophyParticle->Draw(g);
 	}
@@ -786,43 +761,19 @@ void GameSelector::Update()
 
 	// @Patoke: implemented this
 	if (mSlideCounter > 0) {
-		int aNewX = TodAnimateCurve(75, 0, mSlideCounter, mStartX, mDestX, TodCurves::CURVE_EASE_IN_OUT);
-		int aNewY = TodAnimateCurve(75, 0, mSlideCounter, mStartY, mDestY, TodCurves::CURVE_EASE_IN_OUT);
+		int aNewX = PvzpAnimateCurve(75, 0, mSlideCounter, mStartX, mDestX, PvzpCurves::CURVE_EASE_IN_OUT);
+		int aNewY = PvzpAnimateCurve(75, 0, mSlideCounter, mStartY, mDestY, PvzpCurves::CURVE_EASE_IN_OUT);
 		Move(aNewX, aNewY);
 
-		// @Patoke: not from the original binaries but fixes bugs
-		mOverlayWidget->Move(aNewX, aNewY);
 		mZombatarWidget->Move(aNewX + BOARD_WIDTH, aNewY);
 		mAchievementsWidget->mY = aNewY + mApp->mHeight;
-		mAdventureButton->SetOffset(aNewX, aNewY);
-		mMinigameButton->SetOffset(aNewX, aNewY);
-		mPuzzleButton->SetOffset(aNewX, aNewY);
-		mOptionsButton->SetOffset(aNewX, aNewY + 15);
-		mQuitButton->SetOffset(aNewX, aNewY + 5);
-		mHelpButton->SetOffset(aNewX, aNewY + 30);
-		mStoreButton->SetOffset(aNewX, aNewY);
-		mAlmanacButton->SetOffset(aNewX, aNewY);
-		mZenGardenButton->SetOffset(aNewX, aNewY);
-		mSurvivalButton->SetOffset(aNewX, aNewY);
-		mChangeUserButton->SetOffset(aNewX, aNewY);
-		mZombatarButton->SetOffset(aNewX, aNewY);
-		mAchievementsButton->SetOffset(aNewX, aNewY);
-		mQuickPlayButton->SetOffset(aNewX, aNewY);
-
-		// Make sure these are drawn even outside of bounds (force redraw)
-		mAchievementsButton->MarkDirty();
-		mOptionsButton->MarkDirty();
-		mHelpButton->MarkDirty();
-		mQuitButton->MarkDirty();
-		mStoreButton->MarkDirty();
-		mZenGardenButton->MarkDirty();
 
 		mSlideCounter--;
 	}
 
 	mApp->mZenGarden->UpdatePlantNeeds();
 
-	TodParticleSystem* aParticle = mApp->ParticleTryToGet(mTrophyParticleID);
+	PvzpParticleSystem* aParticle = mApp->ParticleTryToGet(mTrophyParticleID);
 	if (aParticle)
 		aParticle->Update();
 
@@ -1019,67 +970,22 @@ void GameSelector::AddedToManager(WidgetManager* theWidgetManager)
 {
 	Widget::AddedToManager(theWidgetManager);
 
-	theWidgetManager->AddWidget(mAdventureButton);
-	theWidgetManager->AddWidget(mMinigameButton);
-	theWidgetManager->AddWidget(mPuzzleButton);
-	theWidgetManager->AddWidget(mOptionsButton);
-	theWidgetManager->AddWidget(mQuitButton);
-	theWidgetManager->AddWidget(mHelpButton);
-	theWidgetManager->AddWidget(mStoreButton);
-	theWidgetManager->AddWidget(mAlmanacButton);
-	theWidgetManager->AddWidget(mSurvivalButton);
-	theWidgetManager->AddWidget(mZenGardenButton);
-	theWidgetManager->AddWidget(mChangeUserButton);
-	theWidgetManager->AddWidget(mOverlayWidget);
-	theWidgetManager->AddWidget(mZombatarButton); // @Patoke: add new widgets
 	theWidgetManager->AddWidget(mZombatarWidget);
-	theWidgetManager->AddWidget(mAchievementsButton);
 	theWidgetManager->AddWidget(mAchievementsWidget);
-	//theWidgetManager->AddWidget(mQuickPlayButton);
 }
 
 void GameSelector::RemovedFromManager(WidgetManager* theWidgetManager)
 {
 	Widget::RemovedFromManager(theWidgetManager);
 
-	theWidgetManager->RemoveWidget(mAdventureButton);
-	theWidgetManager->RemoveWidget(mMinigameButton);
-	theWidgetManager->RemoveWidget(mPuzzleButton);
-	theWidgetManager->RemoveWidget(mOptionsButton);
-	theWidgetManager->RemoveWidget(mQuitButton);
-	theWidgetManager->RemoveWidget(mHelpButton);
-	theWidgetManager->RemoveWidget(mStoreButton);
-	theWidgetManager->RemoveWidget(mAlmanacButton);
-	theWidgetManager->RemoveWidget(mSurvivalButton);
-	theWidgetManager->RemoveWidget(mZenGardenButton);
-	theWidgetManager->RemoveWidget(mChangeUserButton);
-	theWidgetManager->RemoveWidget(mOverlayWidget);
-	theWidgetManager->RemoveWidget(mZombatarButton); // @Patoke: new widgets
 	theWidgetManager->RemoveWidget(mZombatarWidget);
-	theWidgetManager->RemoveWidget(mAchievementsButton);
 	theWidgetManager->RemoveWidget(mAchievementsWidget);
-	//theWidgetManager->RemoveWidget(mQuickPlayButton);
 }
 
 void GameSelector::OrderInManagerChanged()
 {
 	mWidgetManager->PutInfront(mAchievementsWidget, this);
-	mWidgetManager->PutInfront(mOverlayWidget, this);
-	mWidgetManager->PutInfront(mAlmanacButton, this);
-	mWidgetManager->PutInfront(mStoreButton, this);
-	mWidgetManager->PutInfront(mHelpButton, this);
-	mWidgetManager->PutInfront(mQuitButton, this);
-	mWidgetManager->PutInfront(mOptionsButton, this);
-	mWidgetManager->PutInfront(mAdventureButton, this);
-	mWidgetManager->PutInfront(mMinigameButton, this);
-	mWidgetManager->PutInfront(mPuzzleButton, this);
-	mWidgetManager->PutInfront(mZenGardenButton, this);
-	mWidgetManager->PutInfront(mSurvivalButton, this);
-	mWidgetManager->PutInfront(mChangeUserButton, this);
-	mWidgetManager->PutInfront(mZombatarButton, this); // @Patoke: z order for new widgets
-	mWidgetManager->PutInfront(mAchievementsButton, this);
 	mWidgetManager->BringToFront(mZombatarWidget);
-	//mWidgetManager->PutInfront(mQuickPlayButton, this);
 }
 
 // GOTY @Patoke: 0x44EB11
@@ -1173,7 +1079,7 @@ void GameSelector::KeyChar(char theChar)
 
 	if ((gIsPartnerBuild || mApp->mDebugKeysEnabled) && theChar == 'u' && mApp->mPlayerInfo)
 	{
-		TodTraceAndLogLn("Selector cheat key '%c'", theChar);
+		PvzpTraceAndLogLn("Selector cheat key '%c'", theChar);
 
 		mApp->mPlayerInfo->mFinishedAdventure = 2;
 		mApp->mPlayerInfo->AddCoins(50000);
@@ -1194,7 +1100,7 @@ void GameSelector::KeyChar(char theChar)
 
 	if (mApp->mDebugKeysEnabled)
 	{
-		TodTraceAndLogLn("Selector cheat key '%c'", theChar);
+		PvzpTraceAndLogLn("Selector cheat key '%c'", theChar);
 		if (theChar == 'c' || theChar == 'C')
 		{
 			mMinigamesLocked = false;
@@ -1219,7 +1125,7 @@ void GameSelector::MouseDown(int x, int y, int theClickCount)
 		}
 	}
 
-	if (mApp->mTodCheatKeys && mStartingGame && mStartingGameCounter < 450)
+	if (mApp->mCheatKeys && mStartingGame && mStartingGameCounter < 450)
 		mStartingGameCounter = 450;
 }
 
@@ -1376,14 +1282,8 @@ void GameSelector::ButtonDepress(int theId)
 	case GameSelector::GameSelector_Zombatar:
 		ShowZombatarScreen();
 		break;
-	case GameSelector::GameSelector_AchievementsBack: // @Patoke: seems to be unused
-		//SlideTo(0, 0);
-		break;
 	case GameSelector::GameSelector_Achievements:
 		ShowAchievementsScreen();
-		break;
-	case GameSelector::GameSelector_QuickPlay:
-		// GameSelector::ShowQuickPlayScreen();
 		break;
 	}
 }

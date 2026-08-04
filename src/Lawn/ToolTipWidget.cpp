@@ -22,9 +22,9 @@
 #include "../Resources.h"
 #include "ToolTipWidget.h"
 #include "../GameConstants.h"
-#include "../Sexy.TodLib/TodCommon.h"
+#include "../PvzpLib/PvzpCommon.h"
 #include "graphics/Font.h"
-#include "../Sexy.TodLib/TodStringFile.h"
+#include "../PvzpLib/PvzpStringFile.h"
 
 using namespace Sexy;
 
@@ -158,19 +158,19 @@ void ToolTipWidget::CalculateSize()
 
 void ToolTipWidget::SetLabel(std::string_view theLabel)
 {
-	mLabel = TodStringTranslate(theLabel);
+	mLabel = PvzpStringTranslate(theLabel);
 	CalculateSize();
 }
 
 void ToolTipWidget::SetTitle(std::string_view theTitle)
 {
-	mTitle = TodStringTranslate(theTitle);
+	mTitle = PvzpStringTranslate(theTitle);
 	CalculateSize();
 }
 
 void ToolTipWidget::SetWarningText(std::string_view theWarningText)
 {
-	mWarningText = TodStringTranslate(theWarningText);
+	mWarningText = PvzpStringTranslate(theWarningText);
 	CalculateSize();
 }
 

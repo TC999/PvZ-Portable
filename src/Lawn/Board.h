@@ -25,7 +25,7 @@
 #include <cstdint>
 
 #include "../ConstEnums.h"
-#include "../Sexy.TodLib/DataArray.h"
+#include "../PvzpLib/DataArray.h"
 #include "widget/Widget.h"
 #include "widget/ButtonListener.h"
 
@@ -58,7 +58,7 @@ class CutScene;
 class Challenge;
 class Reanimation;
 class DataSync;
-class TodParticleSystem;
+class PvzpParticleSystem;
 namespace Sexy
 {
 	class Graphics;
@@ -88,7 +88,7 @@ public:
 		Coin*						mCoin;
 		Projectile*					mProjectile;
 		CursorPreview*				mCursorPreview;
-		TodParticleSystem*			mParticleSytem;
+		PvzpParticleSystem*			mParticleSytem;
 		Reanimation*				mReanimation;
 		GridItem*					mGridItem;
 		LawnMower*					mMower;
@@ -119,7 +119,7 @@ struct PlantsOnLawn
 
 struct BungeeDropGrid
 {
-	TodWeightedGridArray			mGridArray[MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y];
+	PvzpWeightedGridArray			mGridArray[MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y];
 	int								mGridArrayCount;
 };
 
@@ -160,7 +160,7 @@ public:
 	int32_t							mIceMinX[MAX_GRID_SIZE_Y];
 	int32_t							mIceTimer[MAX_GRID_SIZE_Y];
 	ParticleSystemID				mIceParticleID[MAX_GRID_SIZE_Y];
-	TodSmoothArray					mRowPickingArray[MAX_GRID_SIZE_Y];
+	PvzpSmoothArray					mRowPickingArray[MAX_GRID_SIZE_Y];
 	ZombieType						mZombiesInWave[MAX_ZOMBIE_WAVES][MAX_ZOMBIES_IN_WAVE];
 	bool							mZombieAllowed[100];
 	int32_t							mSunCountDown;

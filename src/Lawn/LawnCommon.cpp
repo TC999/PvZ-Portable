@@ -26,7 +26,7 @@
 #include "LawnCommon.h"
 #include "../Resources.h"
 #include "../GameConstants.h"
-#include "../Sexy.TodLib/TodCommon.h"
+#include "../PvzpLib/PvzpCommon.h"
 #include "graphics/Font.h"
 #include "widget/Dialog.h"
 #include "misc/SexyMatrix.h"

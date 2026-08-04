@@ -159,7 +159,7 @@ public:
 class Coin;
 class Zombie;
 class Reanimation;
-class TodParticleSystem;
+class PvzpParticleSystem;
 
 class Plant : public GameObject
 {
@@ -252,7 +252,7 @@ public:
     void                    IceZombies();
     void                    BlowAwayFliers();
     void                    UpdateGraveBuster();
-    TodParticleSystem*      AddAttachedParticle(int thePosX, int thePosY, int theRenderPosition, ParticleEffect theEffect);
+    PvzpParticleSystem*      AddAttachedParticle(int thePosX, int thePosY, int theRenderPosition, ParticleEffect theEffect);
     void                    GetPeaHeadOffset(int& theOffsetX, int& theOffsetY);
     /*inline*/ bool         MakesSun();
     static void             DrawSeedType(Graphics* g, SeedType theSeedType, SeedType theImitaterType, DrawVariation theDrawVariation, float thePosX, float thePosY);

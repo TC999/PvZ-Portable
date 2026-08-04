@@ -1163,7 +1163,7 @@ enum StorePages : int32_t
     STORE_PAGE_ZEN2 = 3,
     NUM_STORE_PAGES = 4
 };
-enum TodCurves : int32_t
+enum PvzpCurves : int32_t
 {
     CURVE_CONSTANT,             // 常函数曲线
     CURVE_LINEAR,               // 线性曲线

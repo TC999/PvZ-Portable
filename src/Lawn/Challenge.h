@@ -25,7 +25,7 @@
 #include <cstdint>
 #include "../ConstEnums.h"
 #include "../GameConstants.h"
-#include "../Sexy.TodLib/FilterEffect.h"
+#include "../PvzpLib/FilterEffect.h"
 #include "graphics/Graphics.h"
 
 #define BEGHOULED_MAX_GRIDSIZEX 8
@@ -42,7 +42,7 @@ class Zombie;
 class GridItem;
 class SeedPacket;
 class HitResult;
-struct TodWeightedGridArray;
+struct PvzpWeightedGridArray;
 
 enum BeghouledUpgrade : int32_t
 {
@@ -166,7 +166,7 @@ public:
     void                    ZombiquariumDropBrain(int x, int y);
     void                    ZombiquariumUpdate();
     /*inline*/ void         ShovelAddWallnuts();
-    void                    ScaryPotterPlacePot(ScaryPotType theScaryPotType, ZombieType theZombieType, SeedType theSeedType, int theCount, TodWeightedGridArray* theGridArray, int theGridArrayCount);
+    void                    ScaryPotterPlacePot(ScaryPotType theScaryPotType, ZombieType theZombieType, SeedType theSeedType, int theCount, PvzpWeightedGridArray* theGridArray, int theGridArrayCount);
     void                    ScaryPotterStart();
     void                    ScaryPotterUpdate();
     void                    ScaryPotterOpenPot(GridItem* theScaryPot);
@@ -174,8 +174,8 @@ public:
     int                    ScaryPotterIsCompleted();
     void                    ScaryPotterChangePotType(GridItemState thePotType, int theCount);
     void                    ScaryPotterPopulate();
-    /*inline*/ void         ScaryPotterDontPlaceInCol(int theCol, TodWeightedGridArray* theGridArray, int theGridArrayCount);
-    void                    ScaryPotterFillColumnWithPlant(int theCol, SeedType theSeedType, TodWeightedGridArray* theGridArray, int theGridArrayCount);
+    /*inline*/ void         ScaryPotterDontPlaceInCol(int theCol, PvzpWeightedGridArray* theGridArray, int theGridArrayCount);
+    void                    ScaryPotterFillColumnWithPlant(int theCol, SeedType theSeedType, PvzpWeightedGridArray* theGridArray, int theGridArrayCount);
     void                    PuzzleNextStageClear();
     void                    ScaryPotterMalletPot(GridItem* theScaryPot);
     static ZombieType       IZombieSeedTypeToZombieType(SeedType theSeedType);

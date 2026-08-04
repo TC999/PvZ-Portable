@@ -28,7 +28,7 @@
 #include "../../LawnApp.h"
 #include "../../Resources.h"
 #include "../../GameConstants.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "graphics/Graphics.h"
 #include "graphics/Font.h"
 #include "misc/KeyCodes.h"
@@ -1039,6 +1039,8 @@ void ZombatarWidget::DrawMainBackground(Graphics* g)
 
 void ZombatarWidget::DrawList(Graphics* g)
 {
+	g->DrawImage(IMAGE_ZOMBATAR_WIDGET_BG, ZOMBATAR_PANEL_X, ZOMBATAR_PANEL_Y);
+
 	int aCount = GetHeadCount();
 	ClampCurrentIndex();
 	if (aCount <= 0)
@@ -1076,7 +1078,7 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 	if (mPage == ZOMBATAR_PAGE_SKIN)
 	{
 		int aPanelW = IMAGE_ZOMBATAR_WIDGET_BG ? IMAGE_ZOMBATAR_WIDGET_BG->mWidth : ZOMBATAR_PANEL_W;
-		TodDrawStringWrapped(g, "[ZOMBATAR_START_TEXT]",
+		PvzpDrawStringWrapped(g, "[ZOMBATAR_START_TEXT]",
 			Rect(ZOMBATAR_PANEL_X + aPanelW / 2 - 200, ZOMBATAR_START_TEXT_Y, ZOMBATAR_START_TEXT_W, ZOMBATAR_START_TEXT_H),
 			FONT_DWARVENTODCRAFT15, Color(254, 227, 0, 175), DS_ALIGN_CENTER);
 		g->SetColor(Color::White);
@@ -1182,7 +1184,7 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 			const char* aKey = mPart[mPage] < 0 ? "[ZOMBATAR_COLOR_ITEM_NOT_CHOSEN]" : "[ZOMBATAR_COLOR_NOT_APPLICABLE]";
 			int aColorsW = IMAGE_ZOMBATAR_COLORS_BG ? IMAGE_ZOMBATAR_COLORS_BG->mWidth : 261;
 			int aColorsH = IMAGE_ZOMBATAR_COLORS_BG ? IMAGE_ZOMBATAR_COLORS_BG->mHeight : 96;
-			TodDrawStringWrapped(g, aKey, Rect(ZOMBATAR_COLOR_HINT_X, ZOMBATAR_COLOR_HINT_Y, aColorsW - 40, aColorsH),
+			PvzpDrawStringWrapped(g, aKey, Rect(ZOMBATAR_COLOR_HINT_X, ZOMBATAR_COLOR_HINT_Y, aColorsW - 40, aColorsH),
 				FONT_BRIANNETOD12, Color::White, DS_ALIGN_LEFT);
 		}
 		else
@@ -1207,18 +1209,18 @@ void ZombatarWidget::DrawConfirm(Graphics* g)
 
 	g->SetFont(FONT_HOUSEOFTERROR28);
 	g->SetColor(Color(254, 227, 0));
-	std::string aHeader = TodStringTranslate("[ZOMBATAR_FINISHED_WARNING_HEADER]");
+	std::string aHeader = PvzpStringTranslate("[ZOMBATAR_FINISHED_WARNING_HEADER]");
 	g->DrawString(aHeader, ZOMBATAR_CONFIRM_HEADER_X - FONT_HOUSEOFTERROR28->StringWidth(aHeader) / 2, ZOMBATAR_CONFIRM_HEADER_Y);
 
-	TodDrawStringWrapped(g, "[ZOMBATAR_FINISHED_WARNING_TEXT]",
+	PvzpDrawStringWrapped(g, "[ZOMBATAR_FINISHED_WARNING_TEXT]",
 		Rect(ZOMBATAR_CONFIRM_TEXT_X, ZOMBATAR_CONFIRM_TEXT_Y, ZOMBATAR_CONFIRM_TEXT_W, ZOMBATAR_CONFIRM_TEXT_H),
 		FONT_CONTINUUMBOLD14, Color::White, DS_ALIGN_CENTER);
 
 	g->SetFont(FONT_BRIANNETOD12);
 	g->SetColor(Color(255, 255, 255));
-	std::string aAccept = TodStringTranslate("[ZOMBATAR_FINISHED_BUTTON_TEXT]");
+	std::string aAccept = PvzpStringTranslate("[ZOMBATAR_FINISHED_BUTTON_TEXT]");
 	g->DrawString(aAccept, ZOMBATAR_CONFIRM_ACCEPT_LABEL_X - FONT_BRIANNETOD12->StringWidth(aAccept) / 2, ZOMBATAR_CONFIRM_LABEL_Y);
-	std::string aBack = TodStringTranslate("[ZOMBATAR_BACK_BUTTON_TEXT]");
+	std::string aBack = PvzpStringTranslate("[ZOMBATAR_BACK_BUTTON_TEXT]");
 	g->DrawString(aBack, ZOMBATAR_CONFIRM_BACK_LABEL_X - FONT_BRIANNETOD12->StringWidth(aBack) / 2, ZOMBATAR_CONFIRM_LABEL_Y);
 }
 

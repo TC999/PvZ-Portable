@@ -23,7 +23,7 @@
 #define __SEEDCHOOSERSCREEN_H__
 
 #include "../../ConstEnums.h"
-#include "../../Sexy.TodLib/TodCommon.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "widget/Widget.h"
 using namespace Sexy;
 
@@ -96,7 +96,7 @@ public:
     SeedChooserScreen();
     ~SeedChooserScreen() override;
 
-    static /*inline*/ int   PickFromWeightedArrayUsingSpecialRandSeed(TodWeightedArray* theArray, int theCount, MTRand& theLevelRNG);
+    static /*inline*/ int   PickFromWeightedArrayUsingSpecialRandSeed(PvzpWeightedArray* theArray, int theCount, MTRand& theLevelRNG);
     void                    CrazyDavePickSeeds();
     bool                    Has7Rows();
     void                    GetSeedPositionInChooser(int theIndex, int& x, int& y);

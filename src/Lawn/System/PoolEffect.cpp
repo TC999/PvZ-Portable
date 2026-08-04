@@ -24,7 +24,7 @@
 #include "../../LawnApp.h"
 #include "../../Resources.h"
 #include "../../GameConstants.h"
-#include "../../Sexy.TodLib/TodDebug.h"
+#include "../../PvzpLib/PvzpDebug.h"
 #include "graphics/GLImage.h"
 #include "graphics/Graphics.h"
 #include "graphics/GLInterface.h"
@@ -37,7 +37,7 @@ constexpr const int CAUSTIC_IMAGE_HEIGHT = 64;
 void PoolEffect::PoolEffectInitialize()
 {
 	//load pool caustics into memory
-    TodHesitationBracket aHesitation("PoolEffectInitialize");
+    PvzpHesitationBracket aHesitation("PoolEffectInitialize");
 
     mApp = gLawnApp;
     mPoolCounter = 0;

@@ -26,10 +26,10 @@
 #include "../LawnCommon.h"
 #include "../../Resources.h"
 #include "ChallengeScreen.h"
-#include "../../Sexy.TodLib/TodDebug.h"
-#include "../../Sexy.TodLib/Reanimator.h"
-#include "../../Sexy.TodLib/EffectSystem.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpDebug.h"
+#include "../../PvzpLib/Reanimator.h"
+#include "../../PvzpLib/EffectSystem.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "graphics/ImageFont.h"
 
 constexpr const int DIALOG_HEADER_OFFSET = 45;
@@ -44,8 +44,8 @@ LawnDialog::LawnDialog(LawnApp* theApp, int theId, bool isModal, const std::stri
     mDrawStandardBack = true;
     mTallBottom = false;
     mVerticalCenterText = true;
-    mDialogHeader = TodStringTranslate(theDialogHeader);
-    mDialogLines = TodStringTranslate(theDialogLines);
+    mDialogHeader = PvzpStringTranslate(theDialogHeader);
+    mDialogLines = PvzpStringTranslate(theDialogLines);
     SetColor(0, { 0xE0,0xBB,0x62 });
     SetColor(1, { 0xE0,0xBB,0x62 });
     SetHeaderFont(Sexy::FONT_DWARVENTODCRAFT24);
@@ -422,7 +422,7 @@ void ReanimationWidget::Dispose()
 
 void ReanimationWidget::AddReanimation(float x, float y, ReanimationType theReanimationType)
 {
-    TOD_ASSERT(mReanim == nullptr);
+    PVZP_ASSERT(mReanim == nullptr);
     
     mPosX = x;
     mPosY = y;
@@ -463,7 +463,7 @@ GameOverDialog::GameOverDialog(const std::string& theMessage, bool theShowChalle
     mLawnYesButton->SetLabel("[TRY_AGAIN]");
     if (theShowChallengeName)
     {
-        mDialogHeader = TodStringTranslate(mApp->GetCurrentChallengeDef().mChallengeName);
+        mDialogHeader = PvzpStringTranslate(mApp->GetCurrentChallengeDef().mChallengeName);
     }
 
     if (theMessage.size() == 0)

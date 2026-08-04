@@ -116,7 +116,7 @@ public:
     _Font*					mHiliteFont;
     int						mTextDownOffsetX;
     int						mTextDownOffsetY;
-	int						mButtonOffsetX;
+	int						mButtonOffsetX;		// static layout offset, set once at creation
 	int						mButtonOffsetY;
 	bool					mUsePolygonShape;
 	SexyVector2				mPolygonShape[4];
@@ -128,8 +128,6 @@ public:
     void					Draw(Graphics* g) override;
 	bool					IsPointVisible(int x, int y) override;
     void					SetLabel(std::string_view theLabel);
-	// @Patoke: user defined
-	void					SetOffset(int theX, int theY);
 };
 
 LawnStoneButton*			MakeButton(int theId, ButtonListener* theListener, std::string_view theText);

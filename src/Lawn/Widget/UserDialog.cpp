@@ -25,7 +25,7 @@
 #include "../../Resources.h"
 #include "../System/ProfileMgr.h"
 #include "../System/PlayerInfo.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpStringFile.h"
 #include "widget/ListWidget.h"
 
 static int gUserListWidgetColors[][3] = {
