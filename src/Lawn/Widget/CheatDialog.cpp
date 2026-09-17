@@ -28,7 +28,7 @@
 #include "../System/PlayerInfo.h"
 #include "widget/WidgetManager.h"
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 
 CheatDialog::CheatDialog(LawnApp* theApp) : LawnDialog(theApp, Dialogs::DIALOG_CHEAT, true, "CHEAT", "Enter New Level:", "", Dialog::BUTTONS_OK_CANCEL)
 {

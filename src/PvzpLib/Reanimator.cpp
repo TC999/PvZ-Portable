@@ -33,7 +33,7 @@
 #include "misc/PerfTimer.h"
 #include "graphics/MemoryImage.h"
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 
 constexpr const int NO_BASE_POSE = -2;
 

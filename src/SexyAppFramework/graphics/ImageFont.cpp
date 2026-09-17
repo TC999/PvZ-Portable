@@ -30,7 +30,7 @@
 #include "graphics/GLImage.h"
 #include <algorithm>
 #include <mutex>
-#include <format>
+#include "FormatCompat.h"
 #include "fcaseopen/fcaseopen.h"
 
 using namespace Sexy;

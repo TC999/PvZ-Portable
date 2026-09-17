@@ -54,7 +54,7 @@
 #include "widget/WidgetManager.h"
 #include "Widget/AchievementsScreen.h"
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 
 constexpr const int BEGHOULED_WINNING_SCORE = 75;
 constexpr const int SLOT_MACHINE_WINNING_SCORE = 2000;

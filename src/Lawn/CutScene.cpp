@@ -48,7 +48,7 @@
 #include "misc/PerfTimer.h"
 #include "widget/WidgetManager.h"
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 
 static const int	TimePanRightStart				= 1500;
 static const int	TimePanRightEnd					= 3500;

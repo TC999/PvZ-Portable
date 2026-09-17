@@ -42,7 +42,7 @@
 #include <memory>
 #include <system_error>
 #include <tuple>
-#include <format>
+#include "FormatCompat.h"
 
 #include <SDL.h>
 

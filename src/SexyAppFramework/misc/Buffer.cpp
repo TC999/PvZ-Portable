@@ -26,7 +26,7 @@
 #include <SDL_stdinc.h>
 #include <array>
 #include <bit>
-#include <format>
+#include "FormatCompat.h"
 constexpr const long POLYNOMIAL = 0x04c11db7L;
 
 using namespace Sexy;

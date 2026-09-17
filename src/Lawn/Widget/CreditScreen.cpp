@@ -35,7 +35,7 @@
 #include "../../PvzpLib/PvzpStringFile.h"
 #include "graphics/Font.h"
 #include <optional>
-#include <format>
+#include "FormatCompat.h"
 
 static constexpr float CREDIT_SCREEN_ANIM_RATE = 0.3f;
 

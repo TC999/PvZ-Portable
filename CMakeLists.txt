@@ -27,6 +27,26 @@ if (CMAKE_GENERATOR MATCHES "Ninja")
 	set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 endif()
 
+include(CheckCXXSourceCompiles)
+set(_pvz_required_flags "${CMAKE_REQUIRED_FLAGS}")
+if(CMAKE_CXX20_STANDARD_COMPILE_OPTION)
+	set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${CMAKE_CXX20_STANDARD_COMPILE_OPTION}")
+endif()
+check_cxx_source_compiles([=[
+#include <format>
+int main() {
+	return std::format("{}", 1).empty();
+}
+]=] PVZP_HAS_STD_FORMAT)
+set(CMAKE_REQUIRED_FLAGS "${_pvz_required_flags}")
+unset(_pvz_required_flags)
+
+set(PVZP_FORMAT_LIBS)
+if(NOT PVZP_HAS_STD_FORMAT)
+	find_package(fmt CONFIG REQUIRED)
+	list(APPEND PVZP_FORMAT_LIBS fmt::fmt)
+endif()
+
 if(MSVC)
 	if(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES "-static")
 		set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -239,6 +259,7 @@ if(EMSCRIPTEN)
 	target_link_libraries(pvz-portable PRIVATE
 		SDL2_mixer_ext_Static
 		${OPENMPT_LIB}
+		${PVZP_FORMAT_LIBS}
 	)
 	target_link_options(pvz-portable PRIVATE
 		"SHELL:-sUSE_SDL=2"
@@ -261,6 +282,7 @@ else()
 	target_link_libraries(pvz-portable PRIVATE
 		SDL2_mixer_ext_Static 
 		${OPENMPT_LIB} 
+		${PVZP_FORMAT_LIBS}
 		PNG::PNG
 		JPEG::JPEG
 		ZLIB::ZLIB

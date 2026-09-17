@@ -22,7 +22,7 @@
 #ifndef __PVZPDEBUG_H__
 #define __PVZPDEBUG_H__
 
-#include <format>
+#include "FormatCompat.h"
 
 #include "../SexyAppFramework/Common.h"
 
@@ -52,13 +52,13 @@ void*				PvzpMalloc(int theSize);
 void				PvzpFree(void* theBlock);
 
 template<typename... Args>
-void				PvzpLogLn(std::format_string<Args...> theFmt, Args&&... theArgs)
+void				PvzpLogLn(std::string_view theFmt, Args&&... theArgs)
 {
-	Sexy::DispatchLogLn(Sexy::SexyLogPriority::Info, std::vformat(theFmt.get(), std::make_format_args(theArgs...)));
+	Sexy::DispatchLogLn(Sexy::SexyLogPriority::Info, std::vformat(theFmt, std::make_format_args(theArgs...)));
 }
 
 template<typename... Args>
-void				PvzpTraceWithoutSpamming(std::format_string<Args...> theFmt, Args&&... theArgs)
+void				PvzpTraceWithoutSpamming(std::string_view theFmt, Args&&... theArgs)
 {
 	static uint64_t gLastTraceTime = 0LL;
 	uint64_t aTime = std::time(nullptr);
@@ -66,13 +66,13 @@ void				PvzpTraceWithoutSpamming(std::format_string<Args...> theFmt, Args&&... t
 		return;
 
 	gLastTraceTime = aTime;
-	Sexy::DispatchLogLn(Sexy::SexyLogPriority::Info, std::vformat(theFmt.get(), std::make_format_args(theArgs...)));
+	Sexy::DispatchLogLn(Sexy::SexyLogPriority::Info, std::vformat(theFmt, std::make_format_args(theArgs...)));
 }
 
 template<typename... Args>
-void				PvzpAssertFailed(const char* theCondition, const char* theFile, int theLine, std::format_string<Args...> theMsg, Args&&... theArgs)
+void				PvzpAssertFailed(const char* theCondition, const char* theFile, int theLine, std::string_view theMsg, Args&&... theArgs)
 {
-	PvzpAssertReport(theCondition, theFile, theLine, std::vformat(theMsg.get(), std::make_format_args(theArgs...)));
+	PvzpAssertReport(theCondition, theFile, theLine, std::vformat(theMsg, std::make_format_args(theArgs...)));
 }
 
 #ifdef PVZ_DEBUG

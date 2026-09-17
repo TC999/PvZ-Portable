@@ -22,7 +22,7 @@
 #include "Trail.h"
 #include "Definition.h"
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 #include "graphics/Graphics.h"
 #include "graphics/TriVertex.h"
 

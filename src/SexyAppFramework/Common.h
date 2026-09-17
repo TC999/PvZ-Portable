@@ -38,7 +38,7 @@
 #include <type_traits>
 #include <bit>
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -133,15 +133,15 @@ void				DispatchLogLn(SexyLogPriority thePriority, std::string_view theText);
 void				RegisterLogFileSink(std::string_view thePath);
 
 template<typename... Args>
-void				LogInfoLn(std::format_string<Args...> theFmt, Args&&... theArgs)
+void				LogInfoLn(std::string_view theFmt, Args&&... theArgs)
 {
-	DispatchLogLn(SexyLogPriority::Info, std::vformat(theFmt.get(), std::make_format_args(theArgs...)));
+	DispatchLogLn(SexyLogPriority::Info, std::vformat(theFmt, std::make_format_args(theArgs...)));
 }
 
 template<typename... Args>
-void				LogErrorLn(std::format_string<Args...> theFmt, Args&&... theArgs)
+void				LogErrorLn(std::string_view theFmt, Args&&... theArgs)
 {
-	DispatchLogLn(SexyLogPriority::Error, std::vformat(theFmt.get(), std::make_format_args(theArgs...)));
+	DispatchLogLn(SexyLogPriority::Error, std::vformat(theFmt, std::make_format_args(theArgs...)));
 }
 
 int					Rand();
