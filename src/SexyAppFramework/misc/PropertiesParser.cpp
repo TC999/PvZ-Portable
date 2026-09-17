@@ -25,7 +25,7 @@
 #include "PropertiesParser.h"
 #include "XMLParser.h"
 #include <stdlib.h>
-#include <format>
+#include "FormatCompat.h"
 
 using namespace Sexy;
 

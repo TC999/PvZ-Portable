@@ -24,7 +24,7 @@
 
 #include <memory>
 #include <cassert>
-#include <format>
+#include "FormatCompat.h"
 #include "ResourceManager.h"
 #include "XMLParser.h"
 #include "sound/SoundManager.h"

@@ -27,7 +27,7 @@
 #include "graphics/Graphics.h"
 #include "graphics/GLInterface.h"
 #include <algorithm>
-#include <format>
+#include "FormatCompat.h"
 
 int gParticleDefCount;
 std::unique_ptr<PvzpParticleDefinition[]> gParticleDefArray;

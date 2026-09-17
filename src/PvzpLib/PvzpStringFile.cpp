@@ -19,7 +19,7 @@
  * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <format>
+#include "FormatCompat.h"
 #include "PvzpDebug.h"
 #include "PvzpCommon.h"
 #include "PvzpStringFile.h"

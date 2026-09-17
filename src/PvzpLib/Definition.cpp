@@ -29,7 +29,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <format>
+#include "FormatCompat.h"
 #include "PvzpDebug.h"
 #include "Definition.h"
 #include "zlib.h"

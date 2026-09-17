@@ -20,7 +20,7 @@
  */
 
 #include <stdexcept>
-#include <format>
+#include "FormatCompat.h"
 
 #ifdef __SWITCH__
 #include <switch.h>

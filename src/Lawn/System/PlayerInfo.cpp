@@ -20,7 +20,7 @@
  */
 
 #include <bit>
-#include <format>
+#include "FormatCompat.h"
 
 #include "DataSync.h"
 #include <algorithm>

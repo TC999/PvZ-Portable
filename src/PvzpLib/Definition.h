@@ -23,7 +23,7 @@
 #define __PVZPDEFINITION_H__
 
 #include <string>
-#include <format>
+#include "FormatCompat.h"
 #include "PvzpCommon.h"
 #include "PvzpList.h"
 #include "PvzpDebug.h"
@@ -136,9 +136,9 @@ bool                    DefinitionIsCompiled(const std::string& theXMLFilePath);
 bool                    DefinitionReadCompiledFile(const std::string& theCompiledFilePath, const DefMap* theDefMap, void* theDefinition);
 void                    DefinitionFillWithDefaults(const DefMap* theDefMap, void* theDefinition);
 template<typename... Args>
-void                    DefinitionXmlError(XMLParser* theXmlParser, std::format_string<Args...> theFormat, Args&&... theArgs)
+void                    DefinitionXmlError(XMLParser* theXmlParser, std::string_view theFormat, Args&&... theArgs)
 {
-	std::string aFormattedMessage = std::vformat(theFormat.get(), std::make_format_args(theArgs...));
+	std::string aFormattedMessage = std::vformat(theFormat, std::make_format_args(theArgs...));
 	int aLine = theXmlParser->GetCurrentLineNum();
 	std::string aFileName = theXmlParser->GetFileName();
 	PvzpLogLn("{}({}): XML Definition Error: {}", aFileName, aLine, aFormattedMessage);

@@ -23,7 +23,7 @@
  */
 
 #include "PerfTimer.h"
-#include <format>
+#include "FormatCompat.h"
 #include <map>
 #include <set>
 #include <SDL.h>

@@ -25,7 +25,7 @@
 #include "Common.h"
 #include "Debug.h"
 
-#include <format>
+#include "FormatCompat.h"
 #include <mutex>
 
 #include <time.h>
