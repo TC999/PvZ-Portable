@@ -1,7 +1,7 @@
 /*
  * Portions of this file are based on the PopCap Games Framework
  * Copyright (C) 2005-2009 PopCap Games, Inc.
- * 
+ *
  * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later AND LicenseRef-PopCap
@@ -24,7 +24,7 @@
 
 // This file is included by SWTri.cpp and should not be built directly by the project.
 {
-	int premult; (void)premult;
+	[[maybe_unused]] int premult;
 	#if defined(MOD_ARGB) && defined(GLOBAL_ARGB)
 	{
 		premult = ((globalDiffuse.a*a)>>24);
@@ -58,6 +58,6 @@
 		int g = (((tex&0x00ff00)*premult)>>8)&0x00ff00;
 		int b = (((tex&0x0000ff)*premult)>>8)&0x0000ff;
 		tex = r|g|b;
-	}	
+	}
 	#endif
 }

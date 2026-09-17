@@ -1,7 +1,7 @@
 /*
  * Portions of this file are based on the PopCap Games Framework
  * Copyright (C) 2005-2009 PopCap Games, Inc.
- * 
+ *
  * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later AND LicenseRef-PopCap
@@ -37,7 +37,7 @@
 #include <mutex>
 #include <vector>
 
-#define MAX_VERTICES 16384
+constexpr const int MAX_VERTICES = 16384;
 
 #ifndef GL_FRAMEBUFFER_SRGB
 #define GL_FRAMEBUFFER_SRGB 0x8DB9 // Not in GLES 2.0 headers, but needed to disable sRGB on Windows.
@@ -68,7 +68,7 @@ static inline uint32_t VertexColor(uint32_t triVertexColor, uint32_t fallback) n
 	return triVertexColor ? ArgbToRgba(triVertexColor) : fallback;
 }
 
-#define GetColorFromTriVertex(v, c) VertexColor((v).color, (c))
+static inline uint32_t GetColorFromTriVertex(const TriVertex& v, uint32_t c) noexcept { return VertexColor(v.color, c); }
 
 static int gMinTextureWidth;
 static int gMinTextureHeight;
@@ -92,6 +92,17 @@ static void GfxBegin(GLenum vertexMode)
 	gVertexMode = vertexMode;
 }
 
+static GLenum gBlendSrc = 0;
+static GLenum gBlendDst = 0;
+
+static void SetBlendFunc(GLenum theSrc, GLenum theDst)
+{
+	if (gBlendSrc == theSrc && gBlendDst == theDst) return;
+	glBlendFunc(theSrc, theDst);
+	gBlendSrc = theSrc;
+	gBlendDst = theDst;
+}
+
 static void GfxEnd()
 {
 	if (gVertexMode == (GLenum)-1) return;
@@ -100,25 +111,16 @@ static void GfxEnd()
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, gVbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLVertex) * gNumVertices, gVertices.data(), GL_DYNAMIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT,         GL_FALSE, sizeof(GLVertex), (const void*)0);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE,  GL_TRUE,  sizeof(GLVertex), (const void*)(sizeof(float)*3));
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(2, 2, GL_FLOAT,         GL_FALSE, sizeof(GLVertex), (const void*)(sizeof(float)*3 + sizeof(uint32_t)));
-		glEnableVertexAttribArray(2);
-
 		glDrawArrays(gVertexMode, 0, gNumVertices);
 	}
 
 	gVertexMode = (GLenum)-1;
 	gNumVertices = 0;
-	gVertices.clear();
 }
 
-static void GfxFlushIfOverBudget()
+static void GfxEnsureSpace(int theAdditional)
 {
-	if (gVertexMode == (GLenum)-1 || gNumVertices < MAX_VERTICES) return;
+	if (gVertexMode == (GLenum)-1 || gNumVertices + theAdditional <= MAX_VERTICES) return;
 	GLenum oldMode = gVertexMode;
 	GfxEnd();
 	GfxBegin(oldMode);
@@ -129,12 +131,11 @@ static void GfxAddVertices(const GLVertex *arr, int arrCount)
 	if (gVertexMode == (GLenum)-1) return;
 	if (arrCount <= 0) return;
 
-	const int oldCount = gNumVertices;
+	GfxEnsureSpace(arrCount);
+	if (arrCount > MAX_VERTICES)
+		gVertices.resize(arrCount);
+	memcpy(gVertices.data() + gNumVertices, arr, sizeof(GLVertex) * arrCount);
 	gNumVertices += arrCount;
-	gVertices.resize(gNumVertices);
-	memcpy(gVertices.data() + oldCount, arr, sizeof(GLVertex) * arrCount);
-
-	GfxFlushIfOverBudget();
 }
 
 static void GfxAddVertices(VertexList &arr)
@@ -143,16 +144,16 @@ static void GfxAddVertices(VertexList &arr)
 }
 
 static void GfxAddVertices(const TriVertex arr[][3], int arrCount, unsigned int theColor,
-                           float tx, float ty, float aMaxTotalU, float aMaxTotalV)
+						   float tx, float ty, float aMaxTotalU, float aMaxTotalV)
 {
 	if (gVertexMode == (GLenum)-1) return;
 	if (arrCount <= 0) return;
 
-	const int oldCount = gNumVertices;
-	gNumVertices += arrCount * 3;
-	gVertices.resize(gNumVertices);
+	GfxEnsureSpace(arrCount * 3);
+	if (arrCount * 3 > MAX_VERTICES)
+		gVertices.resize(arrCount * 3);
 
-	GLVertex* dst = gVertices.data() + oldCount;
+	GLVertex* dst = gVertices.data() + gNumVertices;
 	for (int tri = 0; tri < arrCount; tri++)
 	{
 		const TriVertex* v = arr[tri];
@@ -160,14 +161,14 @@ static void GfxAddVertices(const TriVertex arr[][3], int arrCount, unsigned int 
 		{
 			dst[i].sx    = v[i].x + tx;
 			dst[i].sy    = v[i].y + ty;
+			dst[i].sz    = 0;
 			dst[i].color = GetColorFromTriVertex(v[i], theColor);
 			dst[i].tu    = v[i].u * aMaxTotalU;
 			dst[i].tv    = v[i].v * aMaxTotalV;
 		}
 		dst += 3;
+		gNumVertices += 3;
 	}
-
-	GfxFlushIfOverBudget();
 }
 
 // Unified GLSL body; VERT_IN / V2F / FRAG_OUT / TEX2D macros from GLPlatform.h.
@@ -227,7 +228,7 @@ static GLuint shaderCompile(const char *src, uint32_t srcLen, GLenum type)
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
 		char *log = (char*)malloc(logLen);
 		glGetShaderInfoLog(shader, logLen, &logLen, log);
-		Sexy::PrintF("Shader error: %s\n%s%s%s", log, strings[0], strings[1], strings[2]);
+		Sexy::LogInfoLn("Shader error: {}\n{}{}{}", log, strings[0], strings[1], strings[2]);
 		free(log);
 		glDeleteShader(shader);
 		if (gSexyAppBase != nullptr)
@@ -297,9 +298,9 @@ static void CopyImageToTexture8888(MemoryImage *img, int offx, int offy,
 	}
 	else
 	{
-		uint8_t  *srcRow = (uint8_t*)img->mColorIndices + offy * img->GetWidth() + offx;
+		uint8_t  *srcRow = (uint8_t*)img->mColorIndices.get() + offy * img->GetWidth() + offx;
 		uint32_t *dstRow = dst;
-		uint32_t *pal = (uint32_t*)img->mColorTable;
+		uint32_t *pal = (uint32_t*)img->mColorTable.get();
 		for (int y = 0; y < h; y++)
 		{
 			uint8_t *s = srcRow; uint32_t *d = dstRow;
@@ -352,9 +353,9 @@ static void CopyImageToTexture4444(MemoryImage *img, int offx, int offy,
 	}
 	else
 	{
-		uint8_t  *srcRow = (uint8_t*)img->mColorIndices + offy * img->GetWidth() + offx;
+		uint8_t  *srcRow = (uint8_t*)img->mColorIndices.get() + offy * img->GetWidth() + offx;
 		uint16_t *dstRow = dst;
-		uint32_t *pal = (uint32_t*)img->mColorTable;
+		uint32_t *pal = (uint32_t*)img->mColorTable.get();
 		for (int y = 0; y < h; y++)
 		{
 			uint8_t *s = srcRow; uint16_t *d = dstRow;
@@ -406,9 +407,9 @@ static void CopyImageToTexture565(MemoryImage *img, int offx, int offy,
 	}
 	else
 	{
-		uint8_t  *srcRow = (uint8_t*)img->mColorIndices + offy * img->GetWidth() + offx;
+		uint8_t  *srcRow = (uint8_t*)img->mColorIndices.get() + offy * img->GetWidth() + offx;
 		uint16_t *dstRow = dst;
-		uint32_t *pal = (uint32_t*)img->mColorTable;
+		uint32_t *pal = (uint32_t*)img->mColorTable.get();
 		for (int y = 0; y < h; y++)
 		{
 			uint8_t *s = srcRow; uint16_t *d = dstRow;
@@ -438,9 +439,9 @@ static void CopyImageToTexturePalette8(MemoryImage *img, int offx, int offy,
 {
 	std::vector<uint32_t> aDst(pitch * dstH);
 	uint32_t *dst = aDst.data();
-	uint8_t  *srcRow = (uint8_t*)img->mColorIndices + offy * img->GetWidth() + offx;
+	uint8_t  *srcRow = (uint8_t*)img->mColorIndices.get() + offy * img->GetWidth() + offx;
 	uint32_t *dstRow = dst;
-	uint32_t *pal = (uint32_t*)img->mColorTable;
+	uint32_t *pal = (uint32_t*)img->mColorTable.get();
 
 	for (int y = 0; y < h; y++)
 	{
@@ -559,8 +560,24 @@ TextureData::~TextureData()
 	ReleaseTextures();
 }
 
+struct GfxTextureCache
+{
+	GLuint tex = 0;
+	int filter = 0;
+	int clampUv = -1;
+	float uvBounds[4] = {};
+	bool valid = false;
+};
+static GfxTextureCache gTextureCache;
+
+static void GfxInvalidateTextureCache()
+{
+	gTextureCache.valid = false;
+}
+
 void TextureData::ReleaseTextures()
 {
+	GfxInvalidateTextureCache();
 	for (auto &piece : mTextures)
 		glDeleteTextures(1, &piece.mTexture);
 	mTextures.clear();
@@ -600,9 +617,9 @@ void TextureData::CreateTextureDimensions(MemoryImage *theImage)
 
 	for (auto &p : mTextures)        { p.mTexture = 0; p.mWidth = mTexPieceWidth; p.mHeight = mTexPieceHeight; }
 	for (unsigned i = mTexVecWidth - 1; i < mTextures.size(); i += mTexVecWidth)
-	                                  { mTextures[i].mWidth = aRightWidth;  mTextures[i].mHeight = aRightHeight; }
+									  { mTextures[i].mWidth = aRightWidth;  mTextures[i].mHeight = aRightHeight; }
 	for (unsigned i = mTexVecWidth * (mTexVecHeight - 1); i < mTextures.size(); i++)
-	                                  { mTextures[i].mWidth = aBottomWidth; mTextures[i].mHeight = aBottomHeight; }
+									  { mTextures[i].mWidth = aBottomWidth; mTextures[i].mHeight = aBottomHeight; }
 	mTextures.back().mWidth  = aCornerWidth;
 	mTextures.back().mHeight = aCornerHeight;
 
@@ -618,13 +635,13 @@ void TextureData::CreateTextures(MemoryImage *theImage)
 	theImage->CommitBits();
 
 	if (!theImage->mHasAlpha && !theImage->mHasTrans
-	    && (gSupportedPixelFormats & PixelFormat_R5G6B5)
-	    && !(theImage->mRenderFlags & RenderImageFlag_UseA8R8G8B8))
+		&& (gSupportedPixelFormats & PixelFormat_R5G6B5)
+		&& !(theImage->mRenderFlags & RenderImageFlag_UseA8R8G8B8))
 		aFormat = PixelFormat_R5G6B5;
 
 	if ((theImage->mRenderFlags & RenderImageFlag_UseA4R4G4B4)
-	    && aFormat == PixelFormat_A8R8G8B8
-	    && (gSupportedPixelFormats & PixelFormat_A4R4G4B4))
+		&& aFormat == PixelFormat_A8R8G8B8
+		&& (gSupportedPixelFormats & PixelFormat_A4R4G4B4))
 		aFormat = PixelFormat_A4R4G4B4;
 
 	if (aFormat == PixelFormat_A8R8G8B8 && !(gSupportedPixelFormats & PixelFormat_A8R8G8B8))
@@ -632,8 +649,8 @@ void TextureData::CreateTextures(MemoryImage *theImage)
 
 	bool createTextures = false;
 	if (mWidth != theImage->mWidth || mHeight != theImage->mHeight
-	    || aFormat != mPixelFormat
-	    || (theImage->mRenderFlags & RenderImageFlag_TextureMask) != mImageFlags)
+		|| aFormat != mPixelFormat
+		|| (theImage->mRenderFlags & RenderImageFlag_TextureMask) != mImageFlags)
 	{
 		ReleaseTextures();
 		mPixelFormat = aFormat;
@@ -666,20 +683,21 @@ void TextureData::CreateTextures(MemoryImage *theImage)
 	mHeight = theImage->mHeight;
 	mBitsChangedCount = theImage->mBitsChangedCount;
 	mPixelFormat = aFormat;
+	GfxInvalidateTextureCache();
 }
 
 void TextureData::CheckCreateTextures(MemoryImage *theImage)
 {
 	if (mPixelFormat == PixelFormat_Unknown
-	    || theImage->mWidth != mWidth || theImage->mHeight != mHeight
-	    || theImage->mBitsChangedCount != mBitsChangedCount
-	    || (theImage->mRenderFlags & RenderImageFlag_TextureMask) != mImageFlags)
+		|| theImage->mWidth != mWidth || theImage->mHeight != mHeight
+		|| theImage->mBitsChangedCount != mBitsChangedCount
+		|| (theImage->mRenderFlags & RenderImageFlag_TextureMask) != mImageFlags)
 		CreateTextures(theImage);
 }
 
 GLuint& TextureData::GetTexture(int x, int y, int &width, int &height,
-                                float &u1, float &v1, float &u2, float &v2,
-                                float *uvBounds)
+								float &u1, float &v1, float &u2, float &v2,
+								float *uvBounds)
 {
 	int tx = x / mTexPieceWidth, ty = y / mTexPieceHeight;
 	TextureDataPiece &p = mTextures[ty * mTexVecWidth + tx];
@@ -702,8 +720,8 @@ GLuint& TextureData::GetTexture(int x, int y, int &width, int &height,
 }
 
 GLuint& TextureData::GetTextureF(float x, float y, float &width, float &height,
-                                 float &u1, float &v1, float &u2, float &v2,
-                                 float *uvBounds)
+								 float &u1, float &v1, float &u2, float &v2,
+								 float *uvBounds)
 {
 	int tx = (int)(x / mTexPieceWidth), ty = (int)(y / mTexPieceHeight);
 	TextureDataPiece &p = mTextures[ty * mTexVecWidth + tx];
@@ -734,12 +752,26 @@ static constexpr float kDefaultUvBounds[4] = { 0.f, 0.f, 1.f, 1.f };
 
 static void GfxBindTexture(GLuint tex, const float *uvBounds = kDefaultUvBounds, bool clampUv = true)
 {
-	glBindTexture(GL_TEXTURE_2D, tex);
 	int f = gLinearFilter ? GL_LINEAR : GL_NEAREST;
+	int c = clampUv ? 1 : 0;
+	if (gTextureCache.valid
+		&& gTextureCache.tex == tex
+		&& gTextureCache.filter == f
+		&& gTextureCache.clampUv == c
+		&& memcmp(gTextureCache.uvBounds, uvBounds, sizeof(gTextureCache.uvBounds)) == 0)
+		return;
+
+	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, f);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, f);
-	glUniform1i(gUfClampUvEnabled, clampUv ? 1 : 0);
+	glUniform1i(gUfClampUvEnabled, c);
 	glUniform4fv(gUfUvBounds, 1, uvBounds);
+
+	gTextureCache.tex = tex;
+	gTextureCache.filter = f;
+	gTextureCache.clampUv = c;
+	memcpy(gTextureCache.uvBounds, uvBounds, sizeof(gTextureCache.uvBounds));
+	gTextureCache.valid = true;
 }
 
 void TextureData::Blt(float theX, float theY, const Rect& theSrcRect, const Color& theColor)
@@ -967,7 +999,7 @@ void TextureData::BltTransformed(const SexyMatrix3 &theTrans, const Rect& theSrc
 }
 
 void TextureData::BltTriangles(const TriVertex theVertices[][3], int theNumTriangles,
-                               unsigned int theColor, float tx, float ty, bool clampUv)
+							   unsigned int theColor, float tx, float ty, bool clampUv)
 {
 	glUniform1i(gUfUseTexture, 1);
 	if (mMaxTotalU <= 1.0 && mMaxTotalV <= 1.0)
@@ -1065,18 +1097,17 @@ GLInterface::GLInterface(SexyAppBase* theApp)
 	mPresentationRect = Rect(0, 0, mWidth, mHeight);
 	mRefreshRate = 60;
 	mMillisecondsPerFrame = 1000 / mRefreshRate;
-	mScreenImage = nullptr;
 	mNextCursorX = mNextCursorY = 0;
 	mCursorX = mCursorY = 0;
 
 	gVertexMode  = (GLenum)-1;
 	gNumVertices = 0;
-	gVertices.clear();
-	gVertices.reserve(MAX_VERTICES);
+	gVertices.resize(MAX_VERTICES);
 }
 
 GLInterface::~GLInterface()
 {
+	mScreenImage.reset();
 	Flush();
 	for (auto *img : mImageSet)
 	{
@@ -1088,9 +1119,9 @@ GLInterface::~GLInterface()
 void GLInterface::SetDrawMode(int theDrawMode)
 {
 	if (theDrawMode == Graphics::DRAWMODE_NORMAL)
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	else
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		SetBlendFunc(GL_SRC_ALPHA, GL_ONE);
 }
 
 void GLInterface::AddGLImage(GLImage* theGLImage)
@@ -1116,7 +1147,7 @@ void GLInterface::Remove3DData(MemoryImage* theImage)
 	}
 }
 
-GLImage* GLInterface::GetScreenImage() { return mScreenImage; }
+GLImage* GLInterface::GetScreenImage() { return mScreenImage.get(); }
 
 void GLInterface::UpdateViewport()
 {
@@ -1167,6 +1198,13 @@ int GLInterface::Init(bool IsWindowed)
 		glGenBuffers(1, &gVbo);
 		glBindBuffer(GL_ARRAY_BUFFER, gVbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLVertex) * MAX_VERTICES, nullptr, GL_DYNAMIC_DRAW);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT,         GL_FALSE, sizeof(GLVertex), (const void*)0);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE,  GL_TRUE,  sizeof(GLVertex), (const void*)(sizeof(float)*3));
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(2, 2, GL_FLOAT,         GL_FALSE, sizeof(GLVertex), (const void*)(sizeof(float)*3 + sizeof(uint32_t)));
+		glEnableVertexAttribArray(2);
 	}
 
 	int aMaxSize;
@@ -1217,8 +1255,7 @@ bool GLInterface::Redraw(Rect*)
 
 void GLInterface::SetVideoOnlyDraw(bool)
 {
-	delete mScreenImage;
-	mScreenImage = new GLImage(this);
+	mScreenImage = std::make_unique<GLImage>(this);
 	mScreenImage->mWidth  = mWidth;
 	mScreenImage->mHeight = mHeight;
 	mScreenImage->SetImageMode(false, false);
@@ -1232,7 +1269,7 @@ void GLInterface::SetCursorPos(int x, int y)
 
 bool GLInterface::PreDraw()
 {
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	SetBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	return true;
 }
 
@@ -1271,6 +1308,7 @@ bool GLInterface::CreateImageTexture(MemoryImage *theImage)
 
 bool GLInterface::RecoverBits(MemoryImage* theImage)
 {
+	GfxInvalidateTextureCache();
 	if (!theImage->mRenderData) return false;
 
 	TextureData* data = (TextureData*)theImage->mRenderData;

@@ -1,7 +1,7 @@
 /*
  * Portions of this file are based on the PopCap Games Framework
  * Copyright (C) 2005-2009 PopCap Games, Inc.
- * 
+ *
  * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later AND LicenseRef-PopCap
@@ -38,6 +38,7 @@
 #include <type_traits>
 #include <bit>
 #include <algorithm>
+#include <format>
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -126,15 +127,27 @@ const ulong SEXY_RAND_MAX = 0x7FFFFFFF;
 
 extern bool			gDebug;
 
-void				PrintF(const char *text, ...);
-void				LogError(const char* theFormat, ...);
+enum class SexyLogPriority { Info, Error };
+
+void				DispatchLogLn(SexyLogPriority thePriority, std::string_view theText);
+void				RegisterLogFileSink(std::string_view thePath);
+
+template<typename... Args>
+void				LogInfoLn(std::format_string<Args...> theFmt, Args&&... theArgs)
+{
+	DispatchLogLn(SexyLogPriority::Info, std::vformat(theFmt.get(), std::make_format_args(theArgs...)));
+}
+
+template<typename... Args>
+void				LogErrorLn(std::format_string<Args...> theFmt, Args&&... theArgs)
+{
+	DispatchLogLn(SexyLogPriority::Error, std::vformat(theFmt.get(), std::make_format_args(theArgs...)));
+}
 
 int					Rand();
 int					Rand(int range);
 float				Rand(float range);
 void				SRand(ulong theSeed);
-extern std::string	VFormat(const char* fmt, va_list argPtr);
-extern std::string	StrFormat(const char* fmt ...);
 std::string			GetAppDataFolder();
 void				SetAppDataFolder(std::string_view thePath);
 std::string			GetAppDataPath(std::string_view theRelativePath);
@@ -176,12 +189,12 @@ void				SMemWStr(void*& _Dst, std::string_view theString);
 
 inline void			inlineLTrim(std::string &theData, std::string_view theChars = " \t\r\n")
 {
-    theData.erase(0, theData.find_first_not_of(theChars));
+	theData.erase(0, theData.find_first_not_of(theChars));
 }
 
 inline void			inlineRTrim(std::string &theData, std::string_view theChars = " \t\r\n")
 {
-    theData.resize(theData.find_last_not_of(theChars) + 1);
+	theData.resize(theData.find_last_not_of(theChars) + 1);
 }
 
 inline void			inlineTrim(std::string &theData, std::string_view theChars = " \t\r\n")

@@ -1,7 +1,7 @@
 /*
  * Portions of this file are based on the PopCap Games Framework
  * Copyright (C) 2005-2009 PopCap Games, Inc.
- * 
+ *
  * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later AND LicenseRef-PopCap
@@ -26,6 +26,7 @@
 #define __EDITWIDGET_H__
 
 #include "Widget.h"
+#include <memory>
 
 namespace Sexy
 {
@@ -33,32 +34,32 @@ namespace Sexy
 class _Font;
 class EditListener;
 
+struct EditWidgetColorScheme
+{
+	Color					mBkg;
+	Color					mOutline;
+	Color					mText;
+	Color					mHilite;
+	Color					mHiliteText;
+};
+
 class EditWidget : public Widget
 {
 public:
-	enum
-	{
-		COLOR_BKG,
-		COLOR_OUTLINE,
-		COLOR_TEXT,
-		COLOR_HILITE,
-		COLOR_HILITE_TEXT,
-		NUM_COLORS
-	};
-
 	int						mId;
 	std::string				mString;
-	_Font*					mFont;
+	std::unique_ptr<_Font>		mFont;
+	EditWidgetColorScheme	mColors;
 
 	struct WidthCheck
 	{
-		_Font *mFont;
-		int mWidth;
+		std::unique_ptr<_Font>	mFont;
+		int						mWidth;
 	};
 	typedef std::list<WidthCheck> WidthCheckList;
 	WidthCheckList				mWidthCheckList;
-	
-	EditListener*			mEditListener;		
+
+	EditListener*			mEditListener;
 	bool					mShowingCursor;
 	bool					mDrawSelOverride; // set this to true to draw selected text even when not in focus
 	bool					mHadDoubleClick;	// Used to fix a bug with double clicking to hilite a word after the widget manager started calling mouse drag before mouse down/up events
@@ -67,10 +68,10 @@ public:
 	int						mHilitePos;
 	int						mBlinkAcc;
 	int						mBlinkDelay;
-	int						mLeftPos;		
+	int						mLeftPos;
 	int						mMaxChars;
 	int						mMaxPixels;
-	
+
 	std::string				mUndoString;
 	int						mUndoCursor;
 	int						mUndoHilitePos;
@@ -87,6 +88,7 @@ protected:
 
 public:
 	virtual void			SetFont(_Font* theFont, _Font* theWidthCheckFont = nullptr);
+	virtual void			SetColors(const EditWidgetColorScheme& theColors);
 	virtual void			SetText(const std::string& theText, bool leftPosToZero = true);
 	virtual bool			IsPartOfWord(char32_t theChar);
 	virtual int				GetCharAt(int x, int y);

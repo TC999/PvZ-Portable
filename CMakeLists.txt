@@ -1,20 +1,23 @@
 cmake_minimum_required(VERSION 3.12...4.0)
 
-project(pvz-portable LANGUAGES C CXX ASM)
+project(pvz-portable LANGUAGES C CXX)
 
 include(CMake/ProjectVersion.cmake)
 
-option(BUILD_STATIC "Static link for a standalone exe (Windows, non-MSVC)" OFF)
+option(BUILD_STATIC "Statically link dependencies for a standalone exe (Windows MinGW, Linux)" OFF)
 if(BUILD_STATIC)
 	if(WIN32 AND NOT MSVC)
 		set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 		set(BUILD_SHARED_LIBS OFF)
 		add_link_options(-static)
+	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+		set(BUILD_SHARED_LIBS OFF)
 	elseif(MSVC)
 		message(WARNING "BUILD_STATIC is not supported for MSVC. Use a vcpkg -static triplet instead.")
 		set(BUILD_STATIC OFF)
 	else()
-		message(WARNING "BUILD_STATIC is only supported on Windows with MinGW-based toolchains.")
+		message(WARNING "BUILD_STATIC is only supported on Windows with MinGW-based toolchains and on Linux.")
 		set(BUILD_STATIC OFF)
 	endif()
 endif()
@@ -42,36 +45,20 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
 	src/SexyAppFramework/sound/*.cpp
 	src/SexyAppFramework/widget/*.cpp
 	src/SexyAppFramework/fcaseopen/*.c
-	src/Sexy.TodLib/*.cpp
+	src/PvzpLib/*.cpp
 	src/Lawn/*.cpp
 	src/Lawn/Widget/*.cpp
 	src/Lawn/System/*.cpp
 )
 
 set(LOW_MEMORY OFF CACHE BOOL "Enable low memory mode")
-set(DOWNSCALE_COUNT 1 CACHE STRING "Image downscale count")
 if(NINTENDO_SWITCH)
-	set(VORBIS_LIB vorbisfile vorbis)
 	list(APPEND SOURCES
 		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/switch/Window.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/switch/Input.cpp
 	)
 	list(APPEND PLAT_INCLUDES
 		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/switch
-	)
-elseif(NINTENDO_3DS)
-	set(LOW_MEMORY ON)
-	set(DOWNSCALE_COUNT 2)
-	ctr_add_shader_library(colored ${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/3ds/graphics/colored.v.pica)
-	ctr_add_shader_library(textured ${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/3ds/graphics/textured.v.pica)
-	dkp_add_embedded_binary_library(shaders colored textured)
-	list(APPEND SOURCES
-		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/3ds/graphics/Window.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/3ds/graphics/GLInterface.cpp
-		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/3ds/Input.cpp
-	)
-	list(APPEND PLAT_INCLUDES
-		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/3ds
 	)
 elseif(EMSCRIPTEN)
 	# libopenmpt has no Emscripten port; must be pre-built with emmake.
@@ -87,25 +74,34 @@ elseif(EMSCRIPTEN)
 	)
 else()
 	if(VCPKG_TOOLCHAIN)
-		find_package(Vorbis CONFIG REQUIRED)
-		find_package(Ogg CONFIG REQUIRED)
 		find_package(libopenmpt CONFIG REQUIRED)
-		find_package(mpg123 CONFIG REQUIRED)
-		set(VORBIS_LIB Vorbis::vorbis Vorbis::vorbisfile)
-		set(OGG_LIB Ogg::ogg)
 		set(OPENMPT_LIB libopenmpt::libopenmpt)
-		set(MPG123_LIB MPG123::libmpg123)
 	else()
-		find_library(OGG_LIBRARY NAMES ogg libogg REQUIRED)
-		find_library(VORBIS_LIBRARY NAMES vorbis libvorbis REQUIRED)
-		find_library(VORBISFILE_LIBRARY NAMES vorbisfile libvorbisfile REQUIRED)
 		find_library(OPENMPT_LIBRARY NAMES openmpt libopenmpt REQUIRED)
-		find_library(MPG123_LIBRARY NAMES mpg123 libmpg123 REQUIRED)
-
-		set(VORBIS_LIB ${VORBISFILE_LIBRARY} ${VORBIS_LIBRARY})
-		set(OGG_LIB ${OGG_LIBRARY})
 		set(OPENMPT_LIB ${OPENMPT_LIBRARY})
-		set(MPG123_LIB ${MPG123_LIBRARY})
+		if(OPENMPT_LIBRARY MATCHES "\\${CMAKE_STATIC_LIBRARY_SUFFIX}$")
+			find_path(OPENMPT_INCLUDE_DIR libopenmpt/libopenmpt.h REQUIRED)
+			include(CheckCXXSourceCompiles)
+			include(CMakePushCheckState)
+			cmake_push_check_state()
+			set(CMAKE_REQUIRED_INCLUDES ${OPENMPT_INCLUDE_DIR})
+			set(CMAKE_REQUIRED_LIBRARIES ${OPENMPT_LIBRARY})
+			check_cxx_source_compiles("#include <libopenmpt/libopenmpt.h>
+int main() {
+	return openmpt_module_create_from_memory2(0, 0, 0, 0, 0, 0, 0, 0, 0) != 0;
+}" OPENMPT_LINKS_STANDALONE)
+			cmake_pop_check_state()
+			if(NOT OPENMPT_LINKS_STANDALONE)
+				find_library(MPG123_LIBRARY NAMES mpg123 libmpg123)
+				find_library(VORBISFILE_LIBRARY NAMES vorbisfile libvorbisfile)
+				find_library(VORBIS_LIBRARY NAMES vorbis libvorbis)
+				find_library(OGG_LIBRARY NAMES ogg libogg)
+				if(NOT MPG123_LIBRARY OR NOT VORBISFILE_LIBRARY OR NOT VORBIS_LIBRARY OR NOT OGG_LIBRARY)
+					message(FATAL_ERROR "Static libopenmpt does not link standalone and some of its dependencies were not found (see the configure log for details)")
+				endif()
+				list(APPEND OPENMPT_LIB ${MPG123_LIBRARY} ${VORBISFILE_LIBRARY} ${VORBIS_LIBRARY} ${OGG_LIBRARY})
+			endif()
+		endif()
 	endif()
 	list(APPEND SOURCES
 		${CMAKE_CURRENT_SOURCE_DIR}/src/SexyAppFramework/platform/default/Window.cpp
@@ -130,8 +126,8 @@ option(DO_FIX_BUGS "Define DO_FIX_BUGS macro (Community fixes for original game 
 
 if(EMSCRIPTEN)
 	list(PREPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/CMake")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_MPG123=1")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_MPG123=1 -fexceptions")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=2 -sUSE_ZLIB=1 -sUSE_LIBPNG=1 -sUSE_LIBJPEG=1 -fexceptions")
 else()
 	find_package(Threads REQUIRED)
 	find_package(ZLIB REQUIRED)
@@ -225,7 +221,6 @@ set_target_properties(pvz-portable PROPERTIES CXX_EXTENSIONS OFF)
 if (LOW_MEMORY)
 	target_compile_definitions(pvz-portable PRIVATE LOW_MEMORY)
 endif()
-target_compile_definitions(pvz-portable PRIVATE IMG_DOWNSCALE=${DOWNSCALE_COUNT})
 
 if(EMSCRIPTEN)
 	set_property(TARGET pvz-portable APPEND PROPERTY LINK_DEPENDS
@@ -240,9 +235,6 @@ if(EMSCRIPTEN)
 		"SHELL:-sUSE_ZLIB=1"
 		"SHELL:-sUSE_LIBPNG=1"
 		"SHELL:-sUSE_LIBJPEG=1"
-		"SHELL:-sUSE_OGG=1"
-		"SHELL:-sUSE_VORBIS=1"
-		"SHELL:-sUSE_MPG123=1"
 		"SHELL:-fexceptions"
 		"SHELL:-sASYNCIFY"
 		"SHELL:-sALLOW_MEMORY_GROWTH=1"
@@ -259,9 +251,6 @@ else()
 	target_link_libraries(pvz-portable PRIVATE
 		SDL2_mixer_ext_Static 
 		${OPENMPT_LIB} 
-		${MPG123_LIB} 
-		${VORBIS_LIB} 
-		${OGG_LIB} 
 		PNG::PNG
 		JPEG::JPEG
 		ZLIB::ZLIB
@@ -308,19 +297,6 @@ elseif (NINTENDO_SWITCH)
 		NACP pvz-portable.nacp
 		ICON ${CMAKE_CURRENT_SOURCE_DIR}/icon-switch.jpg
 	)
-elseif (NINTENDO_3DS)
-	target_link_libraries(pvz-portable PRIVATE citro3d shaders)
-
-	ctr_generate_smdh(pvz-portable.smdh
-		NAME "PvZ Portable"
-		DESCRIPTION "A community-driven re-implementation of Plants vs. Zombies GOTY Edition"
-		AUTHOR "wszqkzqk, etc., a community-driven port"
-		ICON "${CMAKE_CURRENT_SOURCE_DIR}/icon-3ds.png"
-	)
-
-	ctr_create_3dsx(pvz-portable
-		SMDH pvz-portable.smdh
-	)
 elseif (ANDROID)
 	target_link_libraries(pvz-portable PRIVATE GLESv2 EGL android log)
 	set_target_properties(pvz-portable PROPERTIES OUTPUT_NAME "main")
@@ -345,7 +321,7 @@ elseif (IOS)
 		MACOSX_BUNDLE_BUNDLE_NAME "PvZ Portable"
 		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
 		XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
-		XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
+		XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "16.4"
 		XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "io.github.wszqkzqk.pvz-portable"
 		XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
 		XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"

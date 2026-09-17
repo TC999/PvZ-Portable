@@ -27,10 +27,10 @@
 #include "../LawnApp.h"
 #include "../Resources.h"
 #include "../GameConstants.h"
-#include "../Sexy.TodLib/TodFoley.h"
-#include "../Sexy.TodLib/TodDebug.h"
-#include "../Sexy.TodLib/Reanimator.h"
-#include "../Sexy.TodLib/Attachment.h"
+#include "../PvzpLib/PvzpFoley.h"
+#include "../PvzpLib/PvzpDebug.h"
+#include "../PvzpLib/Reanimator.h"
+#include "../PvzpLib/Attachment.h"
 #include "Widget/AchievementsScreen.h"
 #include <algorithm>
 
@@ -115,12 +115,12 @@ void Projectile::ProjectileInitialize(int theX, int theY, int theRenderOrder, in
 		break;
 	case ProjectileType::PROJECTILE_SNOWPEA:
 	{
-		TodParticleSystem* aParticle = mApp->AddTodParticle(mPosX + 8.0f, mPosY + 13.0f, 400000, ParticleEffect::PARTICLE_SNOWPEA_TRAIL);
+		PvzpParticleSystem* aParticle = mApp->AddPvzpParticle(mPosX + 8.0f, mPosY + 13.0f, 400000, ParticleEffect::PARTICLE_SNOWPEA_TRAIL);
 		AttachParticle(mAttachmentID, aParticle, 8.0f, 13.0f);
 		break;
 	}
 	case ProjectileType::PROJECTILE_FIREBALL:
-		TOD_ASSERT(false);
+		PVZP_ASSERT(false);
 		break;
 	case ProjectileType::PROJECTILE_COBBIG:
 		mWidth = IMAGE_REANIM_COBCANNON_COB->GetWidth();
@@ -129,7 +129,7 @@ void Projectile::ProjectileInitialize(int theX, int theY, int theRenderOrder, in
 		break;
 	case ProjectileType::PROJECTILE_PUFF:
 	{
-		TodParticleSystem* aParticle = mApp->AddTodParticle(mPosX + 13.0f, mPosY + 13.0f, 400000, ParticleEffect::PARTICLE_PUFFSHROOM_TRAIL);
+		PvzpParticleSystem* aParticle = mApp->AddPvzpParticle(mPosX + 13.0f, mPosY + 13.0f, 400000, ParticleEffect::PARTICLE_PUFFSHROOM_TRAIL);
 		AttachParticle(mAttachmentID, aParticle, 13.0f, 13.0f);
 		break;
 	}
@@ -172,7 +172,7 @@ Plant* Projectile::FindCollisionTargetPlant()
 				aPlant->mSeedType == SeedType::SEED_POTATOMINE ||
 				aPlant->mSeedType == SeedType::SEED_SPIKEWEED ||
 				aPlant->mSeedType == SeedType::SEED_SPIKEROCK ||
-				aPlant->mSeedType == SeedType::SEED_LILYPAD)  // 僵尸豌豆不能击中低矮植物
+				aPlant->mSeedType == SeedType::SEED_LILYPAD)  // zombie peas cannot hit low plants
 				continue;
 		}
 
@@ -223,7 +223,7 @@ bool Projectile::PeaAboutToHitTorchwood()
 
 Zombie* Projectile::FindCollisionTarget()
 {
-	if (PeaAboutToHitTorchwood())  // “卡火炬”的原理，这段代码在两版内测版中均不存在
+	if (PeaAboutToHitTorchwood())  // a pea about to hit a torchwood skips zombie collision ("torchwood clip" trick)
 		return nullptr;
 
 	Rect aProjectileRect = GetProjectileRect();
@@ -316,7 +316,7 @@ void Projectile::CheckForCollision()
 			aPlant->mEatenFlashCountdown = std::max(aPlant->mEatenFlashCountdown, 25);
 
 			mApp->PlayFoley(FoleyType::FOLEY_SPLAT);
-			mApp->AddTodParticle(mPosX - 3.0f, mPosY + 17.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PEA_SPLAT);
+			mApp->AddPvzpParticle(mPosX - 3.0f, mPosY + 17.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_PEA_SPLAT);
 			Die();
 		}
 		return;
@@ -506,7 +506,6 @@ void Projectile::DoSplashDamage(Zombie* theZombie)
 	}
 }
 
-// GOTY @Patoke: 0x471B41
 void Projectile::UpdateLobMotion()
 {
 	if (mProjectileType == ProjectileType::PROJECTILE_COBBIG && mPosZ < -700.0f)
@@ -604,7 +603,7 @@ void Projectile::UpdateLobMotion()
 			{
 				mApp->PlayFoley(FoleyType::FOLEY_SPLAT);
 				int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_TOP, 0, 1);
-				mApp->AddTodParticle(mPosX + 20.0f, mPosY + 20.0f, aRenderPosition, ParticleEffect::PARTICLE_UMBRELLA_REFLECT);
+				mApp->AddPvzpParticle(mPosX + 20.0f, mPosY + 20.0f, aRenderPosition, ParticleEffect::PARTICLE_UMBRELLA_REFLECT);
 				Die();
 			}
 			else if (aUmbrellaPlant->mState != PlantState::STATE_UMBRELLA_TRIGGERED)
@@ -623,7 +622,6 @@ void Projectile::UpdateLobMotion()
 	}
 	else if (mProjectileType == ProjectileType::PROJECTILE_COBBIG)
 	{
-		// @Patoke: implemented
 		int aBeforeGargantuarCount = mBoard->GetLiveGargantuarCount();
 		mBoard->KillAllZombiesInRadius(mRow, mPosX + 80, mPosY + 40, 115, 1, true, mDamageRangeFlags);
 		int aAfterGargantuarCount = mBoard->GetLiveGargantuarCount();
@@ -849,16 +847,16 @@ void Projectile::DoImpact(Zombie* theZombie)
 	switch (mProjectileType)
 	{
 	case ProjectileType::PROJECTILE_MELON:
-		mApp->AddTodParticle(aLastPosX + 30.0f, aLastPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_MELONSPLASH);
+		mApp->AddPvzpParticle(aLastPosX + 30.0f, aLastPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_MELONSPLASH);
 		break;
 	case ProjectileType::PROJECTILE_WINTERMELON:
-		mApp->AddTodParticle(aLastPosX + 30.0f, aLastPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_WINTERMELON);
+		mApp->AddPvzpParticle(aLastPosX + 30.0f, aLastPosY + 30.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_WINTERMELON);
 		break;
 	case ProjectileType::PROJECTILE_COBBIG:
 	{
 		int aRenderOrder = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_GROUND, mCobTargetRow, 2);
-		mApp->AddTodParticle(mPosX + 80.0f, mPosY + 40.0f, aRenderOrder, ParticleEffect::PARTICLE_BLASTMARK);
-		mApp->AddTodParticle(mPosX + 80.0f, mPosY + 40.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_POPCORNSPLASH);
+		mApp->AddPvzpParticle(mPosX + 80.0f, mPosY + 40.0f, aRenderOrder, ParticleEffect::PARTICLE_BLASTMARK);
+		mApp->AddPvzpParticle(mPosX + 80.0f, mPosY + 40.0f, mRenderOrder + 1, ParticleEffect::PARTICLE_POPCORNSPLASH);
 		mApp->PlaySample(SOUND_DOOMSHROOM);
 		mBoard->ShakeBoard(3, -4);
 		break;
@@ -932,7 +930,7 @@ void Projectile::DoImpact(Zombie* theZombie)
 		}
 		else
 		{
-			mApp->AddTodParticle(aSplatPosX, aSplatPosY, mRenderOrder + 1, aEffect);
+			mApp->AddPvzpParticle(aSplatPosX, aSplatPosY, mRenderOrder + 1, aEffect);
 		}
 	}
 
@@ -946,15 +944,15 @@ void Projectile::Update()
 		return;
 
 	int aTime = 20;
-	if (mProjectileType == ProjectileType::PROJECTILE_PEA || 
-		mProjectileType == ProjectileType::PROJECTILE_SNOWPEA || 
-		mProjectileType == ProjectileType::PROJECTILE_CABBAGE || 
-		mProjectileType == ProjectileType::PROJECTILE_MELON || 
-		mProjectileType == ProjectileType::PROJECTILE_WINTERMELON || 
-		mProjectileType == ProjectileType::PROJECTILE_KERNEL || 
-		mProjectileType == ProjectileType::PROJECTILE_BUTTER || 
-		mProjectileType == ProjectileType::PROJECTILE_COBBIG || 
-		mProjectileType == ProjectileType::PROJECTILE_ZOMBIE_PEA || 
+	if (mProjectileType == ProjectileType::PROJECTILE_PEA ||
+		mProjectileType == ProjectileType::PROJECTILE_SNOWPEA ||
+		mProjectileType == ProjectileType::PROJECTILE_CABBAGE ||
+		mProjectileType == ProjectileType::PROJECTILE_MELON ||
+		mProjectileType == ProjectileType::PROJECTILE_WINTERMELON ||
+		mProjectileType == ProjectileType::PROJECTILE_KERNEL ||
+		mProjectileType == ProjectileType::PROJECTILE_BUTTER ||
+		mProjectileType == ProjectileType::PROJECTILE_COBBIG ||
+		mProjectileType == ProjectileType::PROJECTILE_ZOMBIE_PEA ||
 		mProjectileType == ProjectileType::PROJECTILE_SPIKE)
 	{
 		aTime = 0;
@@ -1004,7 +1002,7 @@ void Projectile::Draw(Graphics* g)
 		break;
 	case ProjectileType::PROJECTILE_PUFF:
 		aImage = IMAGE_PUFFSHROOM_PUFF1;
-		aScale = TodAnimateCurveFloat(0, 30, mProjectileAge, 0.3f, 1.0f, TodCurves::CURVE_LINEAR);
+		aScale = PvzpAnimateCurveFloat(0, 30, mProjectileAge, 0.3f, 1.0f, PvzpCurves::CURVE_LINEAR);
 		break;
 	case ProjectileType::PROJECTILE_BASKETBALL:
 		aImage = IMAGE_REANIM_ZOMBIE_CATAPULT_BASKETBALL;
@@ -1031,7 +1029,7 @@ void Projectile::Draw(Graphics* g)
 		aScale = 1.0f;
 		break;
 	default:
-		TOD_ASSERT(false);
+		PVZP_ASSERT(false);
 		break;
 	}
 
@@ -1043,8 +1041,8 @@ void Projectile::Draw(Graphics* g)
 
 	if (aImage)
 	{
-		TOD_ASSERT(aProjectileDef.mImageRow < aImage->mNumRows);
-		TOD_ASSERT(mFrame < aImage->mNumCols);
+		PVZP_ASSERT(aProjectileDef.mImageRow < aImage->mNumRows);
+		PVZP_ASSERT(mFrame < aImage->mNumCols);
 
 		int aCelWidth = aImage->GetCelWidth();
 		int aCelHeight = aImage->GetCelHeight();
@@ -1059,8 +1057,8 @@ void Projectile::Draw(Graphics* g)
 			float aOffsetX = mPosX + aCelWidth * 0.5f;
 			float aOffsetY = mPosZ + mPosY + aCelHeight * 0.5f;
 			SexyTransform2D aTransform;
-			TodScaleRotateTransformMatrix(aTransform, aOffsetX + mBoard->mX, aOffsetY + mBoard->mY, mRotation, aScale, aScale);
-			TodBltMatrix(g, aImage, aTransform, g->mClipRect, Color::White, g->mDrawMode, aSrcRect);
+			PvzpScaleRotateTransformMatrix(aTransform, aOffsetX + mBoard->mX, aOffsetY + mBoard->mY, mRotation, aScale, aScale);
+			PvzpBltMatrix(g, aImage, aTransform, g->mClipRect, Color::White, g->mDrawMode, aSrcRect);
 		}
 	}
 
@@ -1128,7 +1126,7 @@ void Projectile::DrawShadow(Graphics* g)
 
 	case ProjectileType::PROJECTILE_PUFF:
 		return;
-		
+
 	case ProjectileType::PROJECTILE_COBBIG:
 		aScale = 1.0f;
 		aStretch = 3.0f;
@@ -1148,7 +1146,7 @@ void Projectile::DrawShadow(Graphics* g)
 		aScale *= 200.0f / (aHeight + 200.0f);
 	}
 
-	TodDrawImageCelScaledF(g, IMAGE_PEA_SHADOWS, aOffsetX, (mShadowY - mPosY + aOffsetY), aCelCol, 0, aScale * aStretch, aScale);
+	PvzpDrawImageCelScaledF(g, IMAGE_PEA_SHADOWS, aOffsetX, (mShadowY - mPosY + aOffsetY), aCelCol, 0, aScale * aStretch, aScale);
 }
 
 void Projectile::Die()
@@ -1168,7 +1166,7 @@ void Projectile::Die()
 
 Rect Projectile::GetProjectileRect()
 {
-	if (mProjectileType == ProjectileType::PROJECTILE_PEA || 
+	if (mProjectileType == ProjectileType::PROJECTILE_PEA ||
 		mProjectileType == ProjectileType::PROJECTILE_SNOWPEA ||
 		mProjectileType == ProjectileType::PROJECTILE_ZOMBIE_PEA)
 	{
@@ -1234,7 +1232,7 @@ void Projectile::ConvertToPea(int theGridX)
 const ProjectileDefinition& Projectile::GetProjectileDef()
 {
 	const ProjectileDefinition& aProjectileDef = gProjectileDefinition[mProjectileType];
-	TOD_ASSERT(aProjectileDef.mProjectileType == mProjectileType);
+	PVZP_ASSERT(aProjectileDef.mProjectileType == mProjectileType);
 
 	return aProjectileDef;
 }

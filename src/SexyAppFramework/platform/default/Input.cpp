@@ -1,7 +1,7 @@
 /*
  * Portions of this file are based on the PopCap Games Framework
  * Copyright (C) 2005-2009 PopCap Games, Inc.
- * 
+ *
  * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later AND LicenseRef-PopCap
@@ -399,6 +399,19 @@ static void RecordDemoEvent(SexyAppBase* theApp, const SDL_Event& theEvent)
 					theApp->mDemoBuffer.WriteNumBits(DEMO_ACTIVATE_APP, 5);
 					theApp->mDemoBuffer.WriteNumBits(theEvent.window.event == SDL_WINDOWEVENT_FOCUS_GAINED ? 1 : 0, 1);
 					break;
+
+				case SDL_WINDOWEVENT_ENTER:
+				case SDL_WINDOWEVENT_LEAVE:
+				{
+					bool aMouseIn = theEvent.window.event == SDL_WINDOWEVENT_ENTER;
+					if (theApp->mMouseIn != aMouseIn)
+					{
+						theApp->WriteDemoTimingBlock();
+						theApp->mDemoBuffer.WriteNumBits(0, 1);
+						theApp->mDemoBuffer.WriteNumBits(aMouseIn ? DEMO_MOUSE_ENTER : DEMO_MOUSE_EXIT, 5);
+					}
+					break;
+				}
 			}
 			break;
 
@@ -489,9 +502,8 @@ static void RecordDemoEvent(SexyAppBase* theApp, const SDL_Event& theEvent)
 	}
 }
 
-bool SexyAppBase::StartTextInput(std::string& theInput)
+bool SexyAppBase::StartTextInput([[maybe_unused]] std::string& theInput)
 {
-	(void)theInput;
 	SDL_StartTextInput();
 
 #ifdef __EMSCRIPTEN__
@@ -651,6 +663,27 @@ bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 						mActive = event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED;
 						RehupFocus();
 						break;
+
+					case SDL_WINDOWEVENT_ENTER:
+						if (!mMouseIn)
+						{
+							int x, y;
+							SDL_GetMouseState(&x, &y);
+							mWidgetManager->RemapMouse(x, y);
+							mMouseIn = true;
+							mWidgetManager->MouseMove(x, y);
+							EnforceCursor();
+						}
+						break;
+
+					case SDL_WINDOWEVENT_LEAVE:
+						if (mMouseIn)
+						{
+							mWidgetManager->MouseExit(mWidgetManager->mLastMouseX, mWidgetManager->mLastMouseY);
+							mMouseIn = false;
+							EnforceCursor();
+						}
+						break;
 				}
 				break;
 
@@ -671,7 +704,7 @@ bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 				mWidgetManager->RemapMouse(x, y);
 
 				mLastUserInputTick = mLastTimerTime;
-				
+
 				mWidgetManager->MouseMove(x, y);
 				break;
 			}
@@ -686,7 +719,7 @@ bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 				mWidgetManager->RemapMouse(x, y);
 
 				mLastUserInputTick = mLastTimerTime;
-				
+
 				mWidgetManager->MouseMove(x, y);
 				int btn =
 					(event.button.button == SDL_BUTTON_LEFT) ? 1 :
@@ -709,7 +742,7 @@ bool SexyAppBase::ProcessDeferredMessages(bool singleMessage)
 				mWidgetManager->RemapMouse(x, y);
 
 				mLastUserInputTick = mLastTimerTime;
-				
+
 				mWidgetManager->MouseMove(x, y);
 				int btn =
 					(event.button.button == SDL_BUTTON_LEFT) ? 1 :

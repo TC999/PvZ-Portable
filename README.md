@@ -12,13 +12,13 @@ A **cross-platform** community-driven reimplementation of Plants vs. Zombies: Ga
 | :---: | :---: | :---: |
 | Almost 100% gameplay recreation | Support for 32/64 bit systems<br>Run on Linux, Windows, macOS, Android, iOS, WebAssembly, Switch... | OpenGL ES 2.0 & SDL |
 
-🌐 **No install wanted?** [Try directly in your browser!](https://wszqkzqk.github.io/pvz-portable-wasm/pvz-portable.html) (You still need your own game data files.)
+🌐 **No install wanted?** [Try directly in your browser!](https://wszqkzqk.github.io/PvZ-Portable/pvz-portable.html) (You still need your own game data files.)
 
 **⚠️ Notice:**
 
 * This repository does **NOT** contain any copyrighted game assets (such as images, music, or fonts) owned by PopCap Games or Electronic Arts. Users must provide their own `main.pak` and `properties/` folder from a **legally purchased copy** of Plants vs. Zombies: GOTY Edition.
 * The codebase is a manual reimplementation derived from community research (such as [植物大战僵尸吧](https://tieba.baidu.com/f?ie=utf-8&kw=%E6%A4%8D%E7%89%A9%E5%A4%A7%E6%88%98%E5%83%B5%E5%B0%B8), [PVZ Wiki](https://wiki.pvz1.com/doku.php?id=home) and [PvZ Tools](https://pvz.tools/memory/)). It is written to utilize portable backends like SDL2 and OpenGL ES 2.0 (with desktop OpenGL 2.1 fallback). The author (wszqkzqk) **NEVER reverse engineered** the program; the author wrote it solely based on publicly available information and game testing. Also, code generated directly through reverse engineering will **not be accepted**.
-* This project is intended solely for **educational purposes**, focusing on **cross-platform porting techniques**, engine modernization, and learning how classic game logic can be adapted to various hardware architectures (e.g., Nintendo Switch, 3DS).
+* This project is intended solely for **educational purposes**, focusing on **cross-platform porting techniques**, engine modernization, and learning how classic game logic can be adapted to various hardware architectures.
 * Non-Commercial: This project is not affiliated with, authorized, or endorsed by PopCap Games or Electronic Arts.
 * Project icons and platform-specific logos are created by me (wszqkzqk) with the help of AI image generation tools and are not official assets of PopCap/EA.
 * To play the game using this project you **MUST** have access to the original game files by purchasing it on [EA's official website](https://www.ea.com/games/plants-vs-zombies/plants-vs-zombies) or [Steam](https://store.steampowered.com/app/3590/Plants_vs_Zombies_GOTY_Edition/).
@@ -62,7 +62,6 @@ This project supports the following platforms (including but not limited to):
 | iOS / iPadOS    | App Documents directory (Files app) | Works (sideload only; unsigned IPA)                                                    |
 | Web (WASM)      | Browser IndexedDB (saves); resources uploaded at runtime    | Works (requires a HTTP server) |
 | Nintendo Switch | sdmc:/switch/PvZPortable | Works on real hardware. Kenji-NX crashes on boot.                           |
-| Nintendo 3DS    | sdmc:/3ds/PvZPortable    | Might not have enough memory for Old 3DS and barely work on New 3DS (discontinued) |
 
 To play the game, you need the game data from PvZ GOTY. Place `main.pak` and the `properties/` folder next to the `pvz-portable` executable (the game will search for resources relative to the executable's directory). You can also use extracted data instead of `main.pak` if you prefer.
 
@@ -118,13 +117,13 @@ The app's Documents folder is exposed via iTunes/Finder file sharing and the iOS
 
 #### Notes
 
-- Requires iOS 15.0+ (arm64).
+- Requires iOS 16.4+ (arm64).
 - Free Apple ID signatures expire after 7 days; TrollStore installs are permanent.
 - Same touch-to-mouse mapping and aspect ratio behavior as the Android port.
 
 ### Play in Your Browser (WebAssembly)
 
-**[▶ Play Online](https://wszqkzqk.github.io/pvz-portable-wasm/pvz-portable.html)** — open the link, load your legally purchased game resources either from a ZIP package or from `main.pak` plus the `properties/` folder, then click **Start Game**. All files stay in your browser locally and are **never uploaded to any server** (the hosting site is purely static). Save data is stored in your browser's IndexedDB and can be imported from ZIP or folder, or exported as a ZIP via the on-screen buttons.
+**[▶ Play Online](https://wszqkzqk.github.io/PvZ-Portable/pvz-portable.html)** — open the link, load your legally purchased game resources either from a ZIP package or from `main.pak` plus the `properties/` folder, then click **Start Game**. All files stay in your browser locally and are **never uploaded to any server** (the hosting site is purely static). Save data is stored in your browser's IndexedDB and can be imported from ZIP or folder, or exported as a ZIP via the on-screen buttons.
 
 You can also [download the WASM build](https://github.com/wszqkzqk/PvZ-Portable/releases) and self-host it. Note that the HTML file must be served over HTTP (e.g. `python3 -m http.server`) — opening it directly as a local file will not work due to browser security restrictions.
 
@@ -159,7 +158,7 @@ Before building on PC, ensure you have the necessary dependencies installed:
 
 - **Build Tools**: `CMake`, `Ninja`, A C/C++ compiler (e.g., `gcc`, `clang`, `MSVC`) supporting **C++20** (Also need a standard library implementation like `libstdc++`, `libc++` or MSVC STL that supports C++20)
 - **Graphics**: `OpenGL ES 2.0` or `OpenGL 2.1+` (auto-detected at runtime via SDL2)
-- **Audio**: `libopenmpt`, `libogg`, `libvorbis`, `mpg123`
+- **Audio**: `libopenmpt`
 - **Image**: `libpng`, `libjpeg-turbo`
 - **Windowing/Input**: `SDL2`
 
@@ -168,7 +167,7 @@ Before building on PC, ensure you have the necessary dependencies installed:
 You can install the required dependencies using the following command:
 
 ```bash
-sudo pacman -S --needed base-devel cmake libjpeg-turbo libogg libopenmpt libpng libvorbis mpg123 ninja sdl2-compat
+sudo pacman -S --needed base-devel cmake libjpeg-turbo libopenmpt libpng ninja sdl2-compat
 ```
 
 ### Debian/Ubuntu
@@ -176,7 +175,7 @@ sudo pacman -S --needed base-devel cmake libjpeg-turbo libogg libopenmpt libpng 
 You can install the required dependencies using the following command:
 
 ```bash
-sudo apt install cmake ninja-build libogg-dev libjpeg-dev libopenmpt-dev libpng-dev libvorbis-dev libmpg123-dev libsdl2-dev
+sudo apt install cmake ninja-build libjpeg-dev libopenmpt-dev libpng-dev libsdl2-dev
 ```
 
 ### Windows (MSYS2 UCRT64)
@@ -184,7 +183,7 @@ sudo apt install cmake ninja-build libogg-dev libjpeg-dev libopenmpt-dev libpng-
 You can install the required dependencies using the following command:
 
 ```bash
-pacman -S --needed base-devel mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libjpeg-turbo mingw-w64-ucrt-x86_64-libopenmpt mingw-w64-ucrt-x86_64-libogg mingw-w64-ucrt-x86_64-libpng mingw-w64-ucrt-x86_64-libvorbis mingw-w64-ucrt-x86_64-mpg123 mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-SDL2
+pacman -S --needed base-devel mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libjpeg-turbo mingw-w64-ucrt-x86_64-libopenmpt mingw-w64-ucrt-x86_64-libpng mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-SDL2
 ```
 
 ### macOS (Homebrew)
@@ -192,7 +191,7 @@ pacman -S --needed base-devel mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-
 You can install the required dependencies using [Homebrew](https://brew.sh/) with the following command:
 
 ```bash
-brew install cmake dylibbundler jpeg-turbo libogg libopenmpt libpng libvorbis mpg123 ninja sdl2
+brew install cmake dylibbundler jpeg-turbo libopenmpt libpng ninja sdl2
 ```
 
 ## Build Instructions
@@ -230,7 +229,7 @@ You can customize the game features by adding options to the first `cmake` comma
 | `PVZ_DEBUG` | `OFF`<br>(`ON` if `CMAKE_BUILD_TYPE` is `Debug`) | Enable **cheat keys**, debug displays and other debug features. |
 | `DO_FIX_BUGS` | `OFF` | Apply community fixes for "bugs" of official 1.2.0.1073 GOTY Edition.[^1] However, these "bugs" are usually **considered "features"** by many players. |
 | `CONSOLE` | `OFF`<br>(`ON` if `CMAKE_BUILD_TYPE` is `Debug`) | Show a console window (Windows only). |
-| `BUILD_STATIC` | `OFF` | Link statically to create a standalone executable (Windows with MinGW-based toolchains only). Use a vcpkg `-static` triplet for MSVC instead. |
+| `BUILD_STATIC` | `OFF` | Link dependencies statically (Windows with MinGW-based toolchains, glibc-based Linux). Use a vcpkg `-static` triplet for MSVC. |
 
 [^1]: Current `DO_FIX_BUGS` includes the following fixes:
     - Fix bungee zombie duplicate sun/item drop in I, Zombie mode.

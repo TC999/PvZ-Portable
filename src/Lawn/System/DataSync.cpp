@@ -35,7 +35,6 @@ DataReader::DataReader()
 	mData = nullptr;
 	mDataLen = 0;
 	mDataPos = 0;
-	mOwnData = false;
 }
 
 DataReader::~DataReader()
@@ -45,20 +44,11 @@ DataReader::~DataReader()
 		fclose(mFile);
 		mFile = nullptr;
 	}
-
-	if (mOwnData)
-	{
-		delete[] mData;
-	}
-
-	mData = nullptr;
-	mDataLen = 0;
-	mDataPos = 0;
-	mOwnData = false;
 }
 
 bool DataReader::OpenFile(const std::string& theFileName)
 {
+	mDataPos = 0;
 	mFile = fcaseopen(theFileName.c_str(), "rb");
 	return mFile;
 }
@@ -70,14 +60,15 @@ void DataReader::OpenMemory(const void* theData, uint32_t theDataLen, bool takeO
 		fclose(mFile);
 		mFile = nullptr;
 	}
-	if (mOwnData)
-	{
-		delete[] mData;
-	}
 
-	mData = (char*)theData;
+	if (takeOwnership)
+		mOwnedData.reset(const_cast<char*>(static_cast<const char*>(theData)));
+	else
+		mOwnedData.reset();
+
+	mData = static_cast<const char*>(theData);
 	mDataLen = theDataLen;
-	mOwnData = takeOwnership;
+	mDataPos = 0;
 }
 
 void DataReader::Close()
@@ -99,8 +90,7 @@ void DataReader::ReadBytes(void* theMem, uint32_t theNumBytes)
 			throw DataReaderException();
 		}
 
-		memcpy(theMem, mData, theNumBytes);
-		mData += theNumBytes;
+		memcpy(theMem, mData + mDataPos - theNumBytes, theNumBytes);
 	}
 	else if (!mFile || fread(theMem, sizeof(char), theNumBytes, mFile) != theNumBytes)
 	{
@@ -112,7 +102,6 @@ void DataReader::Rewind(uint32_t theNumBytes)
 {
 	theNumBytes = std::min(theNumBytes, mDataPos);
 	mDataPos -= theNumBytes;
-	mData -= theNumBytes;
 }
 
 uint16_t DataReader::ReadUInt16()
@@ -176,8 +165,6 @@ void DataReader::ReadString(std::string& theStr)
 	theStr.resize(aStrLen);
 	ReadBytes(theStr.data(), aStrLen);
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 
 DataSync::DataSync(DataReader& theReader)
 {
@@ -453,14 +440,9 @@ void DataSync::SyncString(std::string& theStr)
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
 DataWriter::DataWriter()
 {
 	mFile = nullptr;
-	mData = nullptr;
-	mDataLen = 0;
-	mCapacity = 0;
 }
 
 DataWriter::~DataWriter()
@@ -470,11 +452,6 @@ DataWriter::~DataWriter()
 		fclose(mFile);
 		mFile = nullptr;
 	}
-
-	delete[] mData;
-	mData = nullptr;
-	mDataLen = 0;
-	mCapacity = 0;
 }
 
 bool DataWriter::OpenFile(const std::string& theFileName)
@@ -492,23 +469,6 @@ void DataWriter::Close()
 	}
 }
 
-void DataWriter::EnsureCapacity(uint32_t theNumBytes)
-{
-	if (mCapacity < theNumBytes)
-	{
-		// 每次将容量乘 2 直到容量达到 theNumBytes 或更多
-		do { mCapacity <<= 1; } while (mCapacity < theNumBytes);
-
-		// 申请新内存
-		char* aData = new char[mCapacity];
-		// 将原数据迁移至新内存区域中
-		memcpy(aData, mData, mDataLen);
-		// 释放旧有内存区域
-		delete[] mData;
-		mData = aData;
-	}
-}
-
 void DataWriter::OpenMemory(uint32_t theReserveAmount)
 {
 	if (mFile)
@@ -516,27 +476,20 @@ void DataWriter::OpenMemory(uint32_t theReserveAmount)
 		fclose(mFile);
 		mFile = nullptr;
 	}
-	delete[] mData;
-	mData = 0;
-	mDataLen = 0;
-	mCapacity = 0;
-
-	theReserveAmount = std::max<uint32_t>(theReserveAmount, 32);
-	mData = new char[theReserveAmount];
-	mCapacity = theReserveAmount;
+	mData.clear();
+	mData.reserve(std::max<uint32_t>(theReserveAmount, 32));
 }
 
 void DataWriter::WriteBytes(const void* theData, uint32_t theDataLen)
 {
-	if (mData)
-	{
-		EnsureCapacity(mDataLen + theDataLen);
-		memcpy(mData + mDataLen, theData, theDataLen);
-		mDataLen += theDataLen;
-	}
-	else if (mFile)
+	if (mFile)
 	{
 		fwrite(theData, sizeof(unsigned char), theDataLen, mFile);
+	}
+	else
+	{
+		const char* aData = static_cast<const char*>(theData);
+		mData.insert(mData.end(), aData, aData + theDataLen);
 	}
 }
 

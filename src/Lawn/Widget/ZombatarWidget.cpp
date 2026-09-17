@@ -28,7 +28,8 @@
 #include "../../LawnApp.h"
 #include "../../Resources.h"
 #include "../../GameConstants.h"
-#include "../../Sexy.TodLib/TodStringFile.h"
+#include "../../PvzpLib/PvzpStringFile.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "graphics/Graphics.h"
 #include "graphics/Font.h"
 #include "misc/KeyCodes.h"
@@ -37,6 +38,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <format>
 
 constexpr int ZOMBATAR_COLOR_NONE = -1;
 constexpr int ZOMBATAR_SKIN_COLOR_COUNT = 12;
@@ -53,7 +55,7 @@ constexpr int ZOMBATAR_COLOR_MODE_NONE = 4;
 
 constexpr int ZOMBATAR_PANEL_X = 25;
 constexpr int ZOMBATAR_PANEL_Y = 25;
-constexpr int ZOMBATAR_PANEL_W = 560;
+constexpr int ZOMBATAR_PANEL_WIDTH = 560;
 constexpr int ZOMBATAR_INNER_X = 152;
 constexpr int ZOMBATAR_INNER_Y = 125;
 constexpr int ZOMBATAR_COLORS_X = 221;
@@ -70,6 +72,10 @@ constexpr int ZOMBATAR_GRID_GAP = -4;
 constexpr int ZOMBATAR_GRID_BIAS_X = 50;
 constexpr int ZOMBATAR_CELL_INSET = 9;
 constexpr int ZOMBATAR_CELL_ZOMBIE_MARGIN = 10;
+constexpr int ZOMBATAR_ALIGN_TOP = 0x02;
+constexpr int ZOMBATAR_ALIGN_BOTTOM = 0x04;
+constexpr int ZOMBATAR_ALIGN_LEFT = 0x08;
+constexpr int ZOMBATAR_ALIGN_RIGHT = 0x10;
 constexpr Color ZOMBATAR_CELL_DIM_COLOR(0x80, 0x80, 0x80, 0x80);
 
 constexpr int ZOMBATAR_COLOR_COLS = 9;
@@ -80,8 +86,8 @@ constexpr int ZOMBATAR_COLOR_HINT_X = 240;
 constexpr int ZOMBATAR_COLOR_HINT_Y = 380;
 
 constexpr int ZOMBATAR_START_TEXT_Y = 185;
-constexpr int ZOMBATAR_START_TEXT_W = 500;
-constexpr int ZOMBATAR_START_TEXT_H = 100;
+constexpr int ZOMBATAR_START_TEXT_WIDTH = 500;
+constexpr int ZOMBATAR_START_TEXT_HEIGHT = 100;
 
 constexpr int ZOMBATAR_BACK_X = 278;
 constexpr int ZOMBATAR_BACK_Y = 528;
@@ -102,17 +108,22 @@ constexpr int ZOMBATAR_NEXT_PAGE_X = 497;
 constexpr int ZOMBATAR_PAGE_BTN_Y = 372;
 
 constexpr int ZOMBATAR_LIST_PORTRAIT_Y = 175;
-constexpr int ZOMBATAR_LIST_CUR_X = 239;
-constexpr int ZOMBATAR_LIST_PREV_X = 57;
-constexpr int ZOMBATAR_LIST_NEXT_X = 421;
+constexpr int ZOMBATAR_LIST_SPACING = 40;
+constexpr int ZOMBATAR_LIST_CENTER_INSET = 30;
+constexpr int ZOMBATAR_LIST_CLIP_X = 58;
+constexpr int ZOMBATAR_LIST_CLIP_Y = 125;
+constexpr int ZOMBATAR_LIST_CLIP_RIGHT = 63;
+constexpr int ZOMBATAR_LIST_CLIP_HEIGHT = 437;
+constexpr int ZOMBATAR_LIST_FILL_HEIGHT = 331;
+constexpr int ZOMBATAR_LIST_BLANK_WIDTH = 179;
 constexpr int ZOMBATAR_LIST_COUNTER_X = 221;
 constexpr int ZOMBATAR_LIST_COUNTER_Y = 161;
 constexpr int ZOMBATAR_LIST_DELETE_X = 351;
 constexpr int ZOMBATAR_LIST_DELETE_Y = 161;
 constexpr int ZOMBATAR_LIST_DELETE_RECT_X = 346;
 constexpr int ZOMBATAR_LIST_DELETE_RECT_Y = 146;
-constexpr int ZOMBATAR_LIST_DELETE_RECT_W = 60;
-constexpr int ZOMBATAR_LIST_DELETE_RECT_H = 20;
+constexpr int ZOMBATAR_LIST_DELETE_RECT_WIDTH = 60;
+constexpr int ZOMBATAR_LIST_DELETE_RECT_HEIGHT = 20;
 
 constexpr int ZOMBATAR_AVATAR_GROUND_X = 600;
 constexpr int ZOMBATAR_AVATAR_GROUND_Y = 300;
@@ -126,11 +137,18 @@ constexpr int ZOMBATAR_CONFIRM_HEADER_X = 305;
 constexpr int ZOMBATAR_CONFIRM_HEADER_Y = 185;
 constexpr int ZOMBATAR_CONFIRM_TEXT_X = 60;
 constexpr int ZOMBATAR_CONFIRM_TEXT_Y = 225;
-constexpr int ZOMBATAR_CONFIRM_TEXT_W = 500;
-constexpr int ZOMBATAR_CONFIRM_TEXT_H = 100;
+constexpr int ZOMBATAR_CONFIRM_TEXT_WIDTH = 500;
+constexpr int ZOMBATAR_CONFIRM_TEXT_HEIGHT = 100;
 constexpr int ZOMBATAR_CONFIRM_ACCEPT_LABEL_X = 195;
 constexpr int ZOMBATAR_CONFIRM_BACK_LABEL_X = 435;
 constexpr int ZOMBATAR_CONFIRM_LABEL_Y = 335;
+
+constexpr int ZOMBATAR_TRANSITION_TICKS = 90;		// transition duration in update ticks (100 Hz)
+constexpr int ZOMBATAR_VEIL_X = 58;					// black veil rect over the parts sheet
+constexpr int ZOMBATAR_VEIL_Y = 125;
+constexpr int ZOMBATAR_VEIL_RIGHT_INSET = 63;		// veil width = widget-bg width - 63
+constexpr int ZOMBATAR_VEIL_HEIGHT = 331;
+constexpr Color ZOMBATAR_PAGE_BTN_DISABLED_TINT(108, 109, 140, 40);
 
 constexpr int SlotForPart(ZombatarPage thePage)
 {
@@ -195,90 +213,15 @@ constexpr int GetPartColorMode(ZombatarPage thePage, int thePartIndex)
 	}
 }
 
-struct ZombatarPartLayout
-{
-	int mOffsetX;
-	int mOffsetY;
-	int mColorOffsetX;
-	int mColorOffsetY;
-	int mDrawOrder;
-};
-
-constexpr ZombatarPartLayout gClothesLayout[12] =
-{
-	{88, 110, 0, 0, 0}, {75, 100, 0, 0, 0}, {85, 112, 0, 0, 0}, {76, 110, 0, 0, 0},
-	{89, 115, 0, 0, 0}, {93, 110, 0, 0, 0}, {78, 105, 0, 0, 0}, {88, 110, 0, 0, 0},
-	{88, 102, 0, 0, 0}, {85, 110, 0, 0, 0}, {85, 110, 0, 0, 0}, {79, 112, 0, 0, 0}
-};
-
-constexpr ZombatarPartLayout gTidbitsLayout[14] =
-{
-	{28, 63, 18, 48, 2}, {28, 63, 0, 0, 2}, {46, 111, 0, 0, 2}, {31, 62, 0, 0, 2},
-	{31, 58, 0, 0, 2}, {28, 66, 0, 0, 2}, {28, 72, 0, 0, 2}, {33, 55, 0, 0, 2},
-	{21, 76, 0, 0, 2}, {36, 71, 0, 0, 2}, {36, 70, 0, 0, 2}, {86, 91, 0, 6, 2},
-	{88, 50, 0, 8, 2}, {113, 115, 0, 0, 2}
-};
-
-constexpr ZombatarPartLayout gAccessoryLayout[15] =
-{
-	{103, 110, 0, 0, 4}, {108, 110, 0, 0, 4}, {86, 113, 0, 0, 4}, {131, 95, 0, 0, 4},
-	{131, 100, 0, 0, 4}, {131, 100, 0, 0, 4}, {104, 111, 0, 0, 4}, {118, 65, 0, 0, 4},
-	{61, 118, 0, 0, 4}, {43, 100, 0, 0, 4}, {135, 92, 0, 0, 4}, {78, 130, 0, 0, 4},
-	{68, 145, 0, 0, 4}, {133, 70, 0, 0, 4}, {13, 40, 0, 0, 10}
-};
-
-constexpr ZombatarPartLayout gFacialHairLayout[24] =
-{
-	{35, 107, 1, 0, 6}, {51, 110, 0, 0, 6}, {45, 110, 0, 0, 6}, {38, 105, 3, 2, 6},
-	{69, 145, 0, 0, 6}, {48, 112, 0, 0, 6}, {13, 107, 0, 0, 6}, {45, 105, 1, 1, 6},
-	{41, 105, 1, 1, 6}, {44, 112, 1, 2, 6}, {43, 88, 1, 4, 6}, {28, 105, 8, 1, 6},
-	{45, 110, 0, 0, 6}, {18, 103, 1, 1, 6}, {63, 145, 2, 1, 6}, {63, 140, 1, 1, 6},
-	{43, 110, 0, 0, 6}, {58, 96, 1, 3, 6}, {46, 92, 0, 0, 6}, {114, 80, 0, 0, 6},
-	{118, 83, 1, 1, 6}, {13, 87, 3, 4, 6}, {58, 145, 1, 1, 6}, {38, 108, 4, 2, 6}
-};
-
-constexpr ZombatarPartLayout gHairLayout[16] =
-{
-	{23, 0, 8, 1, 8}, {23, 25, 2, 3, 8}, {23, 30, 0, 0, 8}, {30, 15, 0, 0, 8},
-	{36, 37, 0, 0, 8}, {39, 13, 0, 0, 8}, {51, 22, 0, 0, 8}, {28, 15, 0, 0, 8},
-	{128, 55, 0, 0, 8}, {22, 32, 0, 0, 8}, {25, 19, 2, 2, 8}, {51, -5, 2, 2, 8},
-	{33, 13, 2, 2, 8}, {9, -2, 1, 5, 8}, {45, 4, 0, -1, 8}, {26, 20, 0, 0, 8}
-};
-
-constexpr ZombatarPartLayout gEyewearLayout[16] =
-{
-	{28, 73, 0, 0, 10}, {31, 85, 0, -1, 10}, {28, 69, 0, 1, 10}, {28, 78, 0, -1, 10},
-	{30, 75, -1, -1, 10}, {30, 78, -1, -1, 10}, {50, 90, -1, -1, 10}, {32, 70, -1, -1, 10},
-	{36, 100, -1, -1, 10}, {31, 75, -1, -1, 10}, {31, 67, -1, -1, 10}, {38, 95, -1, -1, 10},
-	{30, 81, 0, 0, 10}, {35, 64, 0, 0, 10}, {42, 65, 0, 0, 10}, {35, 65, 0, 0, 10}
-};
-
-constexpr ZombatarPartLayout gHatsLayout[14] =
-{
-	{28, 5, 2, 1, 12}, {47, 12, 0, 0, 12}, {36, 20, 15, -1, 12}, {11, 10, 0, 0, 12},
-	{41, 16, 0, 0, 12}, {18, 3, 4, -2, 12}, {53, 17, 0, 15, 12}, {3, 0, 0, -2, 12},
-	{38, 0, -1, -2, 12}, {13, 45, 0, 0, 12}, {63, 8, 1, 14, 12}, {43, 15, 0, 0, 12},
-	{18, 0, 0, 0, 12}, {23, 5, 0, 0, 12}
-};
-
-const ZombatarPartLayout* GetPartLayout(ZombatarPage thePage, int theIndex)
+constexpr int ZombatarGridAlign(ZombatarPage thePage, int theIndex)
 {
 	switch (thePage)
 	{
-	case ZOMBATAR_PAGE_CLOTHES: return theIndex < 12 ? &gClothesLayout[theIndex] : nullptr;
-	case ZOMBATAR_PAGE_TIDBITS: return theIndex < 14 ? &gTidbitsLayout[theIndex] : nullptr;
-	case ZOMBATAR_PAGE_ACCESSORY: return theIndex < 15 ? &gAccessoryLayout[theIndex] : nullptr;
-	case ZOMBATAR_PAGE_FACIAL_HAIR:
-	{
-		int aIdx = theIndex;
-		if (aIdx > 16)
-			aIdx -= aIdx / 17;
-		return aIdx < 24 ? &gFacialHairLayout[aIdx] : nullptr;
-	}
-	case ZOMBATAR_PAGE_HAIR: return theIndex < 16 ? &gHairLayout[theIndex] : nullptr;
-	case ZOMBATAR_PAGE_EYEWEAR: return theIndex < 16 ? &gEyewearLayout[theIndex] : nullptr;
-	case ZOMBATAR_PAGE_HATS: return theIndex < 14 ? &gHatsLayout[theIndex] : nullptr;
-	default: return nullptr;
+	case ZOMBATAR_PAGE_CLOTHES: return theIndex == 5 ? 0 : ZOMBATAR_ALIGN_RIGHT | ZOMBATAR_ALIGN_BOTTOM;
+	case ZOMBATAR_PAGE_FACIAL_HAIR: return (theIndex == 14 || theIndex == 21 || theIndex == 23) ? ZOMBATAR_ALIGN_BOTTOM : 0;
+	case ZOMBATAR_PAGE_HAIR: return (theIndex == 11 || theIndex == 15) ? ZOMBATAR_ALIGN_TOP : 0;
+	case ZOMBATAR_PAGE_HATS: return (theIndex >= 6 && theIndex <= 8) ? ZOMBATAR_ALIGN_TOP : 0;
+	default: return 0;
 	}
 }
 
@@ -297,7 +240,7 @@ constexpr int ZombatarColorBaseForMode(int theMode)
 	return theMode == ZOMBATAR_COLOR_MODE_1 ? ZOMBATAR_PART_COLOR_BASE : ZOMBATAR_PART_COLOR_BASE_2;
 }
 
-static Rect FitIconRect(Image* theImage, const Rect& theCell)
+static Rect FitIconRect(Image* theImage, const Rect& theCell, int theAlign)
 {
 	int aCellW = theCell.mWidth;
 	int aCellH = theCell.mHeight;
@@ -317,7 +260,13 @@ static Rect FitIconRect(Image* theImage, const Rect& theCell)
 		aW = static_cast<int>(aW * (static_cast<float>(aAvailH) / static_cast<float>(aH)));
 		aH = aAvailH;
 	}
-	return Rect(theCell.mX + (aCellW - aW) / 2, theCell.mY + (aCellH - aH) / 2, aW, aH);
+	int aX = theCell.mX + (aCellW - aW) / 2;
+	int aY = theCell.mY + (aCellH - aH) / 2;
+	if (theAlign & ZOMBATAR_ALIGN_TOP) aY = theCell.mY + ZOMBATAR_CELL_INSET;
+	else if (theAlign & ZOMBATAR_ALIGN_BOTTOM) aY = theCell.mY + aCellH - ZOMBATAR_CELL_INSET - aH;
+	if (theAlign & ZOMBATAR_ALIGN_LEFT) aX = theCell.mX + ZOMBATAR_CELL_INSET;
+	else if (theAlign & ZOMBATAR_ALIGN_RIGHT) aX = theCell.mX + aCellW - ZOMBATAR_CELL_INSET - aW;
+	return Rect(aX, aY, aW, aH);
 }
 
 constexpr int ZOMBATAR_ITEMS_PER_PAGE[NUM_ZOMBATAR_PAGES] = { 0, 16, 24, 14, 16, 12, 15, 14, 5 };
@@ -335,7 +284,9 @@ ZombatarWidget::ZombatarWidget(GameSelector* theGameSelector)
 	mMouseY = -1;
 	mHoverGridCell = -1;
 	mHoverColorCell = -1;
+	mHoverTab = -1;
 	mDeleteHover = false;
+	mTransitionTimer = 0;
 	mPreviewZombie = nullptr;
 
 	mBackButton = MakeNewButton(ZOMBATAR_BTN_BACK, this, "", nullptr,
@@ -386,44 +337,35 @@ ZombatarWidget::ZombatarWidget(GameSelector* theGameSelector)
 ZombatarWidget::~ZombatarWidget()
 {
 	DestroyPreviewZombie();
-	delete mBackButton;
-	delete mViewButton;
-	delete mFinishedButton;
-	delete mNewButton;
-	delete mConfirmBackButton;
-	delete mPrevPortraitButton;
-	delete mNextPortraitButton;
-	delete mPrevPageButton;
-	delete mNextPageButton;
 }
 
 void ZombatarWidget::AddedToManager(WidgetManager* theWidgetManager)
 {
 	Widget::AddedToManager(theWidgetManager);
-	AddWidget(mBackButton);
-	AddWidget(mViewButton);
-	AddWidget(mFinishedButton);
-	AddWidget(mNewButton);
-	AddWidget(mConfirmBackButton);
-	AddWidget(mPrevPortraitButton);
-	AddWidget(mNextPortraitButton);
-	AddWidget(mPrevPageButton);
-	AddWidget(mNextPageButton);
+	AddWidget(mBackButton.get());
+	AddWidget(mViewButton.get());
+	AddWidget(mFinishedButton.get());
+	AddWidget(mNewButton.get());
+	AddWidget(mConfirmBackButton.get());
+	AddWidget(mPrevPortraitButton.get());
+	AddWidget(mNextPortraitButton.get());
+	AddWidget(mPrevPageButton.get());
+	AddWidget(mNextPageButton.get());
 }
 
 void ZombatarWidget::RemovedFromManager(WidgetManager* theWidgetManager)
 {
 	Widget::RemovedFromManager(theWidgetManager);
 	DestroyPreviewZombie();
-	RemoveWidget(mBackButton);
-	RemoveWidget(mViewButton);
-	RemoveWidget(mFinishedButton);
-	RemoveWidget(mNewButton);
-	RemoveWidget(mConfirmBackButton);
-	RemoveWidget(mPrevPortraitButton);
-	RemoveWidget(mNextPortraitButton);
-	RemoveWidget(mPrevPageButton);
-	RemoveWidget(mNextPageButton);
+	RemoveWidget(mBackButton.get());
+	RemoveWidget(mViewButton.get());
+	RemoveWidget(mFinishedButton.get());
+	RemoveWidget(mNewButton.get());
+	RemoveWidget(mConfirmBackButton.get());
+	RemoveWidget(mPrevPortraitButton.get());
+	RemoveWidget(mNextPortraitButton.get());
+	RemoveWidget(mPrevPageButton.get());
+	RemoveWidget(mNextPageButton.get());
 }
 
 void ZombatarWidget::Update()
@@ -442,6 +384,28 @@ void ZombatarWidget::Update()
 	{
 		CreatePreviewZombie();
 	}
+
+	if (mState == ZOMBATAR_STATE_TO_CONFIRM || mState == ZOMBATAR_STATE_FROM_CONFIRM)
+	{
+		mTransitionTimer--;	// dec-then-use
+		bool aToConfirm = mState == ZOMBATAR_STATE_TO_CONFIRM;
+		int aFromX = aToConfirm ? ZOMBATAR_FINISHED_X : ZOMBATAR_ACCEPT_X;
+		int aFromY = aToConfirm ? ZOMBATAR_FINISHED_Y : ZOMBATAR_CONFIRM_BTN_Y;
+		int aToX = aToConfirm ? ZOMBATAR_ACCEPT_X : ZOMBATAR_FINISHED_X;
+		int aToY = aToConfirm ? ZOMBATAR_CONFIRM_BTN_Y : ZOMBATAR_FINISHED_Y;
+		int aBtnW = IMAGE_ZOMBATAR_FINISHED_BUTTON ? IMAGE_ZOMBATAR_FINISHED_BUTTON->mWidth : 103;
+		int aBtnH = IMAGE_ZOMBATAR_FINISHED_BUTTON ? IMAGE_ZOMBATAR_FINISHED_BUTTON->mHeight : 26;
+		mFinishedButton->Resize(
+			PvzpAnimateCurve(ZOMBATAR_TRANSITION_TICKS, 0, mTransitionTimer, aFromX, aToX, PvzpCurves::CURVE_LINEAR),
+			PvzpAnimateCurve(ZOMBATAR_TRANSITION_TICKS, 0, mTransitionTimer, aFromY, aToY, PvzpCurves::CURVE_LINEAR),
+			aBtnW, aBtnH);
+		if (mTransitionTimer <= 0)
+		{
+			mTransitionTimer = 0;
+			ChangeState(aToConfirm ? ZOMBATAR_STATE_CONFIRM : ZOMBATAR_STATE_CREATE);
+		}
+	}
+
 	MarkDirty();
 }
 
@@ -659,7 +623,7 @@ Rect ZombatarWidget::GetItemRect(int theIndex) const
 	int aCellH = IMAGE_ZOMBATAR_ACCESSORY_BG ? IMAGE_ZOMBATAR_ACCESSORY_BG->mHeight : 67;
 	int aStepX = aCellW + ZOMBATAR_GRID_GAP;
 	int aStepY = aCellH + 3 + ZOMBATAR_GRID_GAP;
-	int aOriginX = ZOMBATAR_PANEL_X + (ZOMBATAR_PANEL_W - ZOMBATAR_GRID_COLS * aStepX) / 2 + ZOMBATAR_GRID_BIAS_X;
+	int aOriginX = ZOMBATAR_PANEL_X + (ZOMBATAR_PANEL_WIDTH - ZOMBATAR_GRID_COLS * aStepX) / 2 + ZOMBATAR_GRID_BIAS_X;
 	int aOriginY = ZOMBATAR_PANEL_Y + 2 * ZOMBATAR_GRID_GAP + 120;
 	int aCol = theIndex % ZOMBATAR_GRID_COLS;
 	int aRow = theIndex / ZOMBATAR_GRID_COLS;
@@ -946,7 +910,7 @@ void ZombatarWidget::CreatePreviewZombie()
 	if (mPreviewZombie)
 		return;
 
-	mPreviewZombie = new Zombie();
+	mPreviewZombie = std::make_unique<Zombie>();
 	mPreviewZombie->mApp = mApp;
 	mPreviewZombie->mBoard = nullptr;
 	mPreviewZombie->ZombieInitialize(0, ZombieType::ZOMBIE_FLAG, false, nullptr, Zombie::ZOMBIE_WAVE_UI);
@@ -962,8 +926,7 @@ void ZombatarWidget::DestroyPreviewZombie()
 		return;
 
 	mPreviewZombie->DieNoLoot();
-	delete mPreviewZombie;
-	mPreviewZombie = nullptr;
+	mPreviewZombie.reset();
 }
 
 void ZombatarWidget::DrawAvatarBox(Graphics* g)
@@ -980,14 +943,10 @@ void ZombatarWidget::DrawAvatarBox(Graphics* g)
 		ClampCurrentIndex();
 		aRecord = mApp->mPlayerInfo->mZombatarData.data() + mCurrentIndex * ZOMBATAR_RECORD_SIZE;
 	}
-	else if (mState == ZOMBATAR_STATE_CREATE || mState == ZOMBATAR_STATE_CONFIRM)
+	else
 	{
 		EncodeRecord(aDraft);
 		aRecord = aDraft;
-	}
-	else
-	{
-		return;
 	}
 
 	mPreviewZombie->ApplyZombatarHead(aRecord);
@@ -1025,8 +984,10 @@ void ZombatarWidget::Draw(Graphics* g)
 		DrawList(g);
 	else if (mState == ZOMBATAR_STATE_CONFIRM)
 		DrawConfirm(g);
-	else
+	else if (mState == ZOMBATAR_STATE_CREATE)
 		DrawCreate(g);
+	else
+		DrawTransition(g);
 
 	if (IMAGE_ZOMBATAR_DISPLAY_WINDOW)
 		g->DrawImage(IMAGE_ZOMBATAR_DISPLAY_WINDOW, 5, 0);
@@ -1039,22 +1000,35 @@ void ZombatarWidget::DrawMainBackground(Graphics* g)
 
 void ZombatarWidget::DrawList(Graphics* g)
 {
+	g->DrawImage(IMAGE_ZOMBATAR_WIDGET_BG, ZOMBATAR_PANEL_X, ZOMBATAR_PANEL_Y);
+
 	int aCount = GetHeadCount();
 	ClampCurrentIndex();
 	if (aCount <= 0)
 		return;
 
-	if (mCurrentIndex > 0)
-		DrawAvatar(g, ZOMBATAR_LIST_PREV_X, ZOMBATAR_LIST_PORTRAIT_Y, mApp->mPlayerInfo->mZombatarData.data() + (mCurrentIndex - 1) * ZOMBATAR_RECORD_SIZE);
-	DrawAvatar(g, ZOMBATAR_LIST_CUR_X, ZOMBATAR_LIST_PORTRAIT_Y, mApp->mPlayerInfo->mZombatarData.data() + mCurrentIndex * ZOMBATAR_RECORD_SIZE);
-	if (mCurrentIndex + 1 < aCount)
-		DrawAvatar(g, ZOMBATAR_LIST_NEXT_X, ZOMBATAR_LIST_PORTRAIT_Y, mApp->mPlayerInfo->mZombatarData.data() + (mCurrentIndex + 1) * ZOMBATAR_RECORD_SIZE);
+	int aPanelW = IMAGE_ZOMBATAR_WIDGET_BG ? IMAGE_ZOMBATAR_WIDGET_BG->mWidth : ZOMBATAR_PANEL_WIDTH;
+	int aBlankW = IMAGE_ZOMBATAR_BACKGROUND_BLANK ? IMAGE_ZOMBATAR_BACKGROUND_BLANK->mWidth : ZOMBATAR_LIST_BLANK_WIDTH;
+	// separate truncating divisions, do not merge
+	int aPortraitX = ZOMBATAR_PANEL_X + (aPanelW - ZOMBATAR_LIST_CENTER_INSET) / 2 + ZOMBATAR_LIST_SPACING / 2 - aBlankW / 2;
+
+	g->ClipRect(Rect(ZOMBATAR_LIST_CLIP_X, ZOMBATAR_LIST_CLIP_Y, aPanelW - ZOMBATAR_LIST_CLIP_RIGHT, ZOMBATAR_LIST_CLIP_HEIGHT));
+	g->SetColor(Color::Black);
+	g->FillRect(ZOMBATAR_LIST_CLIP_X, ZOMBATAR_LIST_CLIP_Y, aPanelW - ZOMBATAR_LIST_CLIP_RIGHT, ZOMBATAR_LIST_FILL_HEIGHT);
+	for (int i = -1; i <= 1; i++)
+	{
+		int aIndex = mCurrentIndex + i;
+		if (aIndex >= 0 && aIndex < aCount)
+			DrawAvatar(g, aPortraitX + i * (ZOMBATAR_LIST_SPACING + aBlankW), ZOMBATAR_LIST_PORTRAIT_Y, mApp->mPlayerInfo->mZombatarData.data() + aIndex * ZOMBATAR_RECORD_SIZE);
+	}
+	g->ClearClipRect();
+	g->SetColor(Color::White);
 
 	DrawAvatar(g, ZOMBATAR_PREVIEW_X, ZOMBATAR_PREVIEW_Y, mApp->mPlayerInfo->mZombatarData.data() + mCurrentIndex * ZOMBATAR_RECORD_SIZE);
 
 	g->SetFont(FONT_BRIANNETOD12);
 	g->SetColor(Color(255, 255, 255));
-	g->DrawString(Sexy::StrFormat("%d / %d", mCurrentIndex + 1, aCount), ZOMBATAR_LIST_COUNTER_X, ZOMBATAR_LIST_COUNTER_Y);
+	g->DrawString(std::format("{} / {}", mCurrentIndex + 1, aCount), ZOMBATAR_LIST_COUNTER_X, ZOMBATAR_LIST_COUNTER_Y);
 
 	g->SetFont(FONT_DWARVENTODCRAFT12);
 	g->SetColor(mDeleteHover ? Color(22, 253, 5) : Color(255, 255, 255));
@@ -1070,14 +1044,14 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 	for (int i = 0; i < NUM_ZOMBATAR_PAGES; i++)
 	{
 		Rect aRect = GetCategoryRect(i);
-		g->DrawImage(GetCategoryImage(static_cast<ZombatarPage>(i), i == mPage, aRect.Contains(mMouseX, mMouseY)), aRect.mX, aRect.mY);
+		g->DrawImage(GetCategoryImage(static_cast<ZombatarPage>(i), i == mPage, i == mHoverTab), aRect.mX, aRect.mY);
 	}
 
 	if (mPage == ZOMBATAR_PAGE_SKIN)
 	{
-		int aPanelW = IMAGE_ZOMBATAR_WIDGET_BG ? IMAGE_ZOMBATAR_WIDGET_BG->mWidth : ZOMBATAR_PANEL_W;
-		TodDrawStringWrapped(g, "[ZOMBATAR_START_TEXT]",
-			Rect(ZOMBATAR_PANEL_X + aPanelW / 2 - 200, ZOMBATAR_START_TEXT_Y, ZOMBATAR_START_TEXT_W, ZOMBATAR_START_TEXT_H),
+		int aPanelW = IMAGE_ZOMBATAR_WIDGET_BG ? IMAGE_ZOMBATAR_WIDGET_BG->mWidth : ZOMBATAR_PANEL_WIDTH;
+		PvzpDrawStringWrapped(g, "[ZOMBATAR_START_TEXT]",
+			Rect(ZOMBATAR_PANEL_X + aPanelW / 2 - 200, ZOMBATAR_START_TEXT_Y, ZOMBATAR_START_TEXT_WIDTH, ZOMBATAR_START_TEXT_HEIGHT),
 			FONT_DWARVENTODCRAFT15, Color(254, 227, 0, 175), DS_ALIGN_CENTER);
 		g->SetColor(Color::White);
 	}
@@ -1103,21 +1077,22 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 
 		if (mPage == ZOMBATAR_PAGE_CLOTHES && IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN && IMAGE_ZOMBATAR_ZOMBIE_BLANK)
 		{
-			g->PushState();
-			g->ClipRect(Rect(aRect.mX + ZOMBATAR_CELL_INSET, aRect.mY + ZOMBATAR_CELL_INSET,
-				aRect.mWidth - ZOMBATAR_CELL_INSET, aRect.mHeight - ZOMBATAR_CELL_INSET));
-			Color aSkinColor = ZombatarGetColor(mColor[ZOMBATAR_PAGE_SKIN]);
-			aSkinColor.mAlpha = aDim ? 0x80 : 0xff;
-			g->SetColorizeImages(true);
-			g->SetColor(aSkinColor);
-			g->DrawImage(IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN,
-				Rect(aRect.mX - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mY - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mWidth, aRect.mHeight),
-				Rect(0, 0, IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN->mWidth, IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN->mHeight));
-			g->SetColorizeImages(false);
-			g->DrawImage(IMAGE_ZOMBATAR_ZOMBIE_BLANK,
-				Rect(aRect.mX - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mY - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mWidth, aRect.mHeight),
-				Rect(0, 0, IMAGE_ZOMBATAR_ZOMBIE_BLANK->mWidth, IMAGE_ZOMBATAR_ZOMBIE_BLANK->mHeight));
-			g->PopState();
+			{
+				GraphicsStateGuard aStateGuard(*g);
+				g->ClipRect(Rect(aRect.mX + ZOMBATAR_CELL_INSET, aRect.mY + ZOMBATAR_CELL_INSET,
+					aRect.mWidth - ZOMBATAR_CELL_INSET, aRect.mHeight - ZOMBATAR_CELL_INSET));
+				Color aSkinColor = ZombatarGetColor(mColor[ZOMBATAR_PAGE_SKIN]);
+				aSkinColor.mAlpha = aDim ? 0x80 : 0xff;
+				g->SetColorizeImages(true);
+				g->SetColor(aSkinColor);
+				g->DrawImage(IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN,
+					Rect(aRect.mX - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mY - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mWidth, aRect.mHeight),
+					Rect(0, 0, IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN->mWidth, IMAGE_ZOMBATAR_ZOMBIE_BLANK_SKIN->mHeight));
+				g->SetColorizeImages(false);
+				g->DrawImage(IMAGE_ZOMBATAR_ZOMBIE_BLANK,
+					Rect(aRect.mX - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mY - ZOMBATAR_CELL_ZOMBIE_MARGIN, aRect.mWidth, aRect.mHeight),
+					Rect(0, 0, IMAGE_ZOMBATAR_ZOMBIE_BLANK->mWidth, IMAGE_ZOMBATAR_ZOMBIE_BLANK->mHeight));
+			}
 			if (aDim)
 			{
 				g->SetColorizeImages(true);
@@ -1128,7 +1103,7 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 		Image* aImage = (mPage == ZOMBATAR_PAGE_BACKDROPS) ? GetBackgroundImage(aPartIndex) : GetPartImage(mPage, aPartIndex);
 		if (aImage)
 		{
-			Rect aIconRect = FitIconRect(aImage, aRect);
+			Rect aIconRect = FitIconRect(aImage, aRect, ZombatarGridAlign(mPage, aPartIndex));
 			Image* aMask = GetPartMaskImage(mPage, aPartIndex);
 			if (aMask)
 			{
@@ -1182,7 +1157,7 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 			const char* aKey = mPart[mPage] < 0 ? "[ZOMBATAR_COLOR_ITEM_NOT_CHOSEN]" : "[ZOMBATAR_COLOR_NOT_APPLICABLE]";
 			int aColorsW = IMAGE_ZOMBATAR_COLORS_BG ? IMAGE_ZOMBATAR_COLORS_BG->mWidth : 261;
 			int aColorsH = IMAGE_ZOMBATAR_COLORS_BG ? IMAGE_ZOMBATAR_COLORS_BG->mHeight : 96;
-			TodDrawStringWrapped(g, aKey, Rect(ZOMBATAR_COLOR_HINT_X, ZOMBATAR_COLOR_HINT_Y, aColorsW - 40, aColorsH),
+			PvzpDrawStringWrapped(g, aKey, Rect(ZOMBATAR_COLOR_HINT_X, ZOMBATAR_COLOR_HINT_Y, aColorsW - 40, aColorsH),
 				FONT_BRIANNETOD12, Color::White, DS_ALIGN_LEFT);
 		}
 		else
@@ -1195,10 +1170,33 @@ void ZombatarWidget::DrawCreate(Graphics* g)
 	{
 		g->SetFont(FONT_BRIANNETOD12);
 		g->SetColor(Color(255, 255, 255));
-		std::string aPage = Sexy::StrFormat(
-			mApp->GetString("ZOMBATAR_PAGE", "Page %d / %d").c_str(), mSubPage + 1, mMaxSubPages + 1);
+		std::string aPage = mApp->GetFormattedString("ZOMBATAR_PAGE", "Page %d / %d", mSubPage + 1, mMaxSubPages + 1);
 		g->DrawString(aPage, 321, 441);
 	}
+}
+
+void ZombatarWidget::DrawTransition(Graphics* g)
+{
+	DrawCreate(g);
+
+	if (mMaxSubPages > 0)	// the page buttons are widgets but belong to the sheet, so draw them here
+	{
+		g->SetColorizeImages(true);
+		g->SetColor(ZOMBATAR_PAGE_BTN_DISABLED_TINT);
+		if (IMAGE_ZOMBATAR_PREV_BUTTON)
+			g->DrawImage(IMAGE_ZOMBATAR_PREV_BUTTON, ZOMBATAR_PREV_PAGE_X, ZOMBATAR_PAGE_BTN_Y);
+		if (IMAGE_ZOMBATAR_NEXT_BUTTON)
+			g->DrawImage(IMAGE_ZOMBATAR_NEXT_BUTTON, ZOMBATAR_NEXT_PAGE_X, ZOMBATAR_PAGE_BTN_Y);
+		g->SetColorizeImages(false);
+	}
+
+	int aPanelW = IMAGE_ZOMBATAR_WIDGET_BG ? IMAGE_ZOMBATAR_WIDGET_BG->mWidth : ZOMBATAR_PANEL_WIDTH;
+	int aAlpha = PvzpAnimateCurve(ZOMBATAR_TRANSITION_TICKS, 0, mTransitionTimer,
+		mState == ZOMBATAR_STATE_TO_CONFIRM ? 0 : 255, mState == ZOMBATAR_STATE_TO_CONFIRM ? 255 : 0,
+		PvzpCurves::CURVE_LINEAR);
+	g->SetColor(Color(0, 0, 0, aAlpha));
+	g->FillRect(ZOMBATAR_VEIL_X, ZOMBATAR_VEIL_Y, aPanelW - ZOMBATAR_VEIL_RIGHT_INSET, ZOMBATAR_VEIL_HEIGHT);
+	g->SetColor(Color::White);
 }
 
 void ZombatarWidget::DrawConfirm(Graphics* g)
@@ -1207,27 +1205,33 @@ void ZombatarWidget::DrawConfirm(Graphics* g)
 
 	g->SetFont(FONT_HOUSEOFTERROR28);
 	g->SetColor(Color(254, 227, 0));
-	std::string aHeader = TodStringTranslate("[ZOMBATAR_FINISHED_WARNING_HEADER]");
+	std::string aHeader(PvzpStringTranslate("[ZOMBATAR_FINISHED_WARNING_HEADER]"));
 	g->DrawString(aHeader, ZOMBATAR_CONFIRM_HEADER_X - FONT_HOUSEOFTERROR28->StringWidth(aHeader) / 2, ZOMBATAR_CONFIRM_HEADER_Y);
 
-	TodDrawStringWrapped(g, "[ZOMBATAR_FINISHED_WARNING_TEXT]",
-		Rect(ZOMBATAR_CONFIRM_TEXT_X, ZOMBATAR_CONFIRM_TEXT_Y, ZOMBATAR_CONFIRM_TEXT_W, ZOMBATAR_CONFIRM_TEXT_H),
+	PvzpDrawStringWrapped(g, "[ZOMBATAR_FINISHED_WARNING_TEXT]",
+		Rect(ZOMBATAR_CONFIRM_TEXT_X, ZOMBATAR_CONFIRM_TEXT_Y, ZOMBATAR_CONFIRM_TEXT_WIDTH, ZOMBATAR_CONFIRM_TEXT_HEIGHT),
 		FONT_CONTINUUMBOLD14, Color::White, DS_ALIGN_CENTER);
 
 	g->SetFont(FONT_BRIANNETOD12);
 	g->SetColor(Color(255, 255, 255));
-	std::string aAccept = TodStringTranslate("[ZOMBATAR_FINISHED_BUTTON_TEXT]");
+	std::string aAccept(PvzpStringTranslate("[ZOMBATAR_FINISHED_BUTTON_TEXT]"));
 	g->DrawString(aAccept, ZOMBATAR_CONFIRM_ACCEPT_LABEL_X - FONT_BRIANNETOD12->StringWidth(aAccept) / 2, ZOMBATAR_CONFIRM_LABEL_Y);
-	std::string aBack = TodStringTranslate("[ZOMBATAR_BACK_BUTTON_TEXT]");
+	std::string aBack(PvzpStringTranslate("[ZOMBATAR_BACK_BUTTON_TEXT]"));
 	g->DrawString(aBack, ZOMBATAR_CONFIRM_BACK_LABEL_X - FONT_BRIANNETOD12->StringWidth(aBack) / 2, ZOMBATAR_CONFIRM_LABEL_Y);
 }
 
 void ZombatarWidget::ChangeState(ZombatarWidgetState theState)
 {
 	mState = theState;
-	mHoverGridCell = -1;
-	mHoverColorCell = -1;
-	mDeleteHover = false;
+	if (theState == ZOMBATAR_STATE_TO_CONFIRM || theState == ZOMBATAR_STATE_FROM_CONFIRM)
+		mTransitionTimer = ZOMBATAR_TRANSITION_TICKS;	// hover cells intentionally stay frozen
+	else
+	{
+		mHoverGridCell = -1;
+		mHoverColorCell = -1;
+		mHoverTab = -1;
+		mDeleteHover = false;
+	}
 	UpdateButtonState();
 }
 
@@ -1246,32 +1250,31 @@ void ZombatarWidget::UpdateButtonState()
 	bool aList = mState == ZOMBATAR_STATE_LIST;
 	bool aCreate = mState == ZOMBATAR_STATE_CREATE;
 	bool aConfirm = mState == ZOMBATAR_STATE_CONFIRM;
+	bool aTransition = mState == ZOMBATAR_STATE_TO_CONFIRM || mState == ZOMBATAR_STATE_FROM_CONFIRM;
 
 	int aTotal = GetTotalItemsForPage(mPage);
 	mMaxSubPages = (aTotal > ZOMBATAR_GRID_PAGE) ? (aTotal - 1) / ZOMBATAR_GRID_PAGE : 0;
 	mSubPage = std::clamp(mSubPage, 0, mMaxSubPages);
 	bool aPaged = aCreate && mMaxSubPages > 0;
 
-	mBackButton->SetVisible(aCreate || aList || aConfirm);
+	mBackButton->SetVisible(aCreate || aList || aConfirm || aTransition);
 	mConfirmBackButton->SetVisible(aConfirm);
 	mViewButton->SetVisible(aCreate && aCount > 0);
-	mFinishedButton->SetVisible(aCreate || aConfirm);
+	mFinishedButton->SetVisible(aCreate || aConfirm || aTransition);
 	mNewButton->SetVisible(aList);
-	mPrevPortraitButton->SetVisible(aList && aCount > 1);
-	mNextPortraitButton->SetVisible(aList && aCount > 1);
+	mPrevPortraitButton->SetVisible(aList && aCount > 1 && mCurrentIndex > 0);
+	mNextPortraitButton->SetVisible(aList && aCount > 1 && mCurrentIndex + 1 < aCount);
 	mPrevPageButton->SetVisible(aPaged);
 	mNextPageButton->SetVisible(aPaged);
 
 	mNewButton->mDisabled = !CanSaveNewHead();
-	mPrevPortraitButton->mDisabled = mCurrentIndex <= 0;
-	mNextPortraitButton->mDisabled = mCurrentIndex + 1 >= aCount;
 	mPrevPageButton->mDisabled = mSubPage <= 0;
 	mNextPageButton->mDisabled = mSubPage >= mMaxSubPages;
 	mFinishedButton->mDisabled = aCreate && !CanSaveNewHead();
 
 	if (aConfirm)
 		mFinishedButton->Resize(ZOMBATAR_ACCEPT_X, ZOMBATAR_CONFIRM_BTN_Y, 103, 26);
-	else
+	else if (aCreate)
 		mFinishedButton->Resize(ZOMBATAR_FINISHED_X, ZOMBATAR_FINISHED_Y, 103, 26);
 }
 
@@ -1281,15 +1284,25 @@ void ZombatarWidget::MouseMove(int x, int y)
 	mMouseY = y;
 	mHoverGridCell = -1;
 	mHoverColorCell = -1;
+	mHoverTab = -1;
 
 	if (mState == ZOMBATAR_STATE_LIST)
 	{
-		mDeleteHover = Rect(ZOMBATAR_LIST_DELETE_RECT_X, ZOMBATAR_LIST_DELETE_RECT_Y, ZOMBATAR_LIST_DELETE_RECT_W, ZOMBATAR_LIST_DELETE_RECT_H).Contains(x, y);
+		mDeleteHover = Rect(ZOMBATAR_LIST_DELETE_RECT_X, ZOMBATAR_LIST_DELETE_RECT_Y, ZOMBATAR_LIST_DELETE_RECT_WIDTH, ZOMBATAR_LIST_DELETE_RECT_HEIGHT).Contains(x, y);
 		return;
 	}
 
 	if (mState != ZOMBATAR_STATE_CREATE)
 		return;
+
+	for (int i = 0; i < NUM_ZOMBATAR_PAGES; i++)
+	{
+		if (GetCategoryRect(i).Contains(x, y))
+		{
+			mHoverTab = i;
+			break;
+		}
+	}
 
 	int aItemCount = GetSubPageItemCount();
 	for (int i = 0; i < aItemCount; i++)
@@ -1398,7 +1411,7 @@ void ZombatarWidget::MouseUp(int x, int y)
 	}
 	else if (mState == ZOMBATAR_STATE_LIST)
 	{
-		if (GetHeadCount() > 0 && Rect(ZOMBATAR_LIST_DELETE_RECT_X, ZOMBATAR_LIST_DELETE_RECT_Y, ZOMBATAR_LIST_DELETE_RECT_W, ZOMBATAR_LIST_DELETE_RECT_H).Contains(x, y))
+		if (GetHeadCount() > 0 && Rect(ZOMBATAR_LIST_DELETE_RECT_X, ZOMBATAR_LIST_DELETE_RECT_Y, ZOMBATAR_LIST_DELETE_RECT_WIDTH, ZOMBATAR_LIST_DELETE_RECT_HEIGHT).Contains(x, y))
 		{
 			int aResult = mApp->LawnMessageBox(
 				DIALOG_ZOMBATAR_DELETE,
@@ -1413,10 +1426,8 @@ void ZombatarWidget::MouseUp(int x, int y)
 	}
 }
 
-void ZombatarWidget::ButtonPress(int theId)
+void ZombatarWidget::ButtonPress([[maybe_unused]] int theId)
 {
-	(void)theId;
-	mApp->PlaySample(SOUND_GRAVEBUTTON);
 }
 
 void ZombatarWidget::ButtonDepress(int theId)
@@ -1431,7 +1442,8 @@ void ZombatarWidget::ButtonDepress(int theId)
 		break;
 
 	case ZOMBATAR_BTN_CONFIRM_BACK:
-		ChangeState(ZOMBATAR_STATE_CREATE);
+		if (mState == ZOMBATAR_STATE_CONFIRM)
+			ChangeState(ZOMBATAR_STATE_FROM_CONFIRM);
 		break;
 
 	case ZOMBATAR_BTN_VIEW:
@@ -1443,7 +1455,7 @@ void ZombatarWidget::ButtonDepress(int theId)
 		if (mState == ZOMBATAR_STATE_CREATE)
 		{
 			if (CanSaveNewHead())
-				ChangeState(ZOMBATAR_STATE_CONFIRM);
+				ChangeState(ZOMBATAR_STATE_TO_CONFIRM);
 			else
 				ShowMaxHeadsMessage();
 		}
@@ -1508,12 +1520,21 @@ void ZombatarWidget::ButtonDepress(int theId)
 
 void ZombatarWidget::KeyDown(KeyCode theKey)
 {
-	if (theKey == KEYCODE_ESCAPE)
+	if (theKey != KEYCODE_ESCAPE)
+		return;
+
+	switch (mState)
 	{
-		if (mState == ZOMBATAR_STATE_CONFIRM)
-			ChangeState(ZOMBATAR_STATE_CREATE);
-		else
-			BackToSelector();
+	case ZOMBATAR_STATE_TO_CONFIRM:
+		mState = ZOMBATAR_STATE_FROM_CONFIRM;
+		mTransitionTimer = ZOMBATAR_TRANSITION_TICKS - mTransitionTimer;	// reverse the slide from its current position
+		break;
+	case ZOMBATAR_STATE_CONFIRM:
+		ChangeState(ZOMBATAR_STATE_FROM_CONFIRM);
+		break;
+	default:
+		BackToSelector();
+		break;
 	}
 }
 

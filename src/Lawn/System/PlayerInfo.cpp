@@ -20,14 +20,15 @@
  */
 
 #include <bit>
+#include <format>
 
 #include "DataSync.h"
 #include <algorithm>
 #include "PlayerInfo.h"
 #include "../LawnCommon.h"
 #include "../Widget/ChallengeScreen.h"
-#include "../../Sexy.TodLib/TodDebug.h"
-#include "../../Sexy.TodLib/TodCommon.h"
+#include "../../PvzpLib/PvzpDebug.h"
+#include "../../PvzpLib/PvzpCommon.h"
 #include "misc/Buffer.h"
 #include "../../SexyAppFramework/SexyAppBase.h"
 
@@ -119,8 +120,8 @@ void PlayerInfo::SyncDetails(DataSync& theSync)
 	theSync.SyncUInt32(mHasSeenUpsell);
 	theSync.SyncUInt32(mPlaceHolderPlayerStats);
 	theSync.SyncUInt32(mNumPottedPlants);
-	
-	TOD_ASSERT(mNumPottedPlants <= MAX_POTTED_PLANTS);
+
+	PVZP_ASSERT(mNumPottedPlants <= MAX_POTTED_PLANTS);
 	for (int i = 0; i < mNumPottedPlants; i++)
 	{
 		if (theSync.GetWriter())
@@ -129,8 +130,7 @@ void PlayerInfo::SyncDetails(DataSync& theSync)
 		PottedPlantFromLE(mPottedPlant[i]);
 	}
 
-	// Implemented by wszqkzqk with doc: https://plantsvszombies.fandom.com/wiki/User_file_format
-	// Known that achievements are stored as 20 x 16-bit values (0/1) in the original format.
+	// achievements are stored as 20 x 16-bit values (0/1): https://plantsvszombies.fandom.com/wiki/User_file_format
 	for (int i = 0; i < 20; i++)
 	{
 		uint16_t aAchievementValue = mEarnedAchievements[i] ? 1 : 0;
@@ -217,7 +217,7 @@ void PlayerInfo::LoadDetails()
 	try
 	{
 		Buffer aBuffer;
-		std::string aFileName = GetAppDataPath(StrFormat("userdata/user%d.dat", mId));
+		std::string aFileName = GetAppDataPath(std::format("userdata/user{}.dat", mId));
 		if (!gSexyAppBase->ReadBufferFromFile(aFileName, &aBuffer, false))
 		{
 			return;
@@ -230,12 +230,11 @@ void PlayerInfo::LoadDetails()
 	}
 	catch (DataReaderException&)
 	{
-		TodTrace("Failed to player data, resetting it\n");
+		PvzpLogLn("Failed to player data, resetting it");
 		Reset();
 	}
 }
 
-// GOTY @Patoke: 0x46D750
 void PlayerInfo::SaveDetails()
 {
 	DataWriter aWriter;
@@ -244,13 +243,13 @@ void PlayerInfo::SaveDetails()
 	SyncDetails(aSync);
 
 	MkDir(GetAppDataPath("userdata"));
-	std::string aFileName = GetAppDataPath(StrFormat("userdata/user%d.dat", mId));
+	std::string aFileName = GetAppDataPath(std::format("userdata/user{}.dat", mId));
 	gSexyAppBase->WriteBytesToFile(aFileName, aWriter.GetDataPtr(), aWriter.GetDataLen());
 }
 
 void PlayerInfo::DeleteUserFiles()
 {
-	std::string aFilename = GetAppDataPath(StrFormat("userdata/user%d.dat", mId));
+	std::string aFilename = GetAppDataPath(std::format("userdata/user{}.dat", mId));
 	gSexyAppBase->EraseFile(aFilename);
 
 	for (int i = 0; i < static_cast<int>(GameMode::NUM_GAME_MODES); i++)
@@ -308,7 +307,7 @@ void PlayerInfo::AddCoins(int theAmount)
 void PlayerInfo::ResetChallengeRecord(GameMode theGameMode)
 {
 	int aGameMode = static_cast<int>(theGameMode) - static_cast<int>(GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1);
-	TOD_ASSERT(aGameMode >= 0 && aGameMode <= NUM_CHALLENGE_MODES);
+	PVZP_ASSERT(aGameMode >= 0 && aGameMode <= NUM_CHALLENGE_MODES);
 	mChallengeRecords[aGameMode] = 0;
 }
 
