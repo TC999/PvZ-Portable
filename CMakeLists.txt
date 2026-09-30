@@ -43,7 +43,15 @@ unset(_pvz_required_flags)
 
 set(PVZP_FORMAT_LIBS)
 if(NOT PVZP_HAS_STD_FORMAT)
-	find_package(fmt CONFIG REQUIRED)
+	find_package(fmt CONFIG QUIET)
+	if(NOT fmt_FOUND)
+		include(FetchContent)
+		FetchContent_Declare(
+			fmt
+			URL https://github.com/fmtlib/fmt/archive/refs/tags/11.0.2.tar.gz
+		)
+		FetchContent_MakeAvailable(fmt)
+	endif()
 	list(APPEND PVZP_FORMAT_LIBS fmt::fmt)
 endif()
 
