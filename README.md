@@ -175,7 +175,7 @@ sudo pacman -S --needed base-devel cmake libjpeg-turbo libopenmpt libpng ninja s
 You can install the required dependencies using the following command:
 
 ```bash
-sudo apt install cmake ninja-build libjpeg-dev libopenmpt-dev libpng-dev libsdl2-dev
+sudo apt install build-essential cmake ninja-build pkg-config libogg-dev libjpeg-dev libopenmpt-dev libpng-dev libvorbis-dev libmpg123-dev libsdl2-dev libfmt-dev
 ```
 
 ### Windows (MSYS2 UCRT64)
